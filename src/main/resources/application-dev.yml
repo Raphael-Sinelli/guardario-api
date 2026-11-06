@@ -1,0 +1,17 @@
+# perfil de desenvolvimento: H2 em memória, recriado a cada subida
+spring:
+  datasource:
+    url: jdbc:h2:mem:guardario;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true # mostra o SQL no console: útil para ver o cache funcionando (segunda chamada sem SELECT)
+    properties:
+      hibernate:
+        format_sql: true
+  h2:
+    console:
+      enabled: true
+      path: /h2-console

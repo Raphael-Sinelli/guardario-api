@@ -1,0 +1,14 @@
+# perfil de produção (usado na entrega de DevOps): PostgreSQL com credenciais por variável de ambiente
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/guardario}
+    username: ${DB_USERNAME:guardario}
+    password: ${DB_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+
+app:
+  seed:
+    enabled: ${SEED_ENABLED:false}

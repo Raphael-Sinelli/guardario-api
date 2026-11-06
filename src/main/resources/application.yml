@@ -1,0 +1,55 @@
+spring:
+  application:
+    name: guardario-api
+  profiles:
+    default: dev # sem perfil informado, sobe com H2 em memória e dados de teste
+  jpa:
+    open-in-view: false # o mapeamento para DTO acontece dentro da transação do service
+  data:
+    web:
+      pageable:
+        max-page-size: 100
+  cache:
+    type: simple
+    cache-names: alertasAtivos, abrigosDisponiveis, areas
+
+server:
+  port: ${PORT:8080}
+
+app:
+  jwt:
+    # nunca versionar a chave: vem da variável de ambiente JWT_SECRET (mínimo de 32 caracteres)
+    secret: ${JWT_SECRET:}
+    expiration-seconds: 3600
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:*,http://127.0.0.1:*,http://10.0.2.2:*}
+  seed:
+    enabled: ${SEED_ENABLED:true}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, metrics, caches
+  endpoint:
+    health:
+      show-details: always
+  info:
+    env:
+      enabled: true
+    java:
+      enabled: true
+    os:
+      enabled: true
+
+info:
+  app:
+    name: GuardaRio API
+    description: Alerta comunitário de enchentes (Global Solution 2026/2, FIAP)
+    version: '@project.version@'
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: method
