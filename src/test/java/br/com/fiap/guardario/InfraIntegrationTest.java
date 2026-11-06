@@ -89,7 +89,10 @@ class InfraIntegrationTest extends IntegracaoBase {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.info.title").value("GuardaRio API"))
                 .andExpect(jsonPath("$.components.securitySchemes.bearerAuth.scheme").value("bearer"))
-                .andExpect(jsonPath("$.paths", hasKey("/api/relatos/{id}/status")));
+                .andExpect(jsonPath("$.paths", hasKey("/api/relatos/{id}/status")))
+                .andExpect(jsonPath("$.paths['/api/areas/{id}'].get.responses['404'].content['application/json'].schema['$ref']")
+                        .value("#/components/schemas/ErrorCustomResponse"))
+                .andExpect(jsonPath("$.components.schemas", hasKey("ValidationErrorResponse")));
     }
 
     @Test
