@@ -92,6 +92,16 @@ Sem login dá para consultar áreas, estações, leituras, alertas e abrigos. In
    4. Logado como cidadão, `POST /api/relatos` com `{"tipo": "BUEIRO_ENTUPIDO", "descricao": "Bueiro entupido na Rua Capachós", "areaId": 1}`. A prioridade vem 3: base 2 do tipo, mais 1 porque a área está em emergência.
    5. Logado como agente, `GET /api/relatos` lista o painel com a maior prioridade primeiro. `PATCH /api/relatos/{id}/status` com `{"status": "EM_ATENDIMENTO"}` muda o status, e os links da resposta trocam `atender` por `resolver`.
 
+### Testando com o Postman (ou o Bruno)
+
+A pasta `postman/` tem a coleção `GuardaRio.postman_collection.json`, com 86 requisições em 10 pastas e testes automáticos em cada uma (status esperado e regras de negócio). O Bruno importa o mesmo arquivo.
+
+1. Suba a API e importe o arquivo no Postman.
+2. Rode a pasta **01 Autenticação**: os logins guardam os tokens nas variáveis da coleção, e as outras requisições já usam o token certo para cada papel.
+3. Rode a pasta **02 Fluxo principal**, que é o roteiro da demonstração, ou a coleção inteira pelo Runner.
+
+A coleção conta com os dados de uma API recém-iniciada. Para rodar tudo de novo do zero, reinicie a API.
+
 ## Regras de negócio
 
 | ID | Regra | Onde está no código |
