@@ -10,6 +10,7 @@ import br.com.fiap.guardario.model.AreaRisco;
 import br.com.fiap.guardario.model.StatusRelato;
 import br.com.fiap.guardario.repository.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
@@ -20,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Locale;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AreaServiceImpl implements AreaService {
@@ -46,6 +48,7 @@ public class AreaServiceImpl implements AreaService {
     @Transactional(readOnly = true)
     @Cacheable(cacheNames = "areas", key = "#id")
     public AreaResponse buscarPorId(Long id) {
+        log.info("Cache 'areas' sem a área {}: consultando o banco", id);
         return AreaMapper.toResponse(buscarEntidade(id));
     }
 

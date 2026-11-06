@@ -10,8 +10,12 @@ spring:
       pageable:
         max-page-size: 100
   cache:
-    type: simple
+    type: caffeine
     cache-names: alertasAtivos, abrigosDisponiveis, areas
+    caffeine:
+      # quem limpa o cache é o @CacheEvict; os 10 minutos são só uma rede de segurança.
+      # recordStats liga as métricas de hit e miss em /actuator/metrics/cache.gets
+      spec: maximumSize=500,expireAfterWrite=10m,recordStats
 
 server:
   port: ${PORT:8080}

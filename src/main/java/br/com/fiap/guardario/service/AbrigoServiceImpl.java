@@ -11,6 +11,7 @@ import br.com.fiap.guardario.repository.AbrigoRepository;
 import br.com.fiap.guardario.repository.AreaRiscoRepository;
 import br.com.fiap.guardario.specification.AbrigoSpecification;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
@@ -23,6 +24,7 @@ import java.util.List;
 /*
  * Toda escrita que pode mudar a lista de abrigos com vaga limpa o cache "abrigosDisponiveis".
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AbrigoServiceImpl implements AbrigoService {
@@ -42,6 +44,7 @@ public class AbrigoServiceImpl implements AbrigoService {
     @Transactional(readOnly = true)
     @Cacheable(cacheNames = "abrigosDisponiveis")
     public List<AbrigoResponse> disponiveis() {
+        log.info("Cache 'abrigosDisponiveis' vazio: consultando o banco");
         return abrigoRepository.findByStatusOrderByNomeAsc(StatusAbrigo.ABERTO).stream()
                 .map(AbrigoMapper::toResponse)
                 .toList();

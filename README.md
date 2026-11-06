@@ -50,7 +50,7 @@ Se o wrapper reclamar da versão do Java, confira se `java -version` e a variáv
 Outros comandos:
 
 ```bash
-./mvnw test                                   # roda os 63 testes
+./mvnw test                                   # roda os 64 testes
 ./mvnw clean package                          # gera target/guardario-api-1.0.0.jar
 java -jar target/guardario-api-1.0.0.jar      # roda o jar gerado
 ```
@@ -256,7 +256,9 @@ erDiagram
 
 ## Cache
 
-Spring Cache com o provedor simples (`ConcurrentHashMap`). O cache guarda DTOs (records), nunca entidades: entidade fora da transação causaria `LazyInitializationException`.
+Spring Cache com o Caffeine como provedor. O cache guarda DTOs (records), nunca entidades: entidade fora da transação causaria `LazyInitializationException`.
+
+Quem mantém o cache correto é o `@CacheEvict` nas escritas. A configuração `maximumSize=500,expireAfterWrite=10m,recordStats` acrescenta duas coisas: um teto de memória e um prazo de 10 minutos como rede de segurança, caso alguma escrita fora da API mude o banco; e as estatísticas de acerto e erro que aparecem no Actuator.
 
 | Cache | O que guarda | Quando é limpo | Por que cachear |
 |---|---|---|---|
@@ -266,9 +268,15 @@ Spring Cache com o provedor simples (`ConcurrentHashMap`). O cache guarda DTOs (
 
 Ficam fora do cache: relatos (têm dado pessoal, são diferentes para cada usuário e mudam o tempo todo), leituras (chegam a cada 10 segundos) e as listas paginadas (combinações demais de página, ordenação e filtro).
 
-Para ver o cache funcionando: no perfil `dev` o SQL aparece no console. Chame `GET /api/alertas/ativos` duas vezes: a primeira faz SELECT, a segunda não. Com o token de ADMIN, `GET /actuator/caches` lista os três caches.
+Três jeitos de ver o cache funcionando:
 
-Limitação conhecida: o cache simples vale para uma instância só. Com várias réplicas da API, o próximo passo seria um cache distribuído como o Redis.
+1. **Log.** Chame `GET /api/alertas/ativos` duas vezes. Na primeira o console mostra `Cache 'alertasAtivos' vazio: consultando o banco` e o SELECT; na segunda, nada, porque o método nem chega a rodar.
+2. **Métricas.** Com o token de ADMIN, `GET /actuator/metrics/cache.gets?tag=cache:alertasAtivos&tag=result:hit` mostra quantas leituras vieram do cache; com `result:miss`, quantas foram ao banco.
+3. **Invalidação.** Registre uma leitura que gere alerta e chame os ativos de novo: o log volta a aparecer, porque o `@CacheEvict` limpou o cache.
+
+`GET /actuator/caches` lista os três caches.
+
+Limitação conhecida: o Caffeine guarda o cache na memória de cada instância. Com várias réplicas da API, o próximo passo seria um cache distribuído, como o Redis.
 
 ## HATEOAS
 
@@ -290,7 +298,7 @@ Quem não está logado não recebe link de ação. O link orienta o cliente, mas
 |---|---|---|
 | `/actuator/health` | público | Status geral, banco de dados e disco |
 | `/actuator/info` | público | Nome, descrição e versão da aplicação, dados do build, Java e sistema operacional |
-| `/actuator/metrics` | ADMIN | Métricas da JVM e do HTTP, e a métrica do domínio `guardario.alertas.emitidos`, com as tags `origem` e `nivel` |
+| `/actuator/metrics` | ADMIN | Métricas da JVM e do HTTP, acertos e erros do cache (`cache.gets`) e a métrica do domínio `guardario.alertas.emitidos`, com as tags `origem` e `nivel` |
 | `/actuator/caches` | ADMIN | Os três caches da aplicação |
 
 ## Segurança
@@ -413,10 +421,10 @@ As rotas de listagem aceitam também `page`, `size` e `sort`. A descrição de c
 
 ## Testes
 
-`./mvnw test` roda 63 testes:
+`./mvnw test` roda 64 testes:
 
 - 15 testes de unidade das regras que ficam nas entidades e nos enums (régua de risco nas fronteiras de cada cota, lotação do abrigo, prioridade, máquina de estados, encerramento de alerta).
-- 48 testes de integração que sobem a aplicação inteira e chamam a API por HTTP com o MockMvc, passando pela segurança, pelo cache e pelo banco de verdade: status de cada erro, 401 x 403, posse, alerta automático, substituição de alertas, filtros com Specification, links HATEOAS mudando com o estado, invalidação do cache, Actuator, OpenAPI e CORS.
+- 49 testes de integração que sobem a aplicação inteira e chamam a API por HTTP com o MockMvc, passando pela segurança, pelo cache e pelo banco de verdade: status de cada erro, 401 x 403, posse, alerta automático, substituição de alertas, filtros com Specification, links HATEOAS mudando com o estado, invalidação e métricas do cache, Actuator, OpenAPI e CORS.
 
 ## Estrutura do projeto
 
@@ -436,7 +444,7 @@ src/main/java/br/com/fiap/guardario
 └── validation       constraints customizadas
 ```
 
-Stack: Java 17+, Spring Boot 4.1.2 (Spring Web MVC, Data JPA, Validation, Security, Cache, HATEOAS, Actuator), JJWT 0.13.0, springdoc-openapi 3.1.1, Lombok, H2 (perfil dev) e PostgreSQL (perfil prod).
+Stack: Java 17+, Spring Boot 4.1.2 (Spring Web MVC, Data JPA, Validation, Security, Cache, HATEOAS, Actuator), Caffeine, JJWT 0.13.0, springdoc-openapi 3.1.1, Lombok, H2 (perfil dev) e PostgreSQL (perfil prod).
 
 ## Uso de IA generativa
 

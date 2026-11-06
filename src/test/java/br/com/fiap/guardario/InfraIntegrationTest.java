@@ -8,6 +8,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasKey;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -45,6 +46,19 @@ class InfraIntegrationTest extends IntegracaoBase {
         registrarLeitura(estacao, 120, 0.0); // vira ATENCAO: o cache da área sai
         assertThat(cacheManager.getCache("areas").get(area)).isNull();
         mockMvc.perform(get("/api/areas/" + area)).andExpect(jsonPath("$.nivelAtual").value("ATENCAO"));
+    }
+
+    @Test
+    void acertosDoCacheAparecemNasMetricasDoActuator() throws Exception {
+        mockMvc.perform(get("/api/abrigos/disponiveis")).andExpect(status().isOk());
+        mockMvc.perform(get("/api/abrigos/disponiveis")).andExpect(status().isOk()); // essa vem do cache
+
+        mockMvc.perform(get("/actuator/metrics/cache.gets")
+                        .param("tag", "cache:abrigosDisponiveis")
+                        .param("tag", "result:hit")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(tokenAdmin())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.measurements[0].value", greaterThanOrEqualTo(1.0)));
     }
 
     @Test

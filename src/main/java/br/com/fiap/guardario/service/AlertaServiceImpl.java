@@ -14,6 +14,7 @@ import br.com.fiap.guardario.repository.UsuarioRepository;
 import br.com.fiap.guardario.security.SecurityUtils;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
@@ -24,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Comparator;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AlertaServiceImpl implements AlertaService {
@@ -52,6 +54,7 @@ public class AlertaServiceImpl implements AlertaService {
     @Transactional(readOnly = true)
     @Cacheable(cacheNames = "alertasAtivos")
     public List<AlertaResponse> ativos() {
+        log.info("Cache 'alertasAtivos' vazio: consultando o banco");
         return alertaRepository.findByStatusOrderByEmitidoEmDesc(StatusAlerta.ATIVO).stream()
                 .sorted(Comparator.comparingInt((Alerta a) -> a.getNivel().getPeso()).reversed())
                 .map(AlertaMapper::toResponse)
