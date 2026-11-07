@@ -82,6 +82,17 @@ class ErrosPadronizadosIntegrationTest extends IntegracaoBase {
                 .andExpect(jsonPath("$.errors[0].field").value("nivelCm"));
     }
 
+    // ordenar por campo de outra entidade deixaria um anônimo ordenar alertas pelo hash da senha de quem emitiu
+    @Test
+    void ordenacaoSoPorCamposDoProprioRecurso() throws Exception {
+        mockMvc.perform(get("/api/alertas").param("sort", "emitidoPor.senha"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", containsString("emitidoPor.senha")));
+        mockMvc.perform(get("/api/usuarios").param("sort", "senha,desc").header(HttpHeaders.AUTHORIZATION, bearer(tokenAdmin())))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(get("/api/areas").param("sort", "nome,desc")).andExpect(status().isOk());
+    }
+
     // o 403 do SecurityConfig (área de URL) e o do @PreAuthorize têm a mesma mensagem
     @Test
     void forbiddenTemAMesmaMensagemNaUrlENoPreAuthorize() throws Exception {
