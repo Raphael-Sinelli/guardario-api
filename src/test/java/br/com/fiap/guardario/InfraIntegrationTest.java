@@ -112,13 +112,17 @@ class InfraIntegrationTest extends IntegracaoBase {
 
     @Test
     void healthEInfoSaoPublicosEMetricsSoParaAdmin() throws Exception {
+        // público vê só o UP; o detalhe (banco, disco com o caminho da pasta) fica para o ADMIN
         mockMvc.perform(get("/actuator/health"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("UP"))
+                .andExpect(jsonPath("$.components").doesNotExist());
+        mockMvc.perform(get("/actuator/health").header(HttpHeaders.AUTHORIZATION, bearer(tokenAdmin())))
                 .andExpect(jsonPath("$.components.db.status").value("UP"));
         mockMvc.perform(get("/actuator/info"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.app.name").value("GuardaRio API"));
+                .andExpect(jsonPath("$.app.name").value("GuardaRio API"))
+                .andExpect(jsonPath("$.os").doesNotExist());
 
         mockMvc.perform(get("/actuator/metrics")).andExpect(status().isUnauthorized());
         mockMvc.perform(get("/actuator/metrics").header(HttpHeaders.AUTHORIZATION, bearer(tokenCidadao())))
