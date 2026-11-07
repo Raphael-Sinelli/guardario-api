@@ -76,6 +76,10 @@ public class AbrigoServiceImpl implements AbrigoService {
         preencher(abrigo, request);
         // sem ocupacao no corpo, fica a atual: as pessoas que já estão no abrigo não podem sumir num PUT
         if (request.ocupacao() != null) {
+            // RN05: FECHADO não recebe ninguém, nem pelo PUT; diminuir (gente saindo) continua valendo
+            if (abrigo.getStatus() == StatusAbrigo.FECHADO && request.ocupacao() > abrigo.getOcupacao()) {
+                throw new RegraNegocioException("Abrigo fechado não recebe pessoas: reabra o abrigo antes de aumentar a ocupação");
+            }
             abrigo.setOcupacao(request.ocupacao());
         }
         if (abrigo.getOcupacao() > abrigo.getCapacidade()) {

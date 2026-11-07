@@ -48,6 +48,25 @@ class AbrigoIntegrationTest extends IntegracaoBase {
                 .andExpect(status().isConflict());
     }
 
+    // FECHADO não recebe ninguém, nem pelo PUT: aumentar a ocupação de abrigo fechado dá 409; diminuir continua valendo
+    @Test
+    void putNaoColocaPessoasEmAbrigoFechado() throws Exception {
+        long area = criarArea("Área Abrigo Fechado " + sufixoUnico());
+        long abrigo = criarAbrigo(area, 10, 2, true, true);
+        mockMvc.perform(patch("/api/abrigos/" + abrigo + "/status").header(HttpHeaders.AUTHORIZATION, bearer(tokenAgente()))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"status\": \"FECHADO\"}"))
+                .andExpect(status().isOk());
+        String corpo = """
+                {"nome": "Abrigo", "endereco": "Rua 2", "capacidade": 10, "ocupacao": %d,
+                 "aceitaPets": true, "acessivelPcd": true, "areaId": %d}""";
+
+        putJson("/api/abrigos/" + abrigo, corpo.formatted(10, area)).andExpect(status().isConflict());
+        putJson("/api/abrigos/" + abrigo, corpo.formatted(1, area))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.ocupacao").value(1))
+                .andExpect(jsonPath("$.status").value("FECHADO"));
+    }
+
     private org.springframework.test.web.servlet.ResultActions putJson(String url, String json) throws Exception {
         return mockMvc.perform(put(url).header(HttpHeaders.AUTHORIZATION, bearer(tokenAgente()))
                 .contentType(MediaType.APPLICATION_JSON).content(json));
