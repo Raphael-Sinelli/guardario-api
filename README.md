@@ -465,7 +465,16 @@ Stack: Java 17+, Spring Boot 4.1.2 (Spring Web MVC, Data JPA, Validation, Securi
 
 ## Uso de IA generativa
 
-O grupo usou o Claude (Anthropic) como apoio na implementação, na revisão do código e na escrita desta documentação. O código foi revisado e testado pelo grupo, que se responsabiliza por ele e sabe explicar cada parte.
+Raphael usou o Claude Code, assistente de programação da Anthropic, para desenvolver esta API. A proposta do GuardaRio (o problema, as regras de negócio e os papéis) vem do documento de solução do grupo, e os requisitos vêm do enunciado da Global Solution e das convenções da disciplina.
+
+O que o Claude Code fez:
+
+- escreveu o código da API a partir desses requisitos: entidades e relacionamentos, repositórios e consultas, services com as regras de negócio, controllers, segurança com JWT, cache, HATEOAS, tratamento de erros e documentação do Swagger;
+- escreveu os testes de unidade e de integração, este README e a coleção do Postman;
+- conferiu o projeto contra a rubrica do enunciado e corrigiu as lacunas que encontrou;
+- rodou o build, os testes e a coleção do Postman para conferir cada mudança.
+
+Raphael definiu o escopo e as fontes, pediu a auditoria contra a rubrica e decide o que entra na entrega.
 
 ## Referências
 
