@@ -202,6 +202,17 @@ class ErrosPadronizadosIntegrationTest extends IntegracaoBase {
     }
 
     // ordenar por campo de outra entidade deixaria um anônimo ordenar alertas pelo hash da senha de quem emitiu
+    // o nível de risco é texto no banco: ordenar por ele daria ordem alfabética (NORMAL depois de EMERGENCIA)
+    @Test
+    void nivelDeRiscoNaoEntraNaOrdenacao() throws Exception {
+        for (String rota : new String[]{"/api/areas?sort=nivelAtual,desc", "/api/alertas?sort=nivel",
+                "/api/estacoes?sort=ultimoRisco", "/api/estacoes/1/leituras?sort=nivelRisco"}) {
+            mockMvc.perform(get(rota))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.errors[0].field").value("sort"));
+        }
+    }
+
     @Test
     void ordenacaoSoPorCamposDoProprioRecurso() throws Exception {
         mockMvc.perform(get("/api/alertas").param("sort", "emitidoPor.senha"))

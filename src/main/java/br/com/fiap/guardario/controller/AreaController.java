@@ -38,7 +38,8 @@ public class AreaController {
     private final AreaModelAssembler assembler;
     private final PagedResourcesAssembler<AreaResponse> pagedAssembler;
 
-    @CamposDeOrdenacao({"nome", "cidade", "uf", "populacaoEstimada", "nivelAtual", "id"})
+    // sem o nível de risco: ele é gravado como texto (EnumType.STRING), e a ordem alfabética não é a de gravidade
+    @CamposDeOrdenacao({"nome", "cidade", "uf", "populacaoEstimada", "id"})
     @GetMapping
     @SecurityRequirements
     @Operation(summary = "Lista as áreas", description = "Pública, paginada e ordenável (ex.: ?page=0&size=10&sort=nome,asc). Filtro opcional por UF.")

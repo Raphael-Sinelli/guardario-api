@@ -46,7 +46,8 @@ public class EstacaoController {
     private final PagedResourcesAssembler<EstacaoResponse> pagedAssembler;
     private final PagedResourcesAssembler<LeituraResponse> pagedLeituraAssembler;
 
-    @CamposDeOrdenacao({"codigo", "nome", "rio", "status", "ultimoNivelCm", "ultimoRisco", "ultimaLeituraEm", "id"})
+    // sem o nível de risco: ele é gravado como texto (EnumType.STRING), e a ordem alfabética não é a de gravidade
+    @CamposDeOrdenacao({"codigo", "nome", "rio", "status", "ultimoNivelCm", "ultimaLeituraEm", "id"})
     @GetMapping
     @SecurityRequirements
     @Operation(summary = "Lista as estações", description = "Pública, paginada e ordenável. Filtro opcional por área.")
@@ -120,7 +121,8 @@ public class EstacaoController {
 
     // ---------- leituras (recurso aninhado: a estação vem da URL) ----------
 
-    @CamposDeOrdenacao({"medidaEm", "nivelCm", "chuvaMmH", "nivelRisco", "id"})
+    // sem o nível de risco: ele é gravado como texto (EnumType.STRING), e a ordem alfabética não é a de gravidade
+    @CamposDeOrdenacao({"medidaEm", "nivelCm", "chuvaMmH", "id"})
     @GetMapping("/{id}/leituras")
     @SecurityRequirements
     @Operation(summary = "Histórico de leituras da estação", description = "Público, paginado; por padrão da mais recente para a mais antiga.")
