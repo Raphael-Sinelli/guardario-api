@@ -24,6 +24,38 @@ class LeituraAlertaIntegrationTest extends IntegracaoBase {
     }
 
     @Test
+    void leituraCriadaDevolveLocationELinksParaOAlertaGerado() throws Exception {
+        long area = criarArea("Área Location " + sufixoUnico());
+        long estacao = criarEstacao(area);
+
+        var resposta = registrarLeitura(estacao, 250, 0.0)
+                .andExpect(status().isCreated())
+                .andExpect(header().string(HttpHeaders.LOCATION, containsString("/api/estacoes/" + estacao + "/leituras/")))
+                .andExpect(jsonPath("$._links.self.href").exists())
+                .andExpect(jsonPath("$._links.estacao.href", endsWith("/api/estacoes/" + estacao)))
+                .andExpect(jsonPath("$._links.area.href", endsWith("/api/areas/" + area)))
+                .andExpect(jsonPath("$._links.alerta.href", containsString("/api/alertas/")))
+                .andReturn().getResponse();
+        long leitura = id(resposta.getContentAsString(), "$.leitura.id");
+
+        mockMvc.perform(get(resposta.getHeader(HttpHeaders.LOCATION)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(leitura))
+                .andExpect(jsonPath("$.nivelRisco").value("ALERTA"))
+                .andExpect(jsonPath("$._links.self.href", endsWith("/api/estacoes/" + estacao + "/leituras/" + leitura)));
+
+        // leitura sem alerta não tem o link alerta; e cada item da lista tem self
+        registrarLeitura(estacao, 260, 0.0).andExpect(jsonPath("$._links.alerta").doesNotExist());
+        mockMvc.perform(get("/api/estacoes/" + estacao + "/leituras"))
+                .andExpect(jsonPath("$._embedded.leituras[0]._links.self.href").exists());
+
+        // a leitura existe, mas não é desta estação
+        long outraEstacao = criarEstacao(area);
+        mockMvc.perform(get("/api/estacoes/" + outraEstacao + "/leituras/" + leitura))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     void leituraEmAlertaGeraAlertaAutomaticoQueApareceNosAtivos() throws Exception {
         long area = criarArea("Área Alerta " + sufixoUnico());
         long estacao = criarEstacao(area);

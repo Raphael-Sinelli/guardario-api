@@ -50,7 +50,7 @@ Se o wrapper reclamar da versão do Java, confira se `java -version` e a variáv
 Outros comandos:
 
 ```bash
-./mvnw test                                   # roda os 68 testes
+./mvnw test                                   # roda os 69 testes
 ./mvnw clean package                          # gera target/guardario-api-1.0.0.jar
 java -jar target/guardario-api-1.0.0.jar      # roda o jar gerado
 ```
@@ -95,7 +95,7 @@ Sem login dá para consultar áreas, estações, leituras, alertas e abrigos. In
 
 ### Testando com o Postman (ou o Bruno)
 
-A pasta `postman/` tem a coleção `GuardaRio.postman_collection.json`, com 87 requisições em 10 pastas e testes automáticos em cada uma (status esperado e regras de negócio). O Bruno importa o mesmo arquivo.
+A pasta `postman/` tem a coleção `GuardaRio.postman_collection.json`, com 89 requisições em 10 pastas e testes automáticos em cada uma (status esperado e regras de negócio). O Bruno importa o mesmo arquivo.
 
 1. Suba a API e importe o arquivo no Postman.
 2. Rode a pasta **01 Autenticação**: os logins guardam os tokens nas variáveis da coleção, e as outras requisições já usam o token certo para cada papel.
@@ -242,6 +242,8 @@ erDiagram
 |---|---|
 | `UsuarioRepository.findByEmail`, `existsByEmail` | Login, filtro JWT e cadastro sem email repetido |
 | `RelatoRepository.findByAutorId(id, pageable)` | `GET /api/relatos/meus` |
+| `LeituraRepository.findByEstacaoId(id, pageable)` | Histórico de leituras da estação |
+| `LeituraRepository.findByIdAndEstacaoId` | `GET /api/estacoes/{id}/leituras/{leituraId}`: a leitura só aparece pela URL da estação dona dela |
 | `AreaRiscoRepository.findByUfIgnoreCase` | Filtro por estado em `GET /api/areas?uf=RS` |
 | `EstacaoRepository.findByAreaId` (com `@EntityGraph`) | Estações de uma área |
 | `AlertaRepository.findByStatus`, `findByAreaIdAndStatus` | Lista por status e verificação da RN02 |
@@ -299,6 +301,7 @@ As respostas usam o formato HAL. As listas vêm com os itens em `_embedded`, os 
 | Relato | `area`, `meus-relatos` | Para AGENTE ou ADMIN: ABERTO tem `atender` e `descartar`; EM_ATENDIMENTO tem `resolver`. Para o autor, enquanto ABERTO: `editar`, `excluir` |
 | Abrigo | `area`, `abrigos-disponiveis` | Com vaga: `registrar-entrada`. Com gente: `registrar-saida`. Aberto ou lotado: `fechar`. Fechado: `reabrir` |
 | Estação | `area`, `leituras`, `estatisticas-24h` | Estação ATIVA e usuário AGENTE ou ADMIN: `registrar-leitura` |
+| Leitura | `estacao`, `estatisticas-24h`. Na resposta do registro: `estacao`, `area` e, quando a leitura abre um alerta automático, `alerta` | nenhuma: leitura não muda depois de gravada |
 | Área | `estacoes`, `abrigos-com-vaga`, `alertas-ativos` | ADMIN: `atualizar`, `excluir` |
 
 Quem não está logado não recebe link de ação. O link orienta o cliente, mas não substitui a checagem: o servidor confere a permissão em toda requisição.
@@ -396,7 +399,8 @@ Os demais erros seguem o formato `ErrorCustomResponse`:
 | PUT | `/api/estacoes/{id}` | ADMIN | 200 |
 | DELETE | `/api/estacoes/{id}` | ADMIN | 204 |
 | GET | `/api/estacoes/{id}/leituras` | público | 200 |
-| POST | `/api/estacoes/{id}/leituras` | AGENTE, ADMIN | 201 |
+| POST | `/api/estacoes/{id}/leituras` | AGENTE, ADMIN | 201 + Location |
+| GET | `/api/estacoes/{id}/leituras/{leituraId}` | público | 200 |
 | GET | `/api/estacoes/{id}/leituras/estatisticas?horas=24` | público | 200 |
 | GET | `/api/alertas?status=` | público | 200 |
 | GET | `/api/alertas/ativos` | público (cache) | 200 |
@@ -433,10 +437,10 @@ As rotas de listagem aceitam também `page`, `size` e `sort`. A descrição de c
 
 ## Testes
 
-`./mvnw test` roda 68 testes:
+`./mvnw test` roda 69 testes:
 
 - 15 testes de unidade das regras que ficam nas entidades e nos enums (régua de risco nas fronteiras de cada cota, lotação do abrigo, prioridade, máquina de estados, encerramento de alerta).
-- 53 testes de integração que sobem a aplicação inteira e chamam a API por HTTP com o MockMvc, passando pela segurança, pelo cache e pelo banco de verdade: status de cada erro, 401 x 403, posse, alerta automático, substituição de alertas, filtros com Specification, links HATEOAS mudando com o estado, invalidação e métricas do cache, Actuator, OpenAPI e CORS.
+- 54 testes de integração que sobem a aplicação inteira e chamam a API por HTTP com o MockMvc, passando pela segurança, pelo cache e pelo banco de verdade: status de cada erro, 401 x 403, posse, alerta automático, substituição de alertas, filtros com Specification, links HATEOAS mudando com o estado, invalidação e métricas do cache, Actuator, OpenAPI e CORS.
 
 ## Estrutura do projeto
 

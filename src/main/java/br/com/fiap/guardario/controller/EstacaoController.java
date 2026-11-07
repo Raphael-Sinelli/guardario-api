@@ -23,7 +23,6 @@ import org.springframework.hateoas.CollectionModel;
 import org.springframework.hateoas.EntityModel;
 import org.springframework.hateoas.IanaLinkRelations;
 import org.springframework.hateoas.PagedModel;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
@@ -137,14 +136,26 @@ public class EstacaoController {
                     AGENTE ou ADMIN (é a rota que a ponte MQTT chama). O servidor classifica o risco pela régua da estação,
                     sobe um nível com chuva de 50 mm/h ou mais, recalcula o nível da área e, se o risco for ALERTA ou pior,
                     abre um alerta automático. O corpo da resposta traz o alertaGeradoId quando isso acontece.""")
-    @ApiResponse(responseCode = "201", description = "Leitura registrada")
+    @ApiResponse(responseCode = "201", description = "Leitura registrada. O Location aponta para a leitura, e o link alerta aparece quando um alerta automático nasce")
     @ApiResponse(responseCode = "400", description = "Valores fora da faixa ou data no futuro")
     @ApiResponse(responseCode = "403", description = "Usuário logado é CIDADAO")
     @ApiResponse(responseCode = "404", description = "Estação não existe")
     @ApiResponse(responseCode = "409", description = "Estação em MANUTENCAO ou INATIVA")
-    public ResponseEntity<LeituraRegistradaResponse> registrarLeitura(@PathVariable @Positive Long id,
-                                                                      @RequestBody @Valid LeituraRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(leituraService.registrar(id, request));
+    public ResponseEntity<EntityModel<LeituraRegistradaResponse>> registrarLeitura(@PathVariable @Positive Long id,
+                                                                                   @RequestBody @Valid LeituraRequest request) {
+        EntityModel<LeituraRegistradaResponse> model = leituraAssembler.toModel(leituraService.registrar(id, request));
+        return ResponseEntity.created(model.getRequiredLink(IanaLinkRelations.SELF).toUri()).body(model);
+    }
+
+    @GetMapping("/{id}/leituras/{leituraId}")
+    @SecurityRequirements
+    @Operation(summary = "Busca uma leitura da estação", description = "Público. É o endereço do Location devolvido no registro da leitura.")
+    @ApiResponse(responseCode = "200", description = "Leitura encontrada")
+    @ApiResponse(responseCode = "400", description = "Id menor ou igual a zero")
+    @ApiResponse(responseCode = "404", description = "Estação não existe, ou a leitura não existe nesta estação")
+    public ResponseEntity<EntityModel<LeituraResponse>> buscarLeitura(@PathVariable @Positive Long id,
+                                                                      @PathVariable @Positive Long leituraId) {
+        return ResponseEntity.ok(leituraAssembler.toModel(leituraService.buscarPorId(id, leituraId)));
     }
 
     @GetMapping("/{id}/leituras/estatisticas")

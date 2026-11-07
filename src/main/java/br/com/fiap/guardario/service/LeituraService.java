@@ -13,5 +13,7 @@ public interface LeituraService {
 
     Page<LeituraResponse> listar(Long estacaoId, Pageable pageable);
 
+    LeituraResponse buscarPorId(Long estacaoId, Long leituraId);
+
     EstatisticaLeiturasResponse estatisticas(Long estacaoId, int horas);
 }

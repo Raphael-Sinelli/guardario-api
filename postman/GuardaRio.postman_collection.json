@@ -488,6 +488,8 @@
                   "pm.test(\"Risco EMERGENCIA pela régua da estação\", () => pm.expect(r.leitura.nivelRisco).to.eql(\"EMERGENCIA\"));",
                   "pm.test(\"Alerta automático gerado\", () => pm.expect(r.alertaGeradoId).to.be.a(\"number\"));",
                   "pm.test(\"Nível da área mudou\", () => pm.expect(r.nivelAreaAlterado).to.eql(true));",
+                  "pm.test(\"Location aponta para a leitura\", () => pm.expect(pm.response.headers.get(\"Location\")).to.include(\"/api/estacoes/1/leituras/\"));",
+                  "pm.test(\"Link HATEOAS para o alerta gerado\", () => pm.expect(r._links.alerta.href).to.include(\"/api/alertas/\" + r.alertaGeradoId));",
                   "pm.collectionVariables.set(\"alertaId\", r.alertaGeradoId);"
                 ]
               }
@@ -1426,7 +1428,8 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Cada leitura tem link self\", () => pm.response.json()._embedded.leituras.forEach(l => pm.expect(l._links.self.href).to.include(\"/leituras/\")));"
                 ]
               }
             }
@@ -1577,7 +1580,79 @@
                 "exec": [
                   "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
                   "pm.test(\"NORMAL\", () => pm.expect(pm.response.json().leitura.nivelRisco).to.eql(\"NORMAL\"));",
-                  "pm.test(\"Sem alerta\", () => pm.expect(pm.response.json().alertaGeradoId).to.eql(null));"
+                  "pm.test(\"Sem alerta\", () => pm.expect(pm.response.json().alertaGeradoId).to.eql(null));",
+                  "pm.test(\"Header Location\", () => pm.expect(pm.response.headers.get(\"Location\")).to.include(\"/leituras/\" + pm.response.json().leitura.id));",
+                  "pm.collectionVariables.set(\"leituraId\", pm.response.json().leitura.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Buscar a leitura criada (endereço do Location)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/estacoes/{{estacaoId}}/leituras/{{leituraId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "estacoes",
+                "{{estacaoId}}",
+                "leituras",
+                "{{leituraId}}"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Mesma leitura\", () => pm.expect(pm.response.json().nivelCm).to.eql(50));",
+                  "pm.test(\"Link para a estação\", () => pm.expect(pm.response.json()._links).to.have.property(\"estacao\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Leitura buscada pela estação errada (404)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/estacoes/1/leituras/{{leituraId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "estacoes",
+                "1",
+                "leituras",
+                "{{leituraId}}"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 404\", () => pm.response.to.have.status(404));"
                 ]
               }
             }

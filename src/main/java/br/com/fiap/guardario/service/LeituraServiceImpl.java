@@ -82,6 +82,15 @@ public class LeituraServiceImpl implements LeituraService {
 
     @Override
     @Transactional(readOnly = true)
+    public LeituraResponse buscarPorId(Long estacaoId, Long leituraId) {
+        garantirQueEstacaoExiste(estacaoId);
+        return leituraRepository.findByIdAndEstacaoId(leituraId, estacaoId)
+                .map(LeituraMapper::toResponse)
+                .orElseThrow(() -> new ResourceNotFoundException("leitura", leituraId));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public EstatisticaLeiturasResponse estatisticas(Long estacaoId, int horas) {
         garantirQueEstacaoExiste(estacaoId);
         Instant desde = Instant.now().minus(horas, ChronoUnit.HOURS);
