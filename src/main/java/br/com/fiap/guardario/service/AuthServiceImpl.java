@@ -15,6 +15,7 @@ import br.com.fiap.guardario.repository.UsuarioRepository;
 import br.com.fiap.guardario.security.JwtService;
 import br.com.fiap.guardario.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -55,7 +56,13 @@ public class AuthServiceImpl implements AuthService {
             usuario.setArea(area);
         }
 
-        return UsuarioMapper.toResponse(usuarioRepository.save(usuario));
+        // dois cadastros simultâneos com o mesmo email passam pelo existsByEmail juntos; o índice único do banco
+        // barra o segundo, e o flush aqui dentro transforma isso no mesmo 409 da regra, com a mensagem certa
+        try {
+            return UsuarioMapper.toResponse(usuarioRepository.saveAndFlush(usuario));
+        } catch (DataIntegrityViolationException e) {
+            throw new EmailJaCadastradoException(email);
+        }
     }
 
     @Override

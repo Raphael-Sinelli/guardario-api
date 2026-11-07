@@ -53,6 +53,26 @@ class ConcorrenciaIntegrationTest extends IntegracaoBase {
         }
     }
 
+    // dez cadastros com o mesmo email ao mesmo tempo: um entra, os outros recebem 409 com a mensagem da regra
+    @Test
+    void cadastrosSimultaneosComOMesmoEmailDevolvemAMensagemDaRegra() throws Exception {
+        String email = "simultaneo" + sufixoUnico().toLowerCase() + "@email.com";
+        List<String> respostas = new ArrayList<>();
+        List<Integer> codigos = emParalelo(10, () -> {
+            var resposta = postJson("/api/auth/register", null, """
+                    {"nome": "Pessoa", "email": "%s", "senha": "Senha@123"}""".formatted(email)).andReturn().getResponse();
+            synchronized (respostas) {
+                respostas.add(resposta.getContentAsString());
+            }
+            return resposta.getStatus();
+        });
+
+        assertThat(codigos).filteredOn(codigo -> codigo == 201).hasSize(1);
+        assertThat(codigos).filteredOn(codigo -> codigo == 409).hasSize(9);
+        assertThat(respostas).filteredOn(corpo -> corpo.contains("\"status\":409"))
+                .allMatch(corpo -> corpo.contains("Já existe um cadastro com o email"));
+    }
+
     private int mudarStatus(long relato, String status, String token) throws Exception {
         return mockMvc.perform(patch("/api/relatos/" + relato + "/status").header(HttpHeaders.AUTHORIZATION, bearer(token))
                         .contentType(MediaType.APPLICATION_JSON).content("{\"status\": \"" + status + "\"}"))
