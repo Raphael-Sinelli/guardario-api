@@ -2,11 +2,13 @@ package br.com.fiap.guardario;
 
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.request;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -69,6 +71,20 @@ class MatrizDeAutorizacaoIntegrationTest extends IntegracaoBase {
                     .andExpect(status().isForbidden())
                     .andExpect(jsonPath("$.status").value(403));
         }
+    }
+
+    // o outro lado da matriz: informação de segurança (nível do rio, alertas e abrigos) responde sem login
+    @ParameterizedTest(name = "{0} sem token")
+    @ValueSource(strings = {
+            "/api/areas", "/api/areas/1", "/api/areas/ranking",
+            "/api/estacoes", "/api/estacoes/1", "/api/estacoes/criticas",
+            "/api/estacoes/1/leituras", "/api/estacoes/1/leituras/estatisticas",
+            "/api/alertas", "/api/alertas/ativos",
+            "/api/abrigos", "/api/abrigos/1", "/api/abrigos/disponiveis",
+            "/actuator/health", "/actuator/info", "/v3/api-docs"
+    })
+    void rotaPublicaRespondeSemToken(String rota) throws Exception {
+        mockMvc.perform(get(rota)).andExpect(status().isOk());
     }
 
     private MockHttpServletRequestBuilder requisicao(String metodo, String rota, String token) {
