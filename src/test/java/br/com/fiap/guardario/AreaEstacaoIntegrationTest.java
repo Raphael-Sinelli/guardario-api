@@ -100,6 +100,21 @@ class AreaEstacaoIntegrationTest extends IntegracaoBase {
         mockMvc.perform(get("/api/alertas").param("status", "XYZ")).andExpect(status().isBadRequest());
     }
 
+    // o Postman manda "Text" quando o tipo do body raw não é trocado para JSON
+    @Test
+    void corpoQueNaoEhJsonDevolve415NoFormatoPadrao() throws Exception {
+        mockMvc.perform(post("/api/areas")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(tokenAdmin()))
+                        .contentType(MediaType.TEXT_PLAIN)
+                        .content("{\"nome\": \"Vila Texto\", \"cidade\": \"Guarulhos\", \"uf\": \"SP\"}"))
+                .andExpect(status().isUnsupportedMediaType())
+                .andExpect(jsonPath("$.status").value(415))
+                .andExpect(jsonPath("$.message", containsString("application/json")));
+
+        mockMvc.perform(post("/api/auth/login").content("{\"email\": \"a@b.com\", \"senha\": \"x\"}"))
+                .andExpect(status().isUnsupportedMediaType());
+    }
+
     @Test
     void areaComEstacaoNaoPodeSerExcluida() throws Exception {
         long area = criarArea("Área Vinculada " + sufixoUnico());

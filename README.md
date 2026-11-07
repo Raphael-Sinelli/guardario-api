@@ -50,7 +50,7 @@ Se o wrapper reclamar da versão do Java, confira se `java -version` e a variáv
 Outros comandos:
 
 ```bash
-./mvnw test                                   # roda os 64 testes
+./mvnw test                                   # roda os 65 testes
 ./mvnw clean package                          # gera target/guardario-api-1.0.0.jar
 java -jar target/guardario-api-1.0.0.jar      # roda o jar gerado
 ```
@@ -368,6 +368,7 @@ Os demais erros seguem o formato `ErrorCustomResponse`:
 | 403 | Papel sem permissão ou recurso de outra pessoa |
 | 404 | Id inexistente ou rota que não existe |
 | 405 | Método HTTP que a rota não aceita |
+| 415 | Corpo enviado sem `Content-Type: application/json` (no Postman, body raw como "Text") |
 | 409 | Regra de negócio: email repetido, transição de status inválida, abrigo lotado ou fechado, alerta já encerrado, exclusão de registro com vínculos |
 | 500 | Erro inesperado: o detalhe fica no log e o cliente recebe uma mensagem genérica |
 
@@ -431,10 +432,10 @@ As rotas de listagem aceitam também `page`, `size` e `sort`. A descrição de c
 
 ## Testes
 
-`./mvnw test` roda 64 testes:
+`./mvnw test` roda 65 testes:
 
 - 15 testes de unidade das regras que ficam nas entidades e nos enums (régua de risco nas fronteiras de cada cota, lotação do abrigo, prioridade, máquina de estados, encerramento de alerta).
-- 49 testes de integração que sobem a aplicação inteira e chamam a API por HTTP com o MockMvc, passando pela segurança, pelo cache e pelo banco de verdade: status de cada erro, 401 x 403, posse, alerta automático, substituição de alertas, filtros com Specification, links HATEOAS mudando com o estado, invalidação e métricas do cache, Actuator, OpenAPI e CORS.
+- 50 testes de integração que sobem a aplicação inteira e chamam a API por HTTP com o MockMvc, passando pela segurança, pelo cache e pelo banco de verdade: status de cada erro, 401 x 403, posse, alerta automático, substituição de alertas, filtros com Specification, links HATEOAS mudando com o estado, invalidação e métricas do cache, Actuator, OpenAPI e CORS.
 
 ## Estrutura do projeto
 

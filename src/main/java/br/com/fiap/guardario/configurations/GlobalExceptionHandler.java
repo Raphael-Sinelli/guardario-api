@@ -19,6 +19,8 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.method.ParameterErrors;
 import org.springframework.validation.method.ParameterValidationResult;
+import org.springframework.web.ErrorResponse;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
@@ -160,6 +162,13 @@ public class GlobalExceptionHandler {
         return erro(HttpStatus.METHOD_NOT_ALLOWED, "Método " + ex.getMethod() + " não é aceito nesta rota", request);
     }
 
+    // corpo enviado como texto ou sem Content-Type
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<ErrorCustomResponse> tipoDeMidiaNaoSuportado(HttpMediaTypeNotSupportedException ex, HttpServletRequest request) {
+        return erro(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
+                "Envie o corpo em JSON, com o header Content-Type: application/json", request);
+    }
+
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<ErrorCustomResponse> statusExplicito(ResponseStatusException ex, HttpServletRequest request) {
         return erro(ex.getStatusCode(), ex.getReason(), request);
@@ -168,6 +177,11 @@ public class GlobalExceptionHandler {
     // erro não previsto: loga o stack trace, mas não vaza detalhes para o cliente
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorCustomResponse> erroInesperado(Exception ex, HttpServletRequest request) {
+        // exceções do Spring MVC que não têm handler acima já sabem o próprio status (406, por exemplo): não viram 500
+        if (ex instanceof ErrorResponse erroDoSpring) {
+            HttpStatusCode status = erroDoSpring.getStatusCode();
+            return erro(status, HttpStatus.valueOf(status.value()).getReasonPhrase(), request);
+        }
         log.error("Erro inesperado em {} {}", request.getMethod(), request.getRequestURI(), ex);
         return erro(HttpStatus.INTERNAL_SERVER_ERROR, "Erro interno. Tente novamente em instantes", request);
     }
