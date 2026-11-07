@@ -27,9 +27,15 @@ public class JwtService {
 
     public JwtService(@Value("${app.jwt.secret:}") String segredo,
                       @Value("${app.jwt.expiration-seconds:3600}") long expiracaoSegundos,
-                      @Value("${app.jwt.chave-temporaria-esperada:false}") boolean chaveTemporariaEsperada) {
+                      @Value("${app.jwt.chave-temporaria-esperada:false}") boolean chaveTemporariaEsperada,
+                      @Value("${app.jwt.chave-obrigatoria:false}") boolean chaveObrigatoria) {
         this.expiracaoSegundos = expiracaoSegundos;
 
+        if ((segredo == null || segredo.isBlank()) && chaveObrigatoria) {
+            // perfil prod: uma chave aleatória invalidaria todos os tokens a cada reinício e não serviria para mais de
+            // uma instância. Melhor não subir do que subir errado
+            throw new IllegalStateException("JWT_SECRET é obrigatório no perfil prod: defina a variável com 32 caracteres ou mais");
+        }
         if (segredo == null || segredo.isBlank()) {
             // nenhuma chave fica no repositório; sem JWT_SECRET, cada subida gera uma chave nova
             this.chave = Jwts.SIG.HS256.key().build();

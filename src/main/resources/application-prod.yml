@@ -12,6 +12,9 @@ spring:
 app:
   seed:
     enabled: ${SEED_ENABLED:false}
+  jwt:
+    # em produção a chave vem sempre de JWT_SECRET: sem ela, a aplicação não sobe
+    chave-obrigatoria: true
 
 # documentação desligada em produção (recomendação da semana 9); SWAGGER_ENABLED=true liga para uma demonstração
 springdoc:

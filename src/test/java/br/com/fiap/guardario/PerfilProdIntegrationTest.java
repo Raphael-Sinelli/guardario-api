@@ -19,7 +19,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "spring.datasource.username=sa",
         "spring.datasource.password=",
         "app.admin.email=admin.prod@guardario.com",
-        "app.admin.password=Senha-De-Producao-1"
+        "app.admin.password=Senha-De-Producao-1",
+        "app.jwt.secret=chave-so-deste-teste-com-mais-de-32-caracteres" // no prod a chave é obrigatória
 })
 class PerfilProdIntegrationTest extends IntegracaoBase {
 
