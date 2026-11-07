@@ -67,6 +67,7 @@ Nenhuma é obrigatória no perfil `dev`. O arquivo `.env.example` lista todas; o
 | `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` | Banco do perfil `prod` | `DB_PASSWORD` não tem padrão |
 | `SEED_ENABLED` | Carga de dados de demonstração | `true` no dev, `false` no prod |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD` | Primeiro ADMIN do perfil `prod`, criado na subida pelo `AdminInitializer` se o email ainda não existir (senha de 8 a 72 caracteres) | sem valor: nenhum ADMIN é criado |
+| `SWAGGER_ENABLED` | Liga o Swagger UI e o `/v3/api-docs` no perfil `prod` | `false` no prod (no dev o Swagger está sempre ligado) |
 | `PORT` | Porta HTTP | `8080` |
 
 ## Usuários de teste por papel

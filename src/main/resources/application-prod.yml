@@ -12,3 +12,10 @@ spring:
 app:
   seed:
     enabled: ${SEED_ENABLED:false}
+
+# documentação desligada em produção (recomendação da semana 9); SWAGGER_ENABLED=true liga para uma demonstração
+springdoc:
+  api-docs:
+    enabled: ${SWAGGER_ENABLED:false}
+  swagger-ui:
+    enabled: ${SWAGGER_ENABLED:false}
