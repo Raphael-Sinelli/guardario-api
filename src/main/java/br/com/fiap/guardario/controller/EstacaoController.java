@@ -58,7 +58,7 @@ public class EstacaoController {
 
     @GetMapping("/{id}")
     @SecurityRequirements
-    @Operation(summary = "Busca uma estação pelo id")
+    @Operation(summary = "Busca uma estação pelo id", description = "Público. Traz as cotas, a última leitura e o risco atual; AGENTE e ADMIN recebem o link registrar-leitura se a estação estiver ATIVA.")
     @ApiResponse(responseCode = "200", description = "Estação encontrada")
     @ApiResponse(responseCode = "400", description = "Id menor ou igual a zero")
     @ApiResponse(responseCode = "404", description = "Estação não existe")

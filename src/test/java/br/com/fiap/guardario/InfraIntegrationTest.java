@@ -104,13 +104,17 @@ class InfraIntegrationTest extends IntegracaoBase {
     // quem declara @ApiResponse perde os códigos automáticos do springdoc, então o 401 e o 400 precisam ser conferidos
     @Test
     @SuppressWarnings("unchecked")
-    void swaggerDocumenta401NasRotasProtegidasE400NasRotasComParametro() throws Exception {
+    void swaggerDescreveTodaRotaComO401DasProtegidasEO400DasComParametro() throws Exception {
         String json = mockMvc.perform(get("/v3/api-docs")).andReturn().getResponse().getContentAsString();
         Map<String, Map<String, Map<String, Object>>> rotas = JsonPath.read(json, "$.paths");
         List<String> semO401 = new ArrayList<>();
         List<String> semO400 = new ArrayList<>();
+        List<String> semDescricao = new ArrayList<>();
 
         rotas.forEach((rota, operacoes) -> operacoes.forEach((metodo, operacao) -> {
+            if (operacao.get("summary") == null || operacao.get("description") == null) {
+                semDescricao.add(metodo.toUpperCase() + " " + rota);
+            }
             Map<String, Object> respostas = (Map<String, Object>) operacao.get("responses");
             boolean publica = operacao.get("security") instanceof List<?> seguranca && seguranca.isEmpty();
             if (!publica && !respostas.containsKey("401")) {
@@ -121,6 +125,7 @@ class InfraIntegrationTest extends IntegracaoBase {
             }
         }));
 
+        assertThat(semDescricao).isEmpty();
         assertThat(semO401).isEmpty();
         assertThat(semO400).isEmpty();
         mockMvc.perform(get("/v3/api-docs"))

@@ -45,7 +45,7 @@ public class UsuarioController {
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Busca um usuário pelo id")
+    @Operation(summary = "Busca um usuário pelo id", description = "Somente ADMIN. A resposta não traz a senha.")
     @ApiResponse(responseCode = "200", description = "Usuário encontrado")
     @ApiResponse(responseCode = "400", description = "Id menor ou igual a zero")
     @ApiResponse(responseCode = "403", description = "Usuário logado não é ADMIN")

@@ -52,7 +52,7 @@ public class AuthController {
     }
 
     @GetMapping("/me")
-    @Operation(summary = "Dados do usuário dono do token")
+    @Operation(summary = "Dados do usuário dono do token", description = "Qualquer usuário logado. O app usa para saber o nome e o papel de quem entrou; a senha nunca aparece.")
     @ApiResponse(responseCode = "200", description = "Usuário logado")
     @ApiResponse(responseCode = "401", description = "Sem token, ou token inválido ou expirado")
     public ResponseEntity<UsuarioResponse> me() {
