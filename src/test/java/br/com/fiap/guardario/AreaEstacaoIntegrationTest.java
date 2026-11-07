@@ -1,6 +1,8 @@
 package br.com.fiap.guardario;
 
 import com.jayway.jsonpath.JsonPath;
+import br.com.fiap.guardario.model.Estacao;
+import br.com.fiap.guardario.repository.EstacaoRepository;
 import jakarta.persistence.EntityManagerFactory;
 import org.hibernate.SessionFactory;
 import org.hibernate.stat.Statistics;
@@ -8,7 +10,11 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -20,6 +26,12 @@ class AreaEstacaoIntegrationTest extends IntegracaoBase {
 
     @Autowired
     private EntityManagerFactory entityManagerFactory;
+
+    @Autowired
+    private EstacaoRepository estacaoRepository;
+
+    @Autowired
+    private PlatformTransactionManager transactionManager;
 
     @Test
     void listaDeAreasEhPublicaPaginadaEComLinks() throws Exception {
@@ -196,6 +208,59 @@ class AreaEstacaoIntegrationTest extends IntegracaoBase {
                 .andExpect(jsonPath("$.ultimoRisco").value("NORMAL"));
         mockMvc.perform(get("/api/areas/" + area)).andExpect(jsonPath("$.nivelAtual").value("NORMAL"));
         mockMvc.perform(get("/api/estacoes/criticas")).andExpect(jsonPath("$._embedded.estacoes[*].id", not(hasItem((int) estacao))));
+    }
+
+    // RN02 vale também quando a régua muda: se a leitura atual passa a ser ALERTA ou pior, nasce o alerta automático
+    @Test
+    void baixarAsCotasAteOAlertaAbreOAlertaAutomatico() throws Exception {
+        long area = criarArea("Área Cotas Baixas " + sufixoUnico());
+        long estacao = criarEstacao(area);
+        registrarLeitura(estacao, 150, 0.0).andExpect(jsonPath("$.alertaGeradoId").value(nullValue()));
+
+        atualizarCotas(estacao, area, 50, 100, 140)
+                .andExpect(jsonPath("$.ultimoRisco").value("EMERGENCIA"));
+        mockMvc.perform(get("/api/alertas/ativos"))
+                .andExpect(jsonPath("$._embedded.alertas[?(@.areaId == %d)].nivel".formatted(area), hasItem("EMERGENCIA")));
+
+        // a Defesa Civil encerra o alerta; mexer na estação sem subir o risco não reabre outro
+        String ativos = mockMvc.perform(get("/api/alertas/ativos")).andReturn().getResponse().getContentAsString();
+        List<Integer> ids = JsonPath.read(ativos, "$._embedded.alertas[?(@.areaId == %d)].id".formatted(area));
+        mockMvc.perform(patch("/api/alertas/" + ids.get(0) + "/encerrar").header(HttpHeaders.AUTHORIZATION, bearer(tokenAgente())))
+                .andExpect(status().isOk());
+        atualizarCotas(estacao, area, 50, 100, 140);
+        mockMvc.perform(get("/api/alertas/ativos"))
+                .andExpect(jsonPath("$._embedded.alertas[?(@.areaId == %d)]".formatted(area), empty()));
+    }
+
+    // estação reativada depois de muito tempo parada não devolve à área um risco velho: o risco fica desconhecido
+    // até a próxima leitura, e a estação aparece como sem leitura
+    @Test
+    void estacaoReativadaComLeituraAntigaNaoDevolveRiscoVelhoParaAArea() throws Exception {
+        long area = criarArea("Área Reativada " + sufixoUnico());
+        long estacao = criarEstacao(area);
+        registrarLeitura(estacao, 250, 0.0).andExpect(jsonPath("$.leitura.nivelRisco").value("ALERTA"));
+        atualizarEstacao(estacao, area, "MANUTENCAO");
+        new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
+            Estacao parada = estacaoRepository.findById(estacao).orElseThrow();
+            parada.setUltimaLeituraEm(Instant.now().minus(Duration.ofDays(3)));
+        });
+
+        atualizarEstacao(estacao, area, "ATIVA");
+        mockMvc.perform(get("/api/estacoes/" + estacao)).andExpect(jsonPath("$.ultimoRisco").value(nullValue()));
+        mockMvc.perform(get("/api/areas/" + area)).andExpect(jsonPath("$.nivelAtual").value("NORMAL"));
+    }
+
+    private org.springframework.test.web.servlet.ResultActions atualizarCotas(long estacao, long area, int atencao, int alerta,
+                                                                               int transbordo) throws Exception {
+        String codigo = JsonPath.read(mockMvc.perform(get("/api/estacoes/" + estacao))
+                .andReturn().getResponse().getContentAsString(), "$.codigo");
+        return mockMvc.perform(put("/api/estacoes/" + estacao).header(HttpHeaders.AUTHORIZATION, bearer(tokenAdmin()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"codigo": "%s", "nome": "Estação de teste", "rio": "Rio Teste", "cotaAtencaoCm": %d,
+                                 "cotaAlertaCm": %d, "cotaTransbordoCm": %d, "areaId": %d}"""
+                                .formatted(codigo, atencao, alerta, transbordo, area)))
+                .andExpect(status().isOk());
     }
 
     @Test

@@ -33,6 +33,7 @@ public class EstacaoServiceImpl implements EstacaoService {
     private final AreaRiscoRepository areaRepository;
     private final AlertaRepository alertaRepository;
     private final LeituraRepository leituraRepository;
+    private final AlertaService alertaService;
 
     @Override
     @Transactional(readOnly = true)
@@ -88,10 +89,17 @@ public class EstacaoServiceImpl implements EstacaoService {
             throw new RegraNegocioException("Já existe uma estação com o código " + codigo);
         }
         AreaRisco areaAnterior = estacao.getArea();
+        boolean estavaAtiva = estacao.isAtiva();
         estacao.setCodigo(codigo);
         preencher(estacao, request); // último nível e último risco não mudam aqui: vêm das leituras
 
+        // reativada depois de mais de 1 hora parada: o último risco é velho e não volta para a área
+        if (!estavaAtiva && estacao.isAtiva() && !estacao.leituraAtualEhRecente()) {
+            estacao.esquecerUltimaLeitura();
+        }
+
         // com as cotas novas, o último risco pode mudar na hora, sem esperar a próxima leitura
+        NivelRisco riscoAnterior = estacao.getUltimoRisco();
         if (estacao.getUltimaLeituraEm() != null) {
             leituraRepository.findFirstByEstacaoIdAndMedidaEm(estacao.getId(), estacao.getUltimaLeituraEm())
                     .ifPresent(ultima -> estacao.reclassificarUltimaLeitura(ultima.getChuvaMmH()));
@@ -104,6 +112,16 @@ public class EstacaoServiceImpl implements EstacaoService {
             areaAnterior.recalcularNivel();
         }
         areaNova.recalcularNivel();
+
+        // RN02 também quando a régua muda: se a leitura atual, ainda recente, SUBIU para ALERTA ou pior por causa das
+        // cotas novas, nasce o alerta automático. Só quando sobe: renomear a estação não reabre um alerta que a Defesa
+        // Civil já encerrou. A área é travada como no registro de leitura, para não cruzar com uma leitura chegando
+        NivelRisco riscoAtual = estacao.getUltimoRisco();
+        boolean subiu = riscoAtual != null && (riscoAnterior == null || riscoAtual.getPeso() > riscoAnterior.getPeso());
+        if (estacao.isAtiva() && estacao.leituraAtualEhRecente() && subiu && riscoAtual.maiorOuIgualA(NivelRisco.ALERTA)) {
+            areaRepository.buscarComTrava(areaNova.getId());
+            alertaService.gerarAutomatico(estacao, estacao.getUltimoRisco(), estacao.getUltimoNivelCm());
+        }
         return EstacaoMapper.toResponse(estacao);
     }
 

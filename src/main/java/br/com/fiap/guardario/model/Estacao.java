@@ -120,6 +120,19 @@ public class Estacao {
         }
     }
 
+    // a leitura atual ainda descreve o rio de agora (é da última 1 hora)?
+    public boolean leituraAtualEhRecente() {
+        return ultimaLeituraEm != null && !ultimaLeituraEm.isBefore(Instant.now().minus(JANELA_LEITURA_ATUAL));
+    }
+
+    // estação que volta a funcionar depois de muito tempo parada: o último risco é velho e não descreve o rio de agora;
+    // fica desconhecido até a próxima leitura (e a estação aparece como sem leitura)
+    public void esquecerUltimaLeitura() {
+        ultimoNivelCm = null;
+        ultimoRisco = null;
+        ultimaLeituraEm = null;
+    }
+
     public boolean isAtiva() {
         return status == StatusEstacao.ATIVA;
     }
