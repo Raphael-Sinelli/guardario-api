@@ -131,6 +131,10 @@ public class GlobalExceptionHandler {
     // sai como erro de campo, no mesmo formato da Bean Validation. JSON quebrado não tem campo, então sai no formato padrão.
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<?> corpoIlegivel(HttpMessageNotReadableException ex, HttpServletRequest request) {
+        // POST ou PUT sem corpo (ou com "null"): falta o corpo, não é JSON mal formado
+        if (ex.getMessage() != null && ex.getMessage().startsWith("Required request body is missing")) {
+            return erro(HttpStatus.BAD_REQUEST, "O corpo da requisição é obrigatório: envie o JSON com os campos da rota", request);
+        }
         if (ex.getCause() instanceof JacksonException erro && !erro.getPath().isEmpty()) {
             String motivo = erro instanceof MismatchedInputException desencontro ? motivo(desencontro.getTargetType())
                     : erro instanceof InputCoercionException ? "número fora do intervalo aceito pelo campo"
