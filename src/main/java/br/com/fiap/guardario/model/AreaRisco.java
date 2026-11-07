@@ -23,6 +23,11 @@ public class AreaRisco {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    // bloqueio otimista: duas requisições alterando este registro ao mesmo tempo não gravam uma por cima da outra;
+    // a segunda recebe 409 (OptimisticLockingFailureException no GlobalExceptionHandler)
+    @Version
+    private Long versao;
+
     @Column(nullable = false, length = 120)
     private String nome;
 

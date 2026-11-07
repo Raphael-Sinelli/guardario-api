@@ -147,6 +147,7 @@ erDiagram
     }
     AreaRisco {
         bigint id PK
+        bigint versao "bloqueio otimista"
         varchar nome
         varchar cidade
         varchar uf
@@ -157,6 +158,7 @@ erDiagram
     }
     Estacao {
         bigint id PK
+        bigint versao "bloqueio otimista"
         varchar codigo UK
         varchar nome
         varchar rio
@@ -181,6 +183,7 @@ erDiagram
     }
     Alerta {
         bigint id PK
+        bigint versao "bloqueio otimista"
         varchar nivel
         varchar titulo
         varchar mensagem
@@ -207,6 +210,7 @@ erDiagram
     }
     Relato {
         bigint id PK
+        bigint versao "bloqueio otimista"
         varchar tipo
         varchar descricao
         int prioridade "1 a 5"
@@ -234,7 +238,7 @@ erDiagram
 
 **DTOs.** O controller nunca recebe nem devolve entidade. Os records de resposta levam só o id do pai (`areaId`, `estacaoId`, `autorId`), o que evita ciclo na serialização e não expõe o hash da senha. `spring.jpa.open-in-view` está desligado, então todo mapeamento para DTO acontece dentro do `@Transactional` do service.
 
-**Outros detalhes.** Enums gravados como texto (`EnumType.STRING`), datas em `Instant` (UTC) e índice em `leitura(estacao_id, medida_em)`, que é a busca do histórico. O `Abrigo` tem `@Version` (bloqueio otimista): durante a cheia vários agentes registram entradas no mesmo abrigo ao mesmo tempo, e sem a versão o segundo UPDATE sobrescreveria o primeiro, perdendo uma entrada já confirmada. Com ela, a requisição que perde a corrida recebe 409 e tenta de novo. Nas leituras, a concorrência é resolvida com trava pessimista (`@Lock(PESSIMISTIC_WRITE)`, um `SELECT ... FOR UPDATE`): o registro da leitura trava a estação e depois a área, e o alerta manual trava a área. Assim, leituras simultâneas da mesma área entram uma de cada vez, o nível da área não se perde (RN03) e não nascem dois alertas automáticos iguais (RN02). Aqui a trava é melhor que o 409, porque a estação não deve ter uma leitura recusada só por ter chegado junto com outra.
+**Outros detalhes.** Enums gravados como texto (`EnumType.STRING`), datas em `Instant` (UTC) e índice em `leitura(estacao_id, medida_em)`, que é a busca do histórico. `Abrigo`, `Alerta`, `Relato`, `Estacao` e `AreaRisco` têm `@Version` (bloqueio otimista): durante a cheia vários agentes mexem no mesmo registro ao mesmo tempo (entradas no abrigo, encerrar um alerta, atender ou descartar um relato), e sem a versão o segundo UPDATE gravaria por cima do primeiro. Com ela, a requisição que perde a corrida recebe 409 e vê o estado novo. Nas leituras, a concorrência é resolvida com trava pessimista (`@Lock(PESSIMISTIC_WRITE)`, um `SELECT ... FOR UPDATE`): o registro da leitura trava a estação e depois a área, e o alerta manual trava a área. Assim, leituras simultâneas da mesma área entram uma de cada vez, o nível da área não se perde (RN03) e não nascem dois alertas automáticos iguais (RN02). Aqui a trava é melhor que o 409, porque a estação não deve ter uma leitura recusada só por ter chegado junto com outra.
 
 ## Consultas: por que cada tipo
 
@@ -378,7 +382,7 @@ Os demais erros seguem o formato `ErrorCustomResponse`:
 | 403 | Papel sem permissão (mesma mensagem no `SecurityConfig` e no `@PreAuthorize`) ou recurso de outra pessoa (a mensagem diz o motivo) |
 | 404 | Id inexistente, ou rota que não existe quando a requisição tem token. Sem token, a rota desconhecida dá 401: toda rota fora da lista pública exige login, e a segurança responde antes de o Spring procurar a rota |
 | 405 | Método HTTP que a rota não aceita |
-| 409 | Regra de negócio: email repetido, transição de status inválida, abrigo lotado ou fechado, alerta já encerrado, exclusão de registro com vínculos, ou duas requisições alterando o mesmo abrigo ao mesmo tempo |
+| 409 | Regra de negócio: email repetido, transição de status inválida, abrigo lotado ou fechado, alerta já encerrado, exclusão de registro com vínculos, ou duas requisições alterando o mesmo registro ao mesmo tempo |
 | 415 | Corpo enviado sem `Content-Type: application/json` (no Postman, body raw como "Text") |
 | 500 | Erro inesperado: o detalhe fica no log e o cliente recebe uma mensagem genérica |
 
