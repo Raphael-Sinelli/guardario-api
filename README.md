@@ -267,7 +267,7 @@ erDiagram
 | `RelatoSpecification.comFiltros` | `GET /api/relatos` | tipo, status, área, prioridade mínima, criado a partir de, criado até |
 | `AbrigoSpecification.comFiltros` | `GET /api/abrigos` | área, aceita pets, acessível para PcD, com vagas (compara as colunas `ocupacao < capacidade`; `comVagas=false` traz os lotados ou fechados), status |
 
-**Paginação e ordenação.** As listas recebem `Pageable` do Spring Data (`?page=0&size=10&sort=nome,asc`) com padrão definido em `@PageableDefault` e no máximo 100 itens por página. Campo de ordenação que não existe devolve 400, e o `OrdenacaoConfig` só deixa ordenar pelos campos do próprio recurso: `?sort=emitidoPor.senha` ordenaria alertas pelo hash da senha de quem emitiu, numa rota pública. O painel de relatos ordena por padrão pela maior prioridade e, no empate, pelo mais antigo.
+**Paginação e ordenação.** As listas recebem `Pageable` do Spring Data (`?page=0&size=10&sort=nome,asc`) com padrão definido em `@PageableDefault` e no máximo 100 itens por página. Campo de ordenação que não existe devolve 400, e o `PaginacaoConfig` só deixa ordenar pelos campos do próprio recurso: `?sort=emitidoPor.senha` ordenaria alertas pelo hash da senha de quem emitiu, numa rota pública. Página com `page` vezes `size` acima do maior inteiro também dá 400, e não 500. O painel de relatos ordena por padrão pela maior prioridade e, no empate, pelo mais antigo.
 
 ## Cache
 
@@ -452,7 +452,7 @@ As rotas de listagem aceitam também `page`, `size` e `sort`. A descrição de c
 ```
 src/main/java/br/com/fiap/guardario
 ├── assembler        links HATEOAS de cada recurso
-├── configurations   SecurityConfig, GlobalExceptionHandler, OpenApiConfig, OrdenacaoConfig, DataInitializer, AdminInitializer
+├── configurations   SecurityConfig, GlobalExceptionHandler, OpenApiConfig, PaginacaoConfig, DataInitializer, AdminInitializer
 ├── controller       rotas REST e documentação do Swagger
 ├── dto              records de entrada e saída
 ├── exceptions       exceções de negócio (404 e 409)

@@ -82,6 +82,15 @@ class ErrosPadronizadosIntegrationTest extends IntegracaoBase {
                 .andExpect(jsonPath("$.errors[0].field").value("nivelCm"));
     }
 
+    // page * size passa do maior inteiro, e o banco não aceita esse deslocamento: é erro do cliente, não 500
+    @Test
+    void paginaForaDoIntervaloDevolve400() throws Exception {
+        mockMvc.perform(get("/api/alertas").param("page", "2147483647").param("size", "100"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", containsString("page")));
+        mockMvc.perform(get("/api/alertas").param("page", "3").param("size", "100")).andExpect(status().isOk());
+    }
+
     // ordenar por campo de outra entidade deixaria um anônimo ordenar alertas pelo hash da senha de quem emitiu
     @Test
     void ordenacaoSoPorCamposDoProprioRecurso() throws Exception {
