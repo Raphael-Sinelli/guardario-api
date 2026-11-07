@@ -178,11 +178,36 @@ class ErrosPadronizadosIntegrationTest extends IntegracaoBase {
                 .andExpect(status().isNotFound())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.status").value(404));
-        mockMvc.perform(post("/api/areas").header(HttpHeaders.AUTHORIZATION, bearer(tokenAdmin()))
-                        .contentType(MediaType.APPLICATION_JSON).accept(MediaType.TEXT_PLAIN).content("{}"))
-                .andExpect(status().isBadRequest())
+        mockMvc.perform(delete("/api/areas/999999").header(HttpHeaders.AUTHORIZATION, bearer(tokenAdmin()))
+                        .accept(MediaType.TEXT_PLAIN))
+                .andExpect(status().isNotFound())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.errors").isArray());
+                .andExpect(jsonPath("$.status").value(404));
+    }
+
+    // escrita pedida com um Accept sem JSON: o 406 sai antes de gravar. Antes ele saía depois, e a leitura ou o relato
+    // ficavam gravados; o cliente que tentasse de novo gravava em dobro
+    @Test
+    void escritaComAcceptSemJsonDevolve406AntesDeGravar() throws Exception {
+        long estacao = criarEstacao(criarArea("Área Accept " + sufixoUnico()));
+        mockMvc.perform(post("/api/estacoes/" + estacao + "/leituras").header(HttpHeaders.AUTHORIZATION, bearer(tokenAgente()))
+                        .contentType(MediaType.APPLICATION_JSON).accept(MediaType.APPLICATION_XML)
+                        .content("{\"nivelCm\": 77, \"chuvaMmH\": 1}"))
+                .andExpect(status().isNotAcceptable())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(406));
+        mockMvc.perform(get("/api/estacoes/" + estacao + "/leituras"))
+                .andExpect(jsonPath("$.page.totalElements").value(0));
+
+        // o Accept de navegador, que tem */*, e o application/json continuam valendo
+        mockMvc.perform(post("/api/estacoes/" + estacao + "/leituras").header(HttpHeaders.AUTHORIZATION, bearer(tokenAgente()))
+                        .contentType(MediaType.APPLICATION_JSON).header(HttpHeaders.ACCEPT, "text/html,application/xml;q=0.9,*/*;q=0.8")
+                        .content("{\"nivelCm\": 77, \"chuvaMmH\": 1}"))
+                .andExpect(status().isCreated());
+        mockMvc.perform(post("/api/estacoes/" + estacao + "/leituras").header(HttpHeaders.AUTHORIZATION, bearer(tokenAgente()))
+                        .contentType(MediaType.APPLICATION_JSON).accept(MediaType.APPLICATION_JSON)
+                        .content("{\"nivelCm\": 78, \"chuvaMmH\": 1}"))
+                .andExpect(status().isCreated());
     }
 
     // método que a rota não aceita: 405 no JSON padrão e o header Allow com os métodos que ela aceita

@@ -387,7 +387,7 @@ Os demais erros seguem o formato `ErrorCustomResponse`:
 | 403 | Papel sem permissão (mesma mensagem no `SecurityConfig` e no `@PreAuthorize`) ou recurso de outra pessoa (a mensagem diz o motivo) |
 | 404 | Id inexistente, ou rota que não existe quando a requisição tem token. Sem token, a rota desconhecida dá 401: toda rota fora da lista pública exige login, e a segurança responde antes de o Spring procurar a rota |
 | 405 | Método HTTP que a rota não aceita |
-| 406 | `Accept` com um formato que a API não produz, como `text/plain` ou `application/xml`. O corpo vem no mesmo JSON de erro: o HTTP permite que a resposta de erro ignore o `Accept`, e todo erro da API sai em JSON, peça o cliente o formato que pedir |
+| 406 | `Accept` com um formato que a API não produz, como `text/plain` ou `application/xml`. Nas escritas (POST, PUT e PATCH), o `NegociacaoConfig` confere o `Accept` antes de o método rodar, então o 406 sai sem gravar nada. O corpo vem no mesmo JSON de erro: o HTTP permite que a resposta de erro ignore o `Accept`, e todo erro da API sai em JSON, peça o cliente o formato que pedir |
 | 409 | Regra de negócio: email repetido, transição de status inválida, abrigo lotado ou fechado, alerta já encerrado, exclusão de registro com vínculos, ou duas requisições alterando o mesmo registro ao mesmo tempo |
 | 415 | Corpo enviado sem `Content-Type: application/json` (no Postman, body raw como "Text") |
 | 500 | Erro inesperado: o detalhe fica no log e o cliente recebe uma mensagem genérica |
@@ -465,7 +465,7 @@ As rotas de listagem aceitam também `page`, `size` e `sort`. A descrição de c
 ```
 src/main/java/br/com/fiap/guardario
 ├── assembler        links HATEOAS de cada recurso e o RespostaHal (lista vazia com _embedded, links da página fora do intervalo)
-├── configurations   SecurityConfig, GlobalExceptionHandler, PaginaDeErroController, OpenApiConfig, PaginacaoConfig e @CamposDeOrdenacao, IdiomaConfig, JacksonConfig, CacheConfig, TomcatConfig e ErroDoTomcatEmJson, DataInitializer, AdminInitializer
+├── configurations   SecurityConfig, GlobalExceptionHandler, PaginaDeErroController, OpenApiConfig, PaginacaoConfig e @CamposDeOrdenacao, NegociacaoConfig, IdiomaConfig, JacksonConfig, CacheConfig, TomcatConfig e ErroDoTomcatEmJson, DataInitializer, AdminInitializer
 ├── controller       rotas REST e documentação do Swagger
 ├── dto              records de entrada e saída
 ├── exceptions       exceções de negócio (404 e 409)
