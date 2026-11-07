@@ -50,7 +50,7 @@ Se o wrapper reclamar da versão do Java, confira se `java -version` e a variáv
 Outros comandos:
 
 ```bash
-./mvnw test                                   # roda os 66 testes
+./mvnw test                                   # roda os 68 testes
 ./mvnw clean package                          # gera target/guardario-api-1.0.0.jar
 java -jar target/guardario-api-1.0.0.jar      # roda o jar gerado
 ```
@@ -66,11 +66,12 @@ Nenhuma é obrigatória no perfil `dev`. O arquivo `.env.example` lista todas; o
 | `SPRING_PROFILES_ACTIVE` | `dev` (H2) ou `prod` (PostgreSQL) | `dev` |
 | `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` | Banco do perfil `prod` | `DB_PASSWORD` não tem padrão |
 | `SEED_ENABLED` | Carga de dados de demonstração | `true` no dev, `false` no prod |
+| `ADMIN_EMAIL`, `ADMIN_PASSWORD` | Primeiro ADMIN do perfil `prod`, criado na subida pelo `AdminInitializer` se o email ainda não existir (senha de 8 a 72 caracteres) | sem valor: nenhum ADMIN é criado |
 | `PORT` | Porta HTTP | `8080` |
 
 ## Usuários de teste por papel
 
-Criados pela carga de demonstração do perfil `dev`. No perfil `prod` eles não existem.
+Criados pela carga de demonstração do perfil `dev`. No perfil `prod` eles não existem: o primeiro ADMIN vem de `ADMIN_EMAIL` e `ADMIN_PASSWORD`, e é ele quem promove os agentes.
 
 | Papel | Email | Senha | O que pode fazer |
 |---|---|---|---|
@@ -328,7 +329,7 @@ Quem não está logado não recebe link de ação. O link orienta o cliente, mas
 
 **CORS para o app.** O `CorsConfigurationSource` libera as origens de `CORS_ALLOWED_ORIGINS` (o padrão inclui `10.0.2.2`, endereço com que o emulador Android enxerga a máquina), os métodos GET, POST, PUT, PATCH, DELETE e OPTIONS, os headers `Authorization` e `Content-Type`, e expõe o header `Location` para o app ler o id do recurso criado. Origem fora da lista recebe 403 no preflight.
 
-**Segredos.** Nenhuma senha ou chave real está no repositório. A chave do JWT vem de `JWT_SECRET`; sem ela, a API gera uma chave aleatória a cada subida e avisa no log. A senha do PostgreSQL vem de `DB_PASSWORD`, sem valor padrão. As senhas da tabela de usuários de teste existem só na carga do perfil `dev`.
+**Segredos.** Nenhuma senha ou chave real está no repositório. A chave do JWT vem de `JWT_SECRET`; sem ela, a API gera uma chave aleatória a cada subida e avisa no log. A senha do PostgreSQL vem de `DB_PASSWORD`, sem valor padrão, e a do primeiro ADMIN de produção vem de `ADMIN_PASSWORD`. As senhas da tabela de usuários de teste existem só na carga do perfil `dev`.
 
 ## Validação e tratamento de erros
 
@@ -432,17 +433,17 @@ As rotas de listagem aceitam também `page`, `size` e `sort`. A descrição de c
 
 ## Testes
 
-`./mvnw test` roda 66 testes:
+`./mvnw test` roda 68 testes:
 
 - 15 testes de unidade das regras que ficam nas entidades e nos enums (régua de risco nas fronteiras de cada cota, lotação do abrigo, prioridade, máquina de estados, encerramento de alerta).
-- 51 testes de integração que sobem a aplicação inteira e chamam a API por HTTP com o MockMvc, passando pela segurança, pelo cache e pelo banco de verdade: status de cada erro, 401 x 403, posse, alerta automático, substituição de alertas, filtros com Specification, links HATEOAS mudando com o estado, invalidação e métricas do cache, Actuator, OpenAPI e CORS.
+- 53 testes de integração que sobem a aplicação inteira e chamam a API por HTTP com o MockMvc, passando pela segurança, pelo cache e pelo banco de verdade: status de cada erro, 401 x 403, posse, alerta automático, substituição de alertas, filtros com Specification, links HATEOAS mudando com o estado, invalidação e métricas do cache, Actuator, OpenAPI e CORS.
 
 ## Estrutura do projeto
 
 ```
 src/main/java/br/com/fiap/guardario
 ├── assembler        links HATEOAS de cada recurso
-├── configurations   SecurityConfig, GlobalExceptionHandler, OpenApiConfig, DataInitializer
+├── configurations   SecurityConfig, GlobalExceptionHandler, OpenApiConfig, DataInitializer, AdminInitializer
 ├── controller       rotas REST e documentação do Swagger
 ├── dto              records de entrada e saída
 ├── exceptions       exceções de negócio (404 e 409)

@@ -29,6 +29,10 @@ app:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:*,http://127.0.0.1:*,http://10.0.2.2:*}
   seed:
     enabled: ${SEED_ENABLED:true}
+  # primeiro ADMIN do perfil prod, criado pelo AdminInitializer; sem as duas variáveis, nada é criado
+  admin:
+    email: ${ADMIN_EMAIL:}
+    password: ${ADMIN_PASSWORD:}
 
 management:
   endpoints:
