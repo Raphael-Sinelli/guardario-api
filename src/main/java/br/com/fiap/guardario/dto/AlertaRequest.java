@@ -16,7 +16,9 @@ public record AlertaRequest(
         @Schema(description = "Opcional: estação relacionada ao alerta", example = "1") @Positive
         Long estacaoId,
 
-        @Schema(description = "ATENCAO, ALERTA ou EMERGENCIA", example = "ALERTA") @NotNull @NivelDeAlerta
+        @Schema(description = "ATENCAO, ALERTA ou EMERGENCIA", example = "ALERTA",
+                allowableValues = {"ATENCAO", "ALERTA", "EMERGENCIA"})
+        @NotNull @NivelDeAlerta
         NivelRisco nivel,
 
         @Schema(example = "Previsão de chuva forte na madrugada") @NotBlank @Size(max = 150)

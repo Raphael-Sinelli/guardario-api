@@ -88,6 +88,19 @@ class ErrosPadronizadosIntegrationTest extends IntegracaoBase {
                 .andExpect(jsonPath("$.message", containsString("JSON")));
     }
 
+    // a lista de valores aceitos é a do campo: no alerta manual, NORMAL não é aceito e não aparece
+    @Test
+    void nivelInvalidoNoAlertaListaSoOsNiveisDeAlerta() throws Exception {
+        postJson("/api/alertas", tokenAgente(), """
+                {"areaId": 1, "nivel": "XYZ", "titulo": "Teste", "mensagem": "Mensagem com tamanho suficiente"}""")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0].field").value("nivel"))
+                .andExpect(jsonPath("$.errors[0].message", containsString("EMERGENCIA")))
+                .andExpect(jsonPath("$.errors[0].message", org.hamcrest.Matchers.not(containsString("NORMAL"))));
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(jsonPath("$.components.schemas.AlertaRequest.properties.nivel.enum.length()").value(3));
+    }
+
     @Test
     void alertaManualComNivelNormalApontaOCampoNivel() throws Exception {
         postJson("/api/alertas", tokenAgente(), """

@@ -7,6 +7,7 @@ import br.com.fiap.guardario.exceptions.CampoInvalidoException;
 import br.com.fiap.guardario.exceptions.RegraNegocioException;
 import br.com.fiap.guardario.exceptions.ResourceNotFoundException;
 import br.com.fiap.guardario.security.RestAccessDeniedHandler;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
@@ -44,6 +45,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -144,7 +146,9 @@ public class GlobalExceptionHandler {
             return erro(HttpStatus.BAD_REQUEST, "O corpo da requisição é obrigatório: envie o JSON com os campos da rota", request);
         }
         if (ex.getCause() instanceof JacksonException erro && !erro.getPath().isEmpty()) {
-            String motivo = erro instanceof MismatchedInputException desencontro ? motivo(desencontro.getTargetType())
+            String motivo = erro instanceof MismatchedInputException desencontro
+                    ? valoresDoCampo(erro).map(aceitos -> "valor inválido; os aceitos são " + String.join(", ", aceitos))
+                            .orElseGet(() -> motivo(desencontro.getTargetType()))
                     : erro instanceof InputCoercionException ? "número fora do intervalo aceito pelo campo"
                     : "valor em formato inválido";
             return erroValidacao(List.of(new ErrorFieldCustom(caminhoDoCampo(erro), motivo)), request);
@@ -156,6 +160,24 @@ public class GlobalExceptionHandler {
         return erro.getPath().stream()
                 .map(parte -> parte.getPropertyName() != null ? parte.getPropertyName() : "[" + parte.getIndex() + "]")
                 .collect(Collectors.joining(".")).replace(".[", "[");
+    }
+
+    // quando o campo restringe o enum (alerta manual não aceita NORMAL), a lista vem do @Schema(allowableValues) dele,
+    // a mesma que o Swagger mostra; sem isso, a mensagem listaria valores que o campo recusa
+    private static Optional<List<String>> valoresDoCampo(JacksonException erro) {
+        JacksonException.Reference ultimo = erro.getPath().get(erro.getPath().size() - 1);
+        Object dono = ultimo.from();
+        Class<?> classe = dono instanceof Class<?> tipo ? tipo : dono != null ? dono.getClass() : null;
+        if (classe == null || ultimo.getPropertyName() == null) {
+            return Optional.empty();
+        }
+        try {
+            Schema schema = classe.getDeclaredField(ultimo.getPropertyName()).getAnnotation(Schema.class);
+            return schema != null && schema.allowableValues().length > 0
+                    ? Optional.of(List.of(schema.allowableValues())) : Optional.empty();
+        } catch (NoSuchFieldException e) {
+            return Optional.empty();
+        }
     }
 
     private static String motivo(Class<?> tipo) {
