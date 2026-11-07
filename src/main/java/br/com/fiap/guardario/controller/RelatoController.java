@@ -1,5 +1,6 @@
 package br.com.fiap.guardario.controller;
 
+import br.com.fiap.guardario.configurations.CamposDeOrdenacao;
 import br.com.fiap.guardario.assembler.RelatoModelAssembler;
 import br.com.fiap.guardario.dto.AlterarStatusRelatoRequest;
 import br.com.fiap.guardario.dto.RelatoRequest;
@@ -57,6 +58,7 @@ public class RelatoController {
         return ResponseEntity.created(model.getRequiredLink(IanaLinkRelations.SELF).toUri()).body(model);
     }
 
+    @CamposDeOrdenacao({"criadoEm", "atualizadoEm", "prioridade", "status", "tipo", "id"})
     @GetMapping("/meus")
     @Operation(summary = "Relatos do usuário logado", description = "Paginado; por padrão do mais recente para o mais antigo.")
     @ApiResponse(responseCode = "200", description = "Página com os relatos do usuário")
@@ -66,6 +68,7 @@ public class RelatoController {
         return ResponseEntity.ok(pagedAssembler.toModel(relatoService.meus(pageable), assembler));
     }
 
+    @CamposDeOrdenacao({"criadoEm", "atualizadoEm", "prioridade", "status", "tipo", "id"})
     @GetMapping
     @PreAuthorize("hasAnyRole('AGENTE', 'ADMIN')")
     @Operation(summary = "Painel de relatos da Defesa Civil",

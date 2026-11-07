@@ -100,6 +100,15 @@ class ErrosPadronizadosIntegrationTest extends IntegracaoBase {
         mockMvc.perform(get("/api/usuarios").param("sort", "senha,desc").header(HttpHeaders.AUTHORIZATION, bearer(tokenAdmin())))
                 .andExpect(status().isBadRequest());
         mockMvc.perform(get("/api/areas").param("sort", "nome,desc")).andExpect(status().isOk());
+
+        // o Spring Data resolve emitidoPorSenha como emitidoPor.senha pelo camelCase: só vale a lista de cada rota
+        mockMvc.perform(get("/api/alertas").param("sort", "emitidoPorSenha"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", containsString("emitidoEm")));
+        mockMvc.perform(get("/api/relatos").param("sort", "autorSenha").header(HttpHeaders.AUTHORIZATION, bearer(tokenAgente())))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(get("/api/relatos").param("sort", "prioridade,desc").header(HttpHeaders.AUTHORIZATION, bearer(tokenAgente())))
+                .andExpect(status().isOk());
     }
 
     // o 403 do SecurityConfig (área de URL) e o do @PreAuthorize têm a mesma mensagem

@@ -1,5 +1,6 @@
 package br.com.fiap.guardario.controller;
 
+import br.com.fiap.guardario.configurations.CamposDeOrdenacao;
 import br.com.fiap.guardario.assembler.AbrigoModelAssembler;
 import br.com.fiap.guardario.dto.AbrigoRequest;
 import br.com.fiap.guardario.dto.AbrigoResponse;
@@ -42,6 +43,7 @@ public class AbrigoController {
     private final AbrigoModelAssembler assembler;
     private final PagedResourcesAssembler<AbrigoResponse> pagedAssembler;
 
+    @CamposDeOrdenacao({"nome", "capacidade", "ocupacao", "status", "id"})
     @GetMapping
     @SecurityRequirements
     @Operation(summary = "Busca abrigos com filtros opcionais",

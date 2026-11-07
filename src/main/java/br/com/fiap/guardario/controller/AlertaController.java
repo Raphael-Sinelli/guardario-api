@@ -1,5 +1,6 @@
 package br.com.fiap.guardario.controller;
 
+import br.com.fiap.guardario.configurations.CamposDeOrdenacao;
 import br.com.fiap.guardario.assembler.AlertaModelAssembler;
 import br.com.fiap.guardario.dto.AlertaEdicaoRequest;
 import br.com.fiap.guardario.dto.AlertaRequest;
@@ -42,6 +43,7 @@ public class AlertaController {
     private final AlertaModelAssembler assembler;
     private final PagedResourcesAssembler<AlertaResponse> pagedAssembler;
 
+    @CamposDeOrdenacao({"emitidoEm", "encerradoEm", "nivel", "status", "origem", "titulo", "id"})
     @GetMapping
     @SecurityRequirements
     @Operation(summary = "Lista os alertas", description = "Público, paginado e ordenável. Filtro opcional por status.")

@@ -1,5 +1,6 @@
 package br.com.fiap.guardario.controller;
 
+import br.com.fiap.guardario.configurations.CamposDeOrdenacao;
 import br.com.fiap.guardario.assembler.AreaModelAssembler;
 import br.com.fiap.guardario.dto.AreaRequest;
 import br.com.fiap.guardario.dto.AreaResponse;
@@ -37,6 +38,7 @@ public class AreaController {
     private final AreaModelAssembler assembler;
     private final PagedResourcesAssembler<AreaResponse> pagedAssembler;
 
+    @CamposDeOrdenacao({"nome", "cidade", "uf", "populacaoEstimada", "nivelAtual", "id"})
     @GetMapping
     @SecurityRequirements
     @Operation(summary = "Lista as áreas", description = "Pública, paginada e ordenável (ex.: ?page=0&size=10&sort=nome,asc). Filtro opcional por UF.")

@@ -1,5 +1,6 @@
 package br.com.fiap.guardario.controller;
 
+import br.com.fiap.guardario.configurations.CamposDeOrdenacao;
 import br.com.fiap.guardario.assembler.UsuarioModelAssembler;
 import br.com.fiap.guardario.dto.AlterarPapelRequest;
 import br.com.fiap.guardario.dto.UsuarioResponse;
@@ -34,6 +35,7 @@ public class UsuarioController {
     private final UsuarioModelAssembler assembler;
     private final PagedResourcesAssembler<UsuarioResponse> pagedAssembler;
 
+    @CamposDeOrdenacao({"nome", "email", "papel", "criadoEm", "id"})
     @GetMapping
     @Operation(summary = "Lista os usuários", description = "Paginado e ordenável, ex.: ?page=0&size=10&sort=nome,asc")
     @ApiResponse(responseCode = "200", description = "Página de usuários")

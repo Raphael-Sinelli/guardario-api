@@ -3,15 +3,19 @@ package br.com.fiap.guardario.configurations;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
+import java.util.List;
+
 /**
  * Confere os parâmetros de lista (page, size e sort) antes do controller. Erro aqui vira 400 no GlobalExceptionHandler.
  * - page e size: page * size é o deslocamento do SELECT; acima do maior inteiro o banco recusa e a resposta seria 500.
- * - sort: o Pageable aceita ordenar por qualquer caminho, inclusive de outra entidade: ?sort=emitidoPor.senha ordenaria
- *   os alertas pelo hash da senha de quem emitiu, numa rota pública. Só vale campo do próprio recurso, e nunca a senha.
+ * - sort: o Pageable aceita ordenar por qualquer caminho, inclusive de outra entidade: ?sort=emitidoPor.senha (ou
+ *   emitidoPorSenha, que o Spring Data resolve pelo camelCase) ordenaria os alertas pelo hash da senha de quem emitiu,
+ *   numa rota pública. Só valem os campos da lista branca de cada rota, declarada com @CamposDeOrdenacao.
  */
 @Configuration
 public class PaginacaoConfig implements WebMvcConfigurer {
@@ -25,7 +29,7 @@ public class PaginacaoConfig implements WebMvcConfigurer {
             @Override
             public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
                 conferirPagina(request);
-                conferirOrdenacao(request);
+                conferirOrdenacao(request, handler);
                 return true;
             }
         }).addPathPatterns("/api/**");
@@ -39,16 +43,20 @@ public class PaginacaoConfig implements WebMvcConfigurer {
         }
     }
 
-    private void conferirOrdenacao(HttpServletRequest request) {
+    private void conferirOrdenacao(HttpServletRequest request, Object handler) {
         String[] ordenacoes = request.getParameterValues("sort");
         if (ordenacoes == null) {
             return;
         }
+        CamposDeOrdenacao anotacao = handler instanceof HandlerMethod metodo
+                ? metodo.getMethodAnnotation(CamposDeOrdenacao.class) : null;
+        List<String> aceitos = anotacao == null ? List.of() : List.of(anotacao.value());
         for (String ordenacao : ordenacoes) {
             String campo = ordenacao.split(",")[0].trim();
-            if (campo.contains(".") || campo.equalsIgnoreCase("senha")) {
-                throw new IllegalArgumentException("Ordenação não permitida por " + campo
-                        + ": use um campo do próprio recurso, como nome ou criadoEm");
+            if (!campo.isEmpty() && !aceitos.contains(campo)) {
+                throw new IllegalArgumentException(aceitos.isEmpty()
+                        ? "Esta rota não aceita ordenação"
+                        : "Ordenação não permitida por " + campo + ". Campos aceitos: " + String.join(", ", aceitos));
             }
         }
     }
