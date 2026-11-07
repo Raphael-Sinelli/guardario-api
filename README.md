@@ -29,7 +29,7 @@ O GuardaRio mede o rio no ponto que afeta cada bairro e transforma a medição e
 Requisito: **JDK 17 ou mais novo** (testado com o 17 e o 21). Não precisa instalar Maven, porque o projeto traz o Maven Wrapper, nem banco de dados, porque o perfil padrão usa H2 em memória.
 
 ```bash
-git clone URL_DO_REPOSITORIO
+git clone https://github.com/Raphael-Sinelli/guardario-api.git
 cd guardario-api
 
 ./mvnw spring-boot:run        # Linux, macOS ou Git Bash
