@@ -32,8 +32,9 @@ public class Abrigo {
     @Column(nullable = false)
     private Integer ocupacao = 0;
 
-    // bloqueio otimista: se dois agentes registram entrada ao mesmo tempo, o segundo UPDATE encontra a versão
-    // já mudada e falha (409), em vez de sobrescrever a ocupação e perder uma entrada já confirmada
+    // bloqueio otimista: se dois agentes editam o mesmo abrigo ao mesmo tempo (PUT ou status), o segundo UPDATE
+    // encontra a versão já mudada e falha (409), em vez de sobrescrever o que o primeiro gravou. As entradas e saídas
+    // não chegam a esse 409: travam a linha do abrigo (AbrigoRepository.buscarComTrava) e entram uma de cada vez
     @Version
     private Long versao;
 

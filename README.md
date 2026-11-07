@@ -352,7 +352,7 @@ Quem não está logado não recebe link de ação. O `excluir` só aparece quand
 
 Bean Validation nos records de entrada (`@NotBlank`, `@Size`, `@Email`, `@Pattern`, `@Positive`, `@PastOrPresent`, `@DecimalMin` e outras) e cinco constraints próprias: duas de classe, porque comparam campos entre si (`@CotasCrescentes` na estação e `@OcupacaoDentroDaCapacidade` no abrigo), e três de campo: `@TamanhoEmBytes(max = 72)` na senha, porque o BCrypt só considera 72 bytes e letra com acento ocupa 2; `@NivelDeAlerta`, que recusa alerta manual com nível NORMAL; e `@JanelaDeMedicao`, que só aceita leitura dos últimos 30 dias. A UF precisa ser a sigla de um estado, o telefone tem só dígitos com DDD, o email precisa de domínio com ponto e valor de outro tipo dá 400 em vez de ser convertido em silêncio pelo Jackson: número decimal em campo inteiro, texto no lugar de número, número no lugar de booleano ou de enum, e número ou booleano no lugar de texto (`JacksonConfig`). Os records de relato, login e cadastro tiram os espaços em volta do texto no construtor compacto, antes da validação. Os controllers têm `@Validated`, o que faz valer `@Positive` e `@Max` nos parâmetros de rota e de query.
 
-O `GlobalExceptionHandler` (`@RestControllerAdvice`) padroniza todas as respostas de erro: `error` é sempre o nome do status HTTP e `message` explica o problema em português. O `IdiomaConfig` fixa o idioma em pt-BR, para as mensagens da Bean Validation não mudarem com o `Accept-Language` do navegador nem com o idioma do servidor. Erro de campo lista todos os campos em `errors`, inclusive os erros de classe e os valores que nem chegam a ser lidos, como um enum que não existe ou texto no lugar de número:
+O `GlobalExceptionHandler` (`@RestControllerAdvice`) padroniza todas as respostas de erro: `error` é sempre o nome do status HTTP e `message` explica o problema em português. O `IdiomaConfig` fixa o idioma em pt-BR, para as mensagens da Bean Validation não mudarem com o `Accept-Language` do navegador nem com o idioma do servidor. Erro de campo sai em `errors`, com o nome do campo. Os erros da Bean Validation saem todos juntos, inclusive os de classe. Valor de tipo errado (um enum que não existe, texto no lugar de número) é conferido antes, na leitura do JSON, como ensina a semana 5: o corpo nem chega a virar o record, então esse erro sai sozinho e os da Bean Validation aparecem na próxima tentativa, depois de corrigido o tipo:
 
 ```json
 {
@@ -464,8 +464,8 @@ As rotas de listagem aceitam também `page`, `size` e `sort`. A descrição de c
 
 ```
 src/main/java/br/com/fiap/guardario
-├── assembler        links HATEOAS de cada recurso
-├── configurations   SecurityConfig, GlobalExceptionHandler, OpenApiConfig, PaginacaoConfig e @CamposDeOrdenacao, IdiomaConfig, CacheConfig, DataInitializer, AdminInitializer
+├── assembler        links HATEOAS de cada recurso e o RespostaHal (lista vazia com _embedded, links da página fora do intervalo)
+├── configurations   SecurityConfig, GlobalExceptionHandler, PaginaDeErroController, OpenApiConfig, PaginacaoConfig e @CamposDeOrdenacao, IdiomaConfig, JacksonConfig, CacheConfig, TomcatConfig e ErroDoTomcatEmJson, DataInitializer, AdminInitializer
 ├── controller       rotas REST e documentação do Swagger
 ├── dto              records de entrada e saída
 ├── exceptions       exceções de negócio (404 e 409)
