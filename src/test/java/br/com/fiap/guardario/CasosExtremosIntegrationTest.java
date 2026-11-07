@@ -47,11 +47,22 @@ class CasosExtremosIntegrationTest extends IntegracaoBase {
         mockMvc.perform(get("/api/areas").param("size", "1000")).andExpect(jsonPath("$.page.size").value(100));
         mockMvc.perform(get("/api/areas").param("size", "0")).andExpect(jsonPath("$.page.size").value(10));
         mockMvc.perform(get("/api/areas").param("page", "-1")).andExpect(jsonPath("$.page.number").value(0));
-        // página depois da última: 200, lista vazia (sem _embedded) e a paginação dizendo onde está
+        // página depois da última: 200, lista vazia (o _embedded vem, com a lista vazia), a paginação dizendo onde
+        // está e só links para páginas que existem: sem prev apontando para outra página vazia
         mockMvc.perform(get("/api/areas").param("page", "99999"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$._embedded").doesNotExist())
-                .andExpect(jsonPath("$.page.number").value(99999));
+                .andExpect(jsonPath("$._embedded.areas").isEmpty())
+                .andExpect(jsonPath("$.page.number").value(99999))
+                .andExpect(jsonPath("$._links.prev").doesNotExist())
+                .andExpect(jsonPath("$._links.next").doesNotExist())
+                .andExpect(jsonPath("$._links.first.href").exists())
+                .andExpect(jsonPath("$._links.last.href").exists());
+        // filtro que não acha nada: a mesma estrutura, com a lista vazia, e o app lê sempre o mesmo formato
+        mockMvc.perform(get("/api/abrigos").param("areaId", "999999"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$._embedded.abrigos").isArray())
+                .andExpect(jsonPath("$._embedded.abrigos").isEmpty())
+                .andExpect(jsonPath("$.page.totalElements").value(0));
         // texto no lugar do número da página volta ao padrão, como no Spring Data
         mockMvc.perform(get("/api/areas").param("page", "abc")).andExpect(status().isOk());
     }

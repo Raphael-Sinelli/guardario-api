@@ -2,6 +2,7 @@ package br.com.fiap.guardario.controller;
 
 import br.com.fiap.guardario.configurations.CamposDeOrdenacao;
 import br.com.fiap.guardario.assembler.AbrigoModelAssembler;
+import br.com.fiap.guardario.assembler.RespostaHal;
 import br.com.fiap.guardario.dto.AbrigoRequest;
 import br.com.fiap.guardario.dto.AbrigoResponse;
 import br.com.fiap.guardario.dto.AlterarStatusAbrigoRequest;
@@ -58,7 +59,7 @@ public class AbrigoController {
             @Parameter(description = "ABERTO, LOTADO ou FECHADO") @RequestParam(required = false) StatusAbrigo status,
             @ParameterObject @PageableDefault(size = 10, sort = "nome") Pageable pageable) {
         var pagina = abrigoService.listar(areaId, aceitaPets, acessivelPcd, comVagas, status, pageable);
-        return ResponseEntity.ok(pagedAssembler.toModel(pagina, assembler));
+        return ResponseEntity.ok(RespostaHal.pagina(pagina, pagedAssembler, assembler, AbrigoResponse.class));
     }
 
     @GetMapping("/disponiveis")
@@ -68,7 +69,7 @@ public class AbrigoController {
     public ResponseEntity<CollectionModel<EntityModel<AbrigoResponse>>> disponiveis() {
         CollectionModel<EntityModel<AbrigoResponse>> model = assembler.toCollectionModel(abrigoService.disponiveis())
                 .add(linkTo(methodOn(AbrigoController.class).disponiveis()).withSelfRel());
-        return ResponseEntity.ok(model);
+        return ResponseEntity.ok(RespostaHal.colecao(model, AbrigoResponse.class));
     }
 
     @GetMapping("/{id}")

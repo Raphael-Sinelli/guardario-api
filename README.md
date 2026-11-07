@@ -305,7 +305,7 @@ Limitação conhecida: o Caffeine guarda o cache na memória de cada instância.
 
 ## HATEOAS
 
-As respostas usam o formato HAL. As listas vêm com os itens em `_embedded`, os dados de paginação em `page` e os links de navegação (`first`, `prev`, `self`, `next`, `last`) em `_links`. Cada recurso traz o link `self`, os recursos relacionados e as ações possíveis no estado atual para quem fez a requisição:
+As respostas usam o formato HAL. As listas vêm com os itens em `_embedded`, os dados de paginação em `page` e os links de navegação (`first`, `prev`, `self`, `next`, `last`) em `_links`. Lista vazia também traz o `_embedded`, com a lista vazia (`{"_embedded": {"abrigos": []}}`): o HAL padrão omite o `_embedded` nesse caso, e o `RespostaHal` o mantém para o cliente ler sempre o mesmo formato. Na página pedida depois da última, o link `prev` sai (apontaria para outra página vazia) e ficam `first` e `last`. Cada recurso traz o link `self`, os recursos relacionados e as ações possíveis no estado atual para quem fez a requisição:
 
 | Recurso | Relacionados | Ações (dependem do estado e do papel) |
 |---|---|---|
@@ -449,7 +449,7 @@ As rotas de listagem aceitam também `page`, `size` e `sort`. A descrição de c
 ## Integração com o app Mobile
 
 - No emulador Android, a API fica em `http://10.0.2.2:8080`.
-- As listas vêm no formato HAL: os itens ficam em `_embedded.<nome>` (por exemplo `_embedded.alertas`) e a paginação em `page`.
+- As listas vêm no formato HAL: os itens ficam em `_embedded.<nome>` (por exemplo `_embedded.alertas`), mesmo quando a lista está vazia, e a paginação em `page`.
 - Rotas protegidas pedem o header `Authorization: Bearer <token>`. O token vale 1 hora; quando expira, a API responde 401 e o app volta para o login.
 - Áreas, estações, alertas e abrigos funcionam sem login, para quem ainda não tem conta.
 

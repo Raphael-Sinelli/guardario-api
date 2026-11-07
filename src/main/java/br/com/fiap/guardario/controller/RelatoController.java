@@ -2,6 +2,7 @@ package br.com.fiap.guardario.controller;
 
 import br.com.fiap.guardario.configurations.CamposDeOrdenacao;
 import br.com.fiap.guardario.assembler.RelatoModelAssembler;
+import br.com.fiap.guardario.assembler.RespostaHal;
 import br.com.fiap.guardario.dto.AlterarStatusRelatoRequest;
 import br.com.fiap.guardario.dto.RelatoRequest;
 import br.com.fiap.guardario.dto.RelatoResponse;
@@ -65,7 +66,7 @@ public class RelatoController {
     @ApiResponse(responseCode = "401", description = "Sem token")
     public ResponseEntity<PagedModel<EntityModel<RelatoResponse>>> meus(
             @ParameterObject @PageableDefault(size = 10, sort = "criadoEm", direction = Sort.Direction.DESC) Pageable pageable) {
-        return ResponseEntity.ok(pagedAssembler.toModel(relatoService.meus(pageable), assembler));
+        return ResponseEntity.ok(RespostaHal.pagina(relatoService.meus(pageable), pagedAssembler, assembler, RelatoResponse.class));
     }
 
     @CamposDeOrdenacao({"criadoEm", "atualizadoEm", "prioridade", "status", "tipo", "id"})
@@ -93,7 +94,7 @@ public class RelatoController {
                     @SortDefault(sort = "prioridade", direction = Sort.Direction.DESC),
                     @SortDefault(sort = "criadoEm", direction = Sort.Direction.ASC)}) Pageable pageable) {
         var pagina = relatoService.listar(tipo, status, areaId, prioridadeMin, de, ate, pageable);
-        return ResponseEntity.ok(pagedAssembler.toModel(pagina, assembler));
+        return ResponseEntity.ok(RespostaHal.pagina(pagina, pagedAssembler, assembler, RelatoResponse.class));
     }
 
     @GetMapping("/{id}")

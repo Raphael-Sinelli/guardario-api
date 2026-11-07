@@ -41,7 +41,7 @@ public class AreaModelAssembler implements RepresentationModelAssembler<AreaResp
     public PagedModel<EntityModel<AreaResponse>> toPagedModel(Page<AreaResponse> pagina,
                                                              PagedResourcesAssembler<AreaResponse> paginador) {
         Set<Long> excluiveis = excluiveis(pagina.getContent());
-        return paginador.toModel(pagina, area -> toModel(area, excluiveis));
+        return RespostaHal.pagina(pagina, paginador, area -> toModel(area, excluiveis), AreaResponse.class);
     }
 
     private EntityModel<AreaResponse> toModel(AreaResponse area, Set<Long> excluiveis) {
@@ -79,6 +79,7 @@ public class AreaModelAssembler implements RepresentationModelAssembler<AreaResp
                         linkTo(methodOn(AreaController.class).buscarPorId(linha.areaId())).withRel("area"),
                         linkTo(methodOn(AbrigoController.class).listar(linha.areaId(), null, null, true, null, null)).withRel("abrigos-com-vaga").expand()))
                 .toList();
-        return CollectionModel.of(linhas, linkTo(methodOn(AreaController.class).ranking()).withSelfRel());
+        return RespostaHal.colecao(CollectionModel.of(linhas, linkTo(methodOn(AreaController.class).ranking()).withSelfRel()),
+                RankingAreaResponse.class);
     }
 }

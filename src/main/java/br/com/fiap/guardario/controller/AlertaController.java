@@ -2,6 +2,7 @@ package br.com.fiap.guardario.controller;
 
 import br.com.fiap.guardario.configurations.CamposDeOrdenacao;
 import br.com.fiap.guardario.assembler.AlertaModelAssembler;
+import br.com.fiap.guardario.assembler.RespostaHal;
 import br.com.fiap.guardario.dto.AlertaEdicaoRequest;
 import br.com.fiap.guardario.dto.AlertaRequest;
 import br.com.fiap.guardario.dto.AlertaResponse;
@@ -53,7 +54,7 @@ public class AlertaController {
     public ResponseEntity<PagedModel<EntityModel<AlertaResponse>>> listar(
             @Parameter(description = "ATIVO ou ENCERRADO") @RequestParam(required = false) StatusAlerta status,
             @ParameterObject @PageableDefault(size = 10, sort = "emitidoEm", direction = Sort.Direction.DESC) Pageable pageable) {
-        return ResponseEntity.ok(pagedAssembler.toModel(alertaService.listar(status, pageable), assembler));
+        return ResponseEntity.ok(RespostaHal.pagina(alertaService.listar(status, pageable), pagedAssembler, assembler, AlertaResponse.class));
     }
 
     @GetMapping("/ativos")
@@ -64,7 +65,7 @@ public class AlertaController {
     public ResponseEntity<CollectionModel<EntityModel<AlertaResponse>>> ativos() {
         CollectionModel<EntityModel<AlertaResponse>> model = assembler.toCollectionModel(alertaService.ativos())
                 .add(linkTo(methodOn(AlertaController.class).ativos()).withSelfRel());
-        return ResponseEntity.ok(model);
+        return ResponseEntity.ok(RespostaHal.colecao(model, AlertaResponse.class));
     }
 
     @GetMapping("/{id}")

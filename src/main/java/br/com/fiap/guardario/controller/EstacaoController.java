@@ -3,6 +3,7 @@ package br.com.fiap.guardario.controller;
 import br.com.fiap.guardario.configurations.CamposDeOrdenacao;
 import br.com.fiap.guardario.assembler.EstacaoModelAssembler;
 import br.com.fiap.guardario.assembler.LeituraModelAssembler;
+import br.com.fiap.guardario.assembler.RespostaHal;
 import br.com.fiap.guardario.dto.*;
 import br.com.fiap.guardario.service.EstacaoService;
 import br.com.fiap.guardario.service.LeituraService;
@@ -77,7 +78,7 @@ public class EstacaoController {
     public ResponseEntity<CollectionModel<EntityModel<EstacaoResponse>>> criticas() {
         CollectionModel<EntityModel<EstacaoResponse>> model = assembler.toCollectionModel(estacaoService.criticas())
                 .add(linkTo(methodOn(EstacaoController.class).criticas()).withSelfRel());
-        return ResponseEntity.ok(model);
+        return ResponseEntity.ok(RespostaHal.colecao(model, EstacaoResponse.class));
     }
 
     @PostMapping
@@ -131,7 +132,7 @@ public class EstacaoController {
     public ResponseEntity<PagedModel<EntityModel<LeituraResponse>>> listarLeituras(
             @PathVariable @Positive Long id,
             @ParameterObject @PageableDefault(size = 20, sort = "medidaEm", direction = Sort.Direction.DESC) Pageable pageable) {
-        return ResponseEntity.ok(pagedLeituraAssembler.toModel(leituraService.listar(id, pageable), leituraAssembler));
+        return ResponseEntity.ok(RespostaHal.pagina(leituraService.listar(id, pageable), pagedLeituraAssembler, leituraAssembler, LeituraResponse.class));
     }
 
     @PostMapping("/{id}/leituras")

@@ -2,6 +2,7 @@ package br.com.fiap.guardario.controller;
 
 import br.com.fiap.guardario.configurations.CamposDeOrdenacao;
 import br.com.fiap.guardario.assembler.UsuarioModelAssembler;
+import br.com.fiap.guardario.assembler.RespostaHal;
 import br.com.fiap.guardario.dto.AlterarPapelRequest;
 import br.com.fiap.guardario.dto.UsuarioResponse;
 import br.com.fiap.guardario.service.UsuarioService;
@@ -44,7 +45,7 @@ public class UsuarioController {
     @ApiResponse(responseCode = "403", description = "Usuário logado não é ADMIN")
     public ResponseEntity<PagedModel<EntityModel<UsuarioResponse>>> listar(
             @ParameterObject @PageableDefault(size = 10, sort = "nome") Pageable pageable) {
-        return ResponseEntity.ok(pagedAssembler.toModel(usuarioService.listar(pageable), assembler));
+        return ResponseEntity.ok(RespostaHal.pagina(usuarioService.listar(pageable), pagedAssembler, assembler, UsuarioResponse.class));
     }
 
     @GetMapping("/{id}")

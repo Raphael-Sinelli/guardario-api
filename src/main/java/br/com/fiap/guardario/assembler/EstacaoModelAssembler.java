@@ -40,7 +40,7 @@ public class EstacaoModelAssembler implements RepresentationModelAssembler<Estac
     public PagedModel<EntityModel<EstacaoResponse>> toPagedModel(Page<EstacaoResponse> pagina,
                                                                 PagedResourcesAssembler<EstacaoResponse> paginador) {
         Set<Long> excluiveis = excluiveis(pagina.getContent());
-        return paginador.toModel(pagina, estacao -> toModel(estacao, excluiveis));
+        return RespostaHal.pagina(pagina, paginador, estacao -> toModel(estacao, excluiveis), EstacaoResponse.class);
     }
 
     // a lista de críticas também faz uma consulta só, em vez de uma por estação
