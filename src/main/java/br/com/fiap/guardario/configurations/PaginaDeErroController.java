@@ -6,6 +6,7 @@ import jakarta.servlet.RequestDispatcher;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.boot.webmvc.error.ErrorController;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -33,6 +34,6 @@ public class PaginaDeErroController implements ErrorController {
         String caminho = uri != null ? uri.toString() : request.getRequestURI();
         ErrorCustomResponse corpo = new ErrorCustomResponse(Instant.now(), status.value(), status.getReasonPhrase(),
                 GlobalExceptionHandler.mensagemPadrao(status), caminho);
-        return ResponseEntity.status(status).body(corpo);
+        return ResponseEntity.status(status).contentType(MediaType.APPLICATION_JSON).body(corpo);
     }
 }

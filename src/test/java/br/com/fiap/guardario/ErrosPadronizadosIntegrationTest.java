@@ -8,6 +8,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -158,6 +159,28 @@ class ErrosPadronizadosIntegrationTest extends IntegracaoBase {
                 {"tipo": "OUTRO", "descricao": 12.5, "areaId": 1}""")
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errors[0].field").value("descricao"));
+    }
+
+    // o cliente pediu um formato que a API não produz: o HTTP permite ignorar o Accept na resposta de erro,
+    // e o erro sai no JSON padrão em vez de um 406 com corpo vazio
+    @Test
+    void formatoNaoAceitoDevolve406ComOCorpoPadraoEmJson() throws Exception {
+        mockMvc.perform(get("/api/areas").accept(MediaType.TEXT_PLAIN))
+                .andExpect(status().isNotAcceptable())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(406))
+                .andExpect(jsonPath("$.message").value("Formato de resposta não suportado: a API responde em JSON"))
+                .andExpect(jsonPath("$.path").value("/api/areas"));
+        // qualquer outro erro pedido com um Accept que a API não produz também sai em JSON
+        mockMvc.perform(get("/api/areas/999999").accept(MediaType.APPLICATION_XML))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(404));
+        mockMvc.perform(post("/api/areas").header(HttpHeaders.AUTHORIZATION, bearer(tokenAdmin()))
+                        .contentType(MediaType.APPLICATION_JSON).accept(MediaType.TEXT_PLAIN).content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.errors").isArray());
     }
 
     // sem isto o Jackson arredondava 1.7 cm para 1 em silêncio

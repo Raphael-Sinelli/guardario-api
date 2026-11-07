@@ -17,6 +17,7 @@ import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.data.core.PropertyReferenceException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
@@ -26,6 +27,7 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.method.ParameterErrors;
 import org.springframework.validation.method.ParameterValidationResult;
 import org.springframework.web.ErrorResponse;
+import org.springframework.web.HttpMediaTypeNotAcceptableException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -263,6 +265,13 @@ public class GlobalExceptionHandler {
                 "Envie o corpo em JSON, com o header Content-Type: application/json", request);
     }
 
+    // Accept que a API não produz (text/plain, application/xml): a resposta de erro pode ignorar o Accept,
+    // então sai o JSON padrão, e não um 406 vazio
+    @ExceptionHandler(HttpMediaTypeNotAcceptableException.class)
+    public ResponseEntity<ErrorCustomResponse> formatoNaoAceito(HttpMediaTypeNotAcceptableException ex, HttpServletRequest request) {
+        return erro(HttpStatus.NOT_ACCEPTABLE, mensagemPadrao(HttpStatus.NOT_ACCEPTABLE), request);
+    }
+
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<ErrorCustomResponse> statusExplicito(ResponseStatusException ex, HttpServletRequest request) {
         return erro(ex.getStatusCode(), ex.getReason(), request);
@@ -296,16 +305,17 @@ public class GlobalExceptionHandler {
         };
     }
 
+    // o Content-Type fixo faz o Spring pular a negociação pelo Accept: todo erro sai em JSON, peça o cliente o que pedir
     private ResponseEntity<ErrorCustomResponse> erro(HttpStatusCode status, String mensagem, HttpServletRequest request) {
         HttpStatus httpStatus = HttpStatus.valueOf(status.value());
         ErrorCustomResponse corpo = new ErrorCustomResponse(
                 Instant.now(), httpStatus.value(), httpStatus.getReasonPhrase(), mensagem, request.getRequestURI());
-        return ResponseEntity.status(httpStatus).body(corpo);
+        return ResponseEntity.status(httpStatus).contentType(MediaType.APPLICATION_JSON).body(corpo);
     }
 
     private ResponseEntity<ValidationErrorResponse> erroValidacao(List<ErrorFieldCustom> erros, HttpServletRequest request) {
         ValidationErrorResponse corpo = new ValidationErrorResponse(Instant.now(), HttpStatus.BAD_REQUEST.value(),
                 HttpStatus.BAD_REQUEST.getReasonPhrase(), "Dados inválidos: confira os campos em errors", request.getRequestURI(), erros);
-        return ResponseEntity.badRequest().body(corpo);
+        return ResponseEntity.badRequest().contentType(MediaType.APPLICATION_JSON).body(corpo);
     }
 }

@@ -387,6 +387,7 @@ Os demais erros seguem o formato `ErrorCustomResponse`:
 | 403 | Papel sem permissão (mesma mensagem no `SecurityConfig` e no `@PreAuthorize`) ou recurso de outra pessoa (a mensagem diz o motivo) |
 | 404 | Id inexistente, ou rota que não existe quando a requisição tem token. Sem token, a rota desconhecida dá 401: toda rota fora da lista pública exige login, e a segurança responde antes de o Spring procurar a rota |
 | 405 | Método HTTP que a rota não aceita |
+| 406 | `Accept` com um formato que a API não produz, como `text/plain` ou `application/xml`. O corpo vem no mesmo JSON de erro: o HTTP permite que a resposta de erro ignore o `Accept`, e todo erro da API sai em JSON, peça o cliente o formato que pedir |
 | 409 | Regra de negócio: email repetido, transição de status inválida, abrigo lotado ou fechado, alerta já encerrado, exclusão de registro com vínculos, ou duas requisições alterando o mesmo registro ao mesmo tempo |
 | 415 | Corpo enviado sem `Content-Type: application/json` (no Postman, body raw como "Text") |
 | 500 | Erro inesperado: o detalhe fica no log e o cliente recebe uma mensagem genérica |
