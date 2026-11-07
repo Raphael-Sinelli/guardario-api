@@ -322,7 +322,7 @@ Quem não está logado não recebe link de ação. O link orienta o cliente, mas
 **Fluxo do JWT, do login à requisição protegida:**
 
 1. `POST /api/auth/register` grava o usuário como CIDADAO, com a senha em hash BCrypt.
-2. `POST /api/auth/login` passa pelo `AuthenticationManager`, que busca o usuário pelo `UserDetailsService` e compara a senha com `BCrypt.matches`. Senha errada lança `BadCredentialsException`, que vira 401 com uma mensagem genérica, para não revelar quais emails existem.
+2. `POST /api/auth/login` passa pelo `AuthenticationManager`, que busca o usuário pelo `UserDetailsService` e compara a senha com `BCrypt.matches`. Senha errada lança `BadCredentialsException`, que vira 401 com uma mensagem genérica, para não revelar quais emails existem. O cadastro, como no projeto da disciplina, ainda responde 409 para email repetido; esconder isso exigiria confirmar o email por mensagem, o que fica fora do escopo.
 3. O `JwtService` gera um token HS256 que vale 1 hora, com o email no `sub` e o papel numa claim informativa.
 4. O app manda `Authorization: Bearer <token>` em cada requisição.
 5. O `JwtAuthenticationFilter` (um `OncePerRequestFilter`) valida assinatura e expiração, carrega o usuário do banco e coloca no `SecurityContext`. O papel que vale é o do banco: uma promoção feita pelo ADMIN vale na hora, e um papel forjado no token não adianta.
@@ -373,7 +373,7 @@ Os demais erros seguem o formato `ErrorCustomResponse`:
 | 400 | Bean Validation, valor de tipo errado num campo do corpo (sai em `errors` com o nome do campo), JSON mal formado, id que não é número ou não é positivo, parâmetro fora do enum, campo de ordenação inexistente |
 | 401 | Sem token, token inválido ou expirado, login com senha errada |
 | 403 | Papel sem permissão (mesma mensagem no `SecurityConfig` e no `@PreAuthorize`) ou recurso de outra pessoa (a mensagem diz o motivo) |
-| 404 | Id inexistente ou rota que não existe |
+| 404 | Id inexistente, ou rota que não existe quando a requisição tem token. Sem token, a rota desconhecida dá 401: toda rota fora da lista pública exige login, e a segurança responde antes de o Spring procurar a rota |
 | 405 | Método HTTP que a rota não aceita |
 | 409 | Regra de negócio: email repetido, transição de status inválida, abrigo lotado ou fechado, alerta já encerrado, exclusão de registro com vínculos, ou duas requisições alterando o mesmo abrigo ao mesmo tempo |
 | 415 | Corpo enviado sem `Content-Type: application/json` (no Postman, body raw como "Text") |
