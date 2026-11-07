@@ -152,8 +152,10 @@ class AreaEstacaoIntegrationTest extends IntegracaoBase {
                 .formatted(sufixoUnico().toLowerCase(), area))
                 .andExpect(status().isCreated());
 
+        // a regra do service cita os moradores; não é a mensagem genérica de integridade do banco
         mockMvc.perform(delete("/api/areas/" + area).header(HttpHeaders.AUTHORIZATION, bearer(tokenAdmin())))
-                .andExpect(status().isConflict());
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message", containsString("moradores")));
     }
 
     // RN03: mover, desativar ou excluir a estação recalcula o nível das áreas envolvidas

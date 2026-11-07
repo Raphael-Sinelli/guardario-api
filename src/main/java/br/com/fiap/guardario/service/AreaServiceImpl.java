@@ -36,6 +36,7 @@ public class AreaServiceImpl implements AreaService {
     private final AbrigoRepository abrigoRepository;
     private final AlertaRepository alertaRepository;
     private final RelatoRepository relatoRepository;
+    private final UsuarioRepository usuarioRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -97,9 +98,10 @@ public class AreaServiceImpl implements AreaService {
         boolean temVinculos = estacaoRepository.existsByAreaId(id)
                 || abrigoRepository.existsByAreaId(id)
                 || alertaRepository.existsByAreaId(id)
-                || relatoRepository.existsByAreaId(id);
+                || relatoRepository.existsByAreaId(id)
+                || usuarioRepository.existsByAreaId(id);
         if (temVinculos) {
-            throw new RegraNegocioException("A área tem estações, abrigos, alertas ou relatos vinculados e não pode ser excluída");
+            throw new RegraNegocioException("A área tem estações, abrigos, alertas, relatos ou moradores vinculados e não pode ser excluída");
         }
         areaRepository.delete(area);
     }

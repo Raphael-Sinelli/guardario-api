@@ -99,7 +99,7 @@ public class AreaController {
     @ApiResponse(responseCode = "204", description = "Área excluída")
     @ApiResponse(responseCode = "403", description = "Usuário logado não é ADMIN")
     @ApiResponse(responseCode = "404", description = "Área não existe")
-    @ApiResponse(responseCode = "409", description = "A área tem registros vinculados")
+    @ApiResponse(responseCode = "409", description = "A área tem estações, abrigos, alertas, relatos ou moradores vinculados")
     public ResponseEntity<Void> excluir(@PathVariable @Positive Long id) {
         areaService.excluir(id);
         return ResponseEntity.noContent().build();

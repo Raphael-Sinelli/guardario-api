@@ -12,4 +12,7 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
 
     // derived query com exists: para no primeiro registro, mais barato que count
     boolean existsByEmail(String email);
+
+    // área com morador cadastrado não pode ser excluída
+    boolean existsByAreaId(Long areaId);
 }
