@@ -42,6 +42,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
+    private static final String[] LEITURA_PUBLICA = {"/api/areas/**", "/api/estacoes/**", "/api/alertas/**", "/api/abrigos/**"};
+
     private final JwtService jwtService;
     private final UsuarioRepository usuarioRepository;
     private final RestAuthenticationEntryPoint authenticationEntryPoint;
@@ -72,8 +74,11 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PATCH, "/api/alertas/*/encerrar", "/api/abrigos/*/status",
                                 "/api/relatos/*/status").hasAnyRole("AGENTE", "ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/relatos").hasAnyRole("AGENTE", "ADMIN")
-                        // informação de segurança é pública: nível do rio, alertas e abrigos não exigem login
-                        .requestMatchers(HttpMethod.GET, "/api/areas/**", "/api/estacoes/**", "/api/alertas/**", "/api/abrigos/**").permitAll()
+                        .requestMatchers(HttpMethod.HEAD, "/api/relatos").hasAnyRole("AGENTE", "ADMIN")
+                        // informação de segurança é pública: nível do rio, alertas e abrigos não exigem login.
+                        // O HEAD é o GET sem corpo (o Spring MVC atende pelo mesmo método), então segue a mesma regra
+                        .requestMatchers(HttpMethod.GET, LEITURA_PUBLICA).permitAll()
+                        .requestMatchers(HttpMethod.HEAD, LEITURA_PUBLICA).permitAll()
                         // ver um cadastro pelo id: qualquer logado, com a posse conferida no service; o resto da área é do ADMIN
                         .requestMatchers(HttpMethod.GET, "/api/usuarios/*").authenticated()
                         .requestMatchers("/api/usuarios/**").hasRole("ADMIN")

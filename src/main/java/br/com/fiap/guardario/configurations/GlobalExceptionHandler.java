@@ -197,6 +197,9 @@ public class GlobalExceptionHandler {
         if (tipo == Instant.class) {
             return "deve ser uma data e hora em UTC, como 2026-11-18T14:30:00Z";
         }
+        if (tipo == String.class) {
+            return "deve ser um texto entre aspas";
+        }
         return "valor em formato inválido";
     }
 

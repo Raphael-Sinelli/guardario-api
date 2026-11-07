@@ -164,6 +164,19 @@ class InfraIntegrationTest extends IntegracaoBase {
         mockMvc.perform(get(abrigosComVaga)).andExpect(status().isOk());
     }
 
+    // o HEAD (o GET sem corpo, usado para checar se a rota responde) segue a regra do GET: público onde o GET é público
+    @Test
+    void headSegueARegraDoGet() throws Exception {
+        mockMvc.perform(head("/api/areas")).andExpect(status().isOk());
+        mockMvc.perform(head("/api/abrigos/disponiveis")).andExpect(status().isOk());
+        mockMvc.perform(head("/api/relatos")).andExpect(status().isUnauthorized());
+        mockMvc.perform(head("/api/relatos").header(HttpHeaders.AUTHORIZATION, bearer(tokenCidadao())))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(head("/api/relatos").header(HttpHeaders.AUTHORIZATION, bearer(tokenAgente())))
+                .andExpect(status().isOk());
+        mockMvc.perform(head("/api/usuarios")).andExpect(status().isUnauthorized());
+    }
+
     @Test
     void healthEInfoSaoPublicosEMetricsSoParaAdmin() throws Exception {
         // público vê só o UP; o detalhe (banco, disco com o caminho da pasta) fica para o ADMIN

@@ -83,7 +83,9 @@ public class AreaController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "Atualiza uma área", description = "Somente ADMIN. O nível de risco não é editável: vem das leituras.")
+    @Operation(summary = "Atualiza uma área", description = "Somente ADMIN. Substitui a área inteira, como todo PUT da API: "
+            + "envie todos os campos, porque população, latitude e longitude omitidas ficam vazias. "
+            + "O nível de risco não é editável: vem das leituras.")
     @ApiResponse(responseCode = "200", description = "Área atualizada")
     @ApiResponse(responseCode = "400", description = "Campos inválidos")
     @ApiResponse(responseCode = "403", description = "Usuário logado não é ADMIN")

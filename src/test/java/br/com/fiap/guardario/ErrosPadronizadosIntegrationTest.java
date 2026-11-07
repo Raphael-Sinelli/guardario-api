@@ -142,6 +142,24 @@ class ErrosPadronizadosIntegrationTest extends IntegracaoBase {
                 .andExpect(jsonPath("$.errors[0].field").value("tipo"));
     }
 
+    // o caminho contrário: número ou booleano num campo de texto era gravado como "12345" ou "true"
+    @Test
+    void numeroOuBooleanoEmCampoDeTextoNaoViraTexto() throws Exception {
+        postJson("/api/areas", tokenAdmin(), """
+                {"nome": 12345, "cidade": "São Paulo", "uf": "SP"}""")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0].field").value("nome"))
+                .andExpect(jsonPath("$.errors[0].message").value("deve ser um texto entre aspas"));
+        postJson("/api/abrigos", tokenAgente(), """
+                {"nome": "Abrigo", "endereco": true, "capacidade": 10, "aceitaPets": true, "acessivelPcd": true, "areaId": 1}""")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0].field").value("endereco"));
+        postJson("/api/relatos", tokenCidadao(), """
+                {"tipo": "OUTRO", "descricao": 12.5, "areaId": 1}""")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0].field").value("descricao"));
+    }
+
     // sem isto o Jackson arredondava 1.7 cm para 1 em silêncio
     @Test
     void numeroDecimalEmCampoInteiroDevolve400() throws Exception {
