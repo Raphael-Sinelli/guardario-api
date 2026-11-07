@@ -15,6 +15,10 @@ spring:
     console:
       enabled: true
       path: /h2-console
+  mvc:
+    # o DevTools liga isto no dev e solta um WARN "Resolved [...]" a cada 400, 404 ou 409 que a API trata de propósito;
+    # o GlobalExceptionHandler já responde esses erros, e o erro inesperado (500) continua no log, com o stack trace
+    log-resolved-exception: false
 
 app:
   jwt:
