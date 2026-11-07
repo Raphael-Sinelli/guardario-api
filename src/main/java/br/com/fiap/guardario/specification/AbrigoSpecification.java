@@ -24,8 +24,9 @@ public final class AbrigoSpecification {
         if (acessivelPcd != null) {
             spec = spec.and(acessivelPcd(acessivelPcd));
         }
-        if (Boolean.TRUE.equals(comVagas)) {
-            spec = spec.and(comVagas());
+        // true: só os que recebem gente agora; false: só os que não recebem (lotados ou fechados)
+        if (comVagas != null) {
+            spec = spec.and(comVagas ? comVagas() : Specification.not(comVagas()));
         }
         if (status != null) {
             spec = spec.and(comStatus(status));

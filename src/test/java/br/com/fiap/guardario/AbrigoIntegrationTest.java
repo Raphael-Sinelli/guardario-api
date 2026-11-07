@@ -80,6 +80,20 @@ class AbrigoIntegrationTest extends IntegracaoBase {
     }
 
     @Test
+    void filtroComVagasFalseTrazSoOsAbrigosSemVaga() throws Exception {
+        long area = criarArea("Área Filtro Vagas " + sufixoUnico());
+        long comVaga = criarAbrigo(area, 10, 2, true, true);
+        long lotado = criarAbrigo(area, 5, 5, true, true);
+
+        mockMvc.perform(get("/api/abrigos").param("areaId", String.valueOf(area)).param("comVagas", "true"))
+                .andExpect(jsonPath("$._embedded.abrigos[*].id", contains((int) comVaga)));
+        mockMvc.perform(get("/api/abrigos").param("areaId", String.valueOf(area)).param("comVagas", "false"))
+                .andExpect(jsonPath("$._embedded.abrigos[*].id", contains((int) lotado)));
+        mockMvc.perform(get("/api/abrigos").param("areaId", String.valueOf(area)))
+                .andExpect(jsonPath("$.page.totalElements").value(2));
+    }
+
+    @Test
     void entradaAteLotarESaidaReabre() throws Exception {
         long abrigo = criarAbrigo(criarArea("Área Lotação " + sufixoUnico()), 10, 0, true, true);
         String agente = tokenAgente();

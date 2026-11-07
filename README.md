@@ -264,7 +264,7 @@ erDiagram
 | Specification | Rota | Filtros |
 |---|---|---|
 | `RelatoSpecification.comFiltros` | `GET /api/relatos` | tipo, status, área, prioridade mínima, criado a partir de, criado até |
-| `AbrigoSpecification.comFiltros` | `GET /api/abrigos` | área, aceita pets, acessível para PcD, com vagas (compara as colunas `ocupacao < capacidade`), status |
+| `AbrigoSpecification.comFiltros` | `GET /api/abrigos` | área, aceita pets, acessível para PcD, com vagas (compara as colunas `ocupacao < capacidade`; `comVagas=false` traz os lotados ou fechados), status |
 
 **Paginação e ordenação.** As listas recebem `Pageable` do Spring Data (`?page=0&size=10&sort=nome,asc`) com padrão definido em `@PageableDefault` e no máximo 100 itens por página. Campo de ordenação que não existe devolve 400. O painel de relatos ordena por padrão pela maior prioridade e, no empate, pelo mais antigo.
 

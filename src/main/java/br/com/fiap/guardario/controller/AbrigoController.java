@@ -52,7 +52,7 @@ public class AbrigoController {
             @Parameter(description = "Id da área", example = "1") @RequestParam(required = false) @Positive Long areaId,
             @Parameter(description = "Só os que aceitam animais") @RequestParam(required = false) Boolean aceitaPets,
             @Parameter(description = "Só os acessíveis para pessoas com deficiência") @RequestParam(required = false) Boolean acessivelPcd,
-            @Parameter(description = "Só os que têm vaga agora") @RequestParam(required = false) Boolean comVagas,
+            @Parameter(description = "true: só os que têm vaga agora; false: só os lotados ou fechados") @RequestParam(required = false) Boolean comVagas,
             @Parameter(description = "ABERTO, LOTADO ou FECHADO") @RequestParam(required = false) StatusAbrigo status,
             @ParameterObject @PageableDefault(size = 10, sort = "nome") Pageable pageable) {
         var pagina = abrigoService.listar(areaId, aceitaPets, acessivelPcd, comVagas, status, pageable);
