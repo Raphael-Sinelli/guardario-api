@@ -392,6 +392,8 @@ Os demais erros seguem o formato `ErrorCustomResponse`:
 | 415 | Corpo enviado sem `Content-Type: application/json` (no Postman, body raw como "Text") |
 | 500 | Erro inesperado: o detalhe fica no log e o cliente recebe uma mensagem genérica |
 
+Requisição que o Tomcat recusa antes de chegar ao Spring (barra codificada `%2F`, escape inválido como `%zz`, byte nulo, caractere proibido na URL, header grande demais) também sai no `ErrorCustomResponse` em JSON, com 400: a `ErroDoTomcatEmJson` substitui a página HTML de erro do Tomcat.
+
 ## Endpoints
 
 | Método | Rota | Acesso | Sucesso |
