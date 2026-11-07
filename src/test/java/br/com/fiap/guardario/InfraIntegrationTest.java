@@ -3,10 +3,13 @@ package br.com.fiap.guardario;
 import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.interceptor.SimpleKey;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -28,6 +31,9 @@ class InfraIntegrationTest extends IntegracaoBase {
 
     @Autowired
     private CacheManager cacheManager;
+
+    @Autowired
+    private PlatformTransactionManager transactionManager;
 
     @Test
     void alertasAtivosFicamEmCacheAteUmNovoAlertaLimpar() throws Exception {
@@ -55,6 +61,28 @@ class InfraIntegrationTest extends IntegracaoBase {
 
         mockMvc.perform(get("/api/alertas/ativos"))
                 .andExpect(jsonPath("$._embedded.alertas[?(@.areaId == %d)].areaNome".formatted(area)).value(nomeNovo));
+    }
+
+    // o @CacheEvict de dentro de uma transação só vale no commit: sem isso, uma leitura concorrente entre o evict e o
+    // commit consultaria o banco ainda sem a mudança e guardaria o dado velho no cache por até 10 minutos
+    @Test
+    void cacheSoEhLimpoDepoisDoCommitENaoEhLimpoNoRollback() {
+        Cache cache = cacheManager.getCache("areas");
+        TransactionTemplate transacao = new TransactionTemplate(transactionManager);
+
+        cache.put("teste-commit", "valor");
+        transacao.executeWithoutResult(status -> {
+            cache.evict("teste-commit");
+            assertThat(cache.get("teste-commit")).isNotNull(); // ainda não houve commit
+        });
+        assertThat(cache.get("teste-commit")).isNull();
+
+        cache.put("teste-rollback", "valor");
+        transacao.executeWithoutResult(status -> {
+            cache.evict("teste-rollback");
+            status.setRollbackOnly();
+        });
+        assertThat(cache.get("teste-rollback")).isNotNull(); // o banco não mudou, o cache continua certo
     }
 
     @Test

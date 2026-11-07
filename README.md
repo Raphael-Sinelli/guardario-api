@@ -274,7 +274,7 @@ erDiagram
 
 Spring Cache com o Caffeine como provedor. O cache guarda DTOs (records), nunca entidades: entidade fora da transação causaria `LazyInitializationException`.
 
-Quem mantém o cache correto é o `@CacheEvict` nas escritas. A configuração `maximumSize=500,expireAfterWrite=10m,recordStats` acrescenta duas coisas: um teto de memória e um prazo de 10 minutos como rede de segurança, caso alguma escrita fora da API mude o banco; e as estatísticas de acerto e erro que aparecem no Actuator.
+Quem mantém o cache correto é o `@CacheEvict` nas escritas. O `CacheConfig` envolve o gerenciador do Caffeine num `TransactionAwareCacheManagerProxy`: o evict de dentro de uma transação só vale depois do commit (e não vale no rollback). Sem isso, uma leitura concorrente entre o evict e o commit veria o banco antigo e guardaria o dado velho de novo. A configuração `maximumSize=500,expireAfterWrite=10m,recordStats` acrescenta duas coisas: um teto de memória e um prazo de 10 minutos como rede de segurança, caso alguma escrita fora da API mude o banco; e as estatísticas de acerto e erro que aparecem no Actuator.
 
 | Cache | O que guarda | Quando é limpo | Por que cachear |
 |---|---|---|---|
@@ -453,7 +453,7 @@ As rotas de listagem aceitam também `page`, `size` e `sort`. A descrição de c
 ```
 src/main/java/br/com/fiap/guardario
 ├── assembler        links HATEOAS de cada recurso
-├── configurations   SecurityConfig, GlobalExceptionHandler, OpenApiConfig, PaginacaoConfig e @CamposDeOrdenacao, IdiomaConfig, DataInitializer, AdminInitializer
+├── configurations   SecurityConfig, GlobalExceptionHandler, OpenApiConfig, PaginacaoConfig e @CamposDeOrdenacao, IdiomaConfig, CacheConfig, DataInitializer, AdminInitializer
 ├── controller       rotas REST e documentação do Swagger
 ├── dto              records de entrada e saída
 ├── exceptions       exceções de negócio (404 e 409)
