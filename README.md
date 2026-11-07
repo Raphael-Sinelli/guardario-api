@@ -50,7 +50,7 @@ Se o wrapper reclamar da versão do Java, confira se `java -version` e a variáv
 Outros comandos:
 
 ```bash
-./mvnw test                                   # roda os 113 testes
+./mvnw test                                   # roda os 178 testes
 ./mvnw clean package                          # gera target/guardario-api-1.0.0.jar
 java -jar target/guardario-api-1.0.0.jar      # roda o jar gerado
 ```
@@ -96,7 +96,7 @@ Sem login dá para consultar áreas, estações, leituras, alertas e abrigos. In
 
 ### Testando com o Postman (ou o Bruno)
 
-A pasta `postman/` tem a coleção `GuardaRio.postman_collection.json`, com 93 requisições em 10 pastas e testes automáticos em cada uma (status esperado e regras de negócio). O Bruno importa o mesmo arquivo.
+A pasta `postman/` tem a coleção `GuardaRio.postman_collection.json`, com 93 requisições em 10 pastas e 146 asserções automáticas (status esperado e regras de negócio); rodada com o Newman contra a API recém-iniciada, dá 0 falhas. O Bruno importa o mesmo arquivo.
 
 1. Suba a API e importe o arquivo no Postman.
 2. Rode a pasta **01 Autenticação**: os logins guardam os tokens nas variáveis da coleção, e as outras requisições já usam o token certo para cada papel.
@@ -452,10 +452,10 @@ As rotas de listagem aceitam também `page`, `size` e `sort`. A descrição de c
 
 ## Testes
 
-`./mvnw test` roda 113 testes:
+`./mvnw test` roda 178 testes:
 
 - 17 testes de unidade das regras que ficam nas entidades e nos enums (régua de risco nas fronteiras de cada cota, nível da área só com estações ativas, leitura atrasada ou antiga, lotação do abrigo, prioridade, máquina de estados, encerramento de alerta).
-- 96 testes de integração que sobem a aplicação inteira e chamam a API por HTTP com o MockMvc, passando pela segurança, pelo cache e pelo banco de verdade: status e formato de cada erro, 401 x 403, token expirado, posse, alerta automático, substituição de alertas, nível da área quando a estação muda de área ou de status, filtros com Specification, links HATEOAS mudando com o estado e sem template, invalidação e métricas do cache, entradas simultâneas no abrigo, leituras simultâneas da mesma área, link excluir sem N+1 (contando os comandos SQL), Actuator, OpenAPI, CORS e o perfil prod subindo sem carga de demonstração.
+- 161 testes de integração que sobem a aplicação inteira e chamam a API por HTTP com o MockMvc, passando pela segurança, pelo cache e pelo banco de verdade: status e formato de cada erro, 401 x 403, token expirado, posse, alerta automático, substituição de alertas, nível da área quando a estação muda de área ou de status, filtros com Specification, links HATEOAS mudando com o estado e sem template, invalidação e métricas do cache, link excluir sem N+1 (contando os comandos SQL), Actuator, OpenAPI, CORS e o perfil prod subindo sem carga de demonstração. Três classes cobrem o que costuma escapar: `MatrizDeAutorizacaoIntegrationTest` passa por toda rota protegida (401 sem token, 403 para quem não tem o papel) e pelas rotas públicas de consulta (200 sem token); `ConcorrenciaIntegrationTest` e os testes de abrigo e leitura disparam requisições ao mesmo tempo (entradas no abrigo, leituras da mesma área, encerrar o mesmo alerta, atender e descartar o mesmo relato, cadastros com o mesmo email); `CasosExtremosIntegrationTest` cobre corpo ausente, campo obrigatório nulo e paginação nos limites (página depois da última, size zero, negativo e acima do teto).
 
 ## Estrutura do projeto
 
