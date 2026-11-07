@@ -319,6 +319,38 @@ class LeituraAlertaIntegrationTest extends IntegracaoBase {
                 .andExpect(jsonPath("$.ultimoRisco").value("EMERGENCIA"));
     }
 
+    // o alerta é histórico: o automático registra uma leitura real e nunca sai; o manual só sai depois de encerrado.
+    // Sem isso, apagar o alerta abria caminho para apagar a estação e todo o histórico de leituras junto
+    @Test
+    void alertaSoEhExcluidoSeForManualEJaEncerrado() throws Exception {
+        String admin = tokenAdmin();
+        String agente = tokenAgente();
+        long automatico = id(registrarLeitura(criarEstacao(criarArea("Área Excluir Automático " + sufixoUnico())), 250, 0.0)
+                .andReturn().getResponse().getContentAsString(), "$.alertaGeradoId");
+        mockMvc.perform(patch("/api/alertas/" + automatico + "/encerrar").header(HttpHeaders.AUTHORIZATION, bearer(agente)))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/alertas/" + automatico).header(HttpHeaders.AUTHORIZATION, bearer(admin)))
+                .andExpect(jsonPath("$._links.excluir").doesNotExist());
+        mockMvc.perform(delete("/api/alertas/" + automatico).header(HttpHeaders.AUTHORIZATION, bearer(admin)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message", containsString("histórico")));
+
+        long manual = id(postJson("/api/alertas", agente, """
+                {"areaId": %d, "nivel": "ATENCAO", "titulo": "Alerta para excluir", "mensagem": "Emitido por engano no teste"}"""
+                .formatted(criarArea("Área Excluir Manual " + sufixoUnico()))));
+        mockMvc.perform(get("/api/alertas/" + manual).header(HttpHeaders.AUTHORIZATION, bearer(admin)))
+                .andExpect(jsonPath("$._links.excluir").doesNotExist());
+        mockMvc.perform(delete("/api/alertas/" + manual).header(HttpHeaders.AUTHORIZATION, bearer(admin)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message", containsString("Encerre o alerta")));
+        mockMvc.perform(patch("/api/alertas/" + manual + "/encerrar").header(HttpHeaders.AUTHORIZATION, bearer(agente)))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/alertas/" + manual).header(HttpHeaders.AUTHORIZATION, bearer(admin)))
+                .andExpect(jsonPath("$._links.excluir.href").exists());
+        mockMvc.perform(delete("/api/alertas/" + manual).header(HttpHeaders.AUTHORIZATION, bearer(admin)))
+                .andExpect(status().isNoContent());
+    }
+
     @Test
     void leituraComDataNoFuturoDevolve400() throws Exception {
         long estacao = criarEstacao(criarArea("Área Futuro " + sufixoUnico()));

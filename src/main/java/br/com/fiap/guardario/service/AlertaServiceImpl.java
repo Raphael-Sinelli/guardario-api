@@ -126,7 +126,18 @@ public class AlertaServiceImpl implements AlertaService {
     @Transactional
     @CacheEvict(cacheNames = "alertasAtivos", allEntries = true)
     public void excluir(Long id) {
-        alertaRepository.delete(buscarEntidade(id));
+        Alerta alerta = buscarEntidade(id);
+        // o alerta é histórico. O automático registra uma leitura real da estação e nunca sai (é ele que impede apagar
+        // a estação com o histórico de leituras); o manual emitido por engano sai, mas só depois de encerrado, para
+        // nenhum aviso ativo sumir sem o registro de quem o encerrou
+        if (alerta.getOrigem() == OrigemAlerta.AUTOMATICO) {
+            throw new RegraNegocioException("Alerta automático faz parte do histórico da estação e não pode ser excluído; "
+                    + "para tirá-lo dos ativos, encerre o alerta");
+        }
+        if (alerta.getStatus() == StatusAlerta.ATIVO) {
+            throw new RegraNegocioException("Encerre o alerta antes de excluir: um alerta ativo não some sem o registro do encerramento");
+        }
+        alertaRepository.delete(alerta);
     }
 
     // RN02: só abre alerta se não houver um ativo de nível igual ou maior; os de nível menor são substituídos.

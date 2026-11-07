@@ -118,10 +118,12 @@ public class AlertaController {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "Exclui um alerta", description = "Somente ADMIN, para corrigir alerta emitido por engano.")
+    @Operation(summary = "Exclui um alerta", description = "Somente ADMIN, para corrigir alerta manual emitido por engano, "
+            + "depois de encerrado. O alerta automático registra uma leitura real e faz parte do histórico: não é excluído.")
     @ApiResponse(responseCode = "204", description = "Alerta excluído")
     @ApiResponse(responseCode = "403", description = "Usuário logado não é ADMIN")
     @ApiResponse(responseCode = "404", description = "Alerta não existe")
+    @ApiResponse(responseCode = "409", description = "Alerta automático, ou alerta manual ainda ativo")
     public ResponseEntity<Void> excluir(@PathVariable @Positive Long id) {
         alertaService.excluir(id);
         return ResponseEntity.noContent().build();

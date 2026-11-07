@@ -5,6 +5,7 @@ import br.com.fiap.guardario.controller.AlertaController;
 import br.com.fiap.guardario.controller.AreaController;
 import br.com.fiap.guardario.controller.EstacaoController;
 import br.com.fiap.guardario.dto.AlertaResponse;
+import br.com.fiap.guardario.model.OrigemAlerta;
 import br.com.fiap.guardario.model.Papel;
 import br.com.fiap.guardario.model.StatusAlerta;
 import br.com.fiap.guardario.security.SecurityUtils;
@@ -35,7 +36,8 @@ public class AlertaModelAssembler implements RepresentationModelAssembler<Alerta
             model.add(linkTo(methodOn(AlertaController.class).encerrar(alerta.id())).withRel("encerrar").withTitle("PATCH, sem corpo"));
             model.add(linkTo(methodOn(AlertaController.class).editar(alerta.id(), null)).withRel("editar").withTitle("PUT com o alerta inteiro"));
         }
-        if (SecurityUtils.temPapel(Papel.ADMIN)) {
+        // excluir só aparece quando dá certo: alerta manual já encerrado (o automático é histórico da estação)
+        if (SecurityUtils.temPapel(Papel.ADMIN) && alerta.origem() == OrigemAlerta.MANUAL && alerta.status() == StatusAlerta.ENCERRADO) {
             model.add(linkTo(methodOn(AlertaController.class).excluir(alerta.id())).withRel("excluir").withTitle("DELETE"));
         }
         return model;
