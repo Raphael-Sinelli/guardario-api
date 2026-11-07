@@ -111,7 +111,7 @@ class LeituraAlertaIntegrationTest extends IntegracaoBase {
         long estacao = criarEstacao(area);
 
         postJson("/api/estacoes/" + estacao + "/leituras", tokenAgente(),
-                "{\"nivelCm\": 290, \"chuvaMmH\": 0, \"medidaEm\": \"1970-01-01T00:00:00Z\"}")
+                "{\"nivelCm\": 290, \"chuvaMmH\": 0, \"medidaEm\": \"" + java.time.Instant.now().minus(java.time.Duration.ofDays(2)) + "\"}")
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.leitura.nivelRisco").value("ALERTA"))
                 .andExpect(jsonPath("$.alertaGeradoId").value(nullValue()))
@@ -258,6 +258,28 @@ class LeituraAlertaIntegrationTest extends IntegracaoBase {
 
         mockMvc.perform(get("/api/estacoes/criticas"))
                 .andExpect(jsonPath("$._embedded.estacoes[*].id", hasItem((int) estacao)));
+    }
+
+    // a estação guarda poucos dias sem internet: data de anos atrás é relógio errado, não leitura
+    @Test
+    void leituraComDataForaDaJanelaDevolve400() throws Exception {
+        long estacao = criarEstacao(criarArea("Área Janela " + sufixoUnico()));
+        for (String data : java.util.List.of("-1000000-01-01T00:00:00Z", "1900-01-01T00:00:00Z",
+                java.time.Instant.now().minus(java.time.Duration.ofDays(31)).toString())) {
+            postJson("/api/estacoes/" + estacao + "/leituras", tokenAgente(),
+                    "{\"nivelCm\": 120, \"chuvaMmH\": 0, \"medidaEm\": \"" + data + "\"}")
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.errors[0].field").value("medidaEm"));
+        }
+    }
+
+    // o relógio da estação pode estar uns segundos adiantado em relação ao servidor
+    @Test
+    void leituraComRelogioPoucosSegundosAdiantadoEhAceita() throws Exception {
+        long estacao = criarEstacao(criarArea("Área Relógio " + sufixoUnico()));
+        postJson("/api/estacoes/" + estacao + "/leituras", tokenAgente(),
+                "{\"nivelCm\": 120, \"chuvaMmH\": 0, \"medidaEm\": \"" + java.time.Instant.now().plusSeconds(20) + "\"}")
+                .andExpect(status().isCreated());
     }
 
     @Test

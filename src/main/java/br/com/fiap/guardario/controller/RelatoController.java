@@ -84,9 +84,9 @@ public class RelatoController {
             @Parameter(description = "Id da área", example = "1") @RequestParam(required = false) @Positive Long areaId,
             @Parameter(description = "Prioridade mínima (1 a 5)", example = "4")
             @RequestParam(required = false) @Min(1) @Max(5) Integer prioridadeMin,
-            @Parameter(description = "Criados a partir de (UTC, ISO 8601)", example = "2026-11-18T00:00:00Z")
+            @Parameter(description = "Criados a partir de (UTC, ISO 8601, como 2026-11-01T00:00:00Z)")
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant de,
-            @Parameter(description = "Criados até (UTC, ISO 8601)", example = "2026-11-19T23:59:59Z")
+            @Parameter(description = "Criados até (UTC, ISO 8601, como 2026-11-30T23:59:59Z)")
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant ate,
             @ParameterObject @PageableDefault(size = 10)
             @SortDefault.SortDefaults({
