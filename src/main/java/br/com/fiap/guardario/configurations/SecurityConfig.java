@@ -61,6 +61,17 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/health/**", "/actuator/info").permitAll()
                         .requestMatchers("/actuator/**").hasRole("ADMIN")
                         .requestMatchers("/h2-console/**").permitAll()
+                        // área de URL de cada papel: quem não tem o papel recebe 403 aqui, antes da validação do corpo
+                        // (o @Valid roda antes do @PreAuthorize, que continua em cada método como segunda camada)
+                        .requestMatchers(HttpMethod.POST, "/api/areas", "/api/estacoes").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/areas/*", "/api/estacoes/*").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/areas/*", "/api/estacoes/*", "/api/alertas/*", "/api/abrigos/*").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/estacoes/*/leituras", "/api/alertas", "/api/abrigos",
+                                "/api/abrigos/*/entradas", "/api/abrigos/*/saidas").hasAnyRole("AGENTE", "ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/alertas/*", "/api/abrigos/*").hasAnyRole("AGENTE", "ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/api/alertas/*/encerrar", "/api/abrigos/*/status",
+                                "/api/relatos/*/status").hasAnyRole("AGENTE", "ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/relatos").hasAnyRole("AGENTE", "ADMIN")
                         // informação de segurança é pública: nível do rio, alertas e abrigos não exigem login
                         .requestMatchers(HttpMethod.GET, "/api/areas/**", "/api/estacoes/**", "/api/alertas/**", "/api/abrigos/**").permitAll()
                         // ver um cadastro pelo id: qualquer logado, com a posse conferida no service; o resto da área é do ADMIN

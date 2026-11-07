@@ -329,7 +329,7 @@ Quem não está logado não recebe link de ação. O `excluir` só aparece quand
 3. O `JwtService` gera um token HS256 que vale 1 hora, com o email no `sub` e o papel numa claim informativa.
 4. O app manda `Authorization: Bearer <token>` em cada requisição.
 5. O `JwtAuthenticationFilter` (um `OncePerRequestFilter`) valida assinatura e expiração, carrega o usuário do banco e coloca no `SecurityContext`. O papel que vale é o do banco: uma promoção feita pelo ADMIN vale na hora, e um papel forjado no token não adianta.
-6. O `SecurityConfig` controla as áreas de URL (rotas públicas, `/api/usuarios/**` e `/actuator/**` só para ADMIN, menos o `GET /api/usuarios/{id}`, que o próprio usuário também faz), o `@PreAuthorize` de cada método controla a ação, e o service confere a posse (relato de outra pessoa dá 403, sempre depois de verificar se existe: 404 vem antes de 403).
+6. O `SecurityConfig` controla as áreas de URL: rotas públicas, a área de cada papel (as escritas de AGENTE e de ADMIN, que assim são negadas antes da validação do corpo), `/api/usuarios/**` e `/actuator/**` só para ADMIN, menos o `GET /api/usuarios/{id}`, que o próprio usuário também faz. Depois disso, o `@PreAuthorize` de cada método controla a ação, e o service confere a posse (relato de outra pessoa dá 403, sempre depois de verificar se existe: 404 vem antes de 403).
 
 **401 x 403.** Sem token, ou com token inválido ou expirado, o `RestAuthenticationEntryPoint` responde 401. Usuário logado sem permissão recebe 403, do `RestAccessDeniedHandler` (área de URL) ou do `GlobalExceptionHandler` (`@PreAuthorize` e regra de posse). Os dois handlers da cadeia de filtros escrevem o mesmo JSON de erro do resto da API.
 
