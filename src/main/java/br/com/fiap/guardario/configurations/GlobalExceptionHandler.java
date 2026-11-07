@@ -9,6 +9,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.OptimisticLockingFailureException;
+import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.data.core.PropertyReferenceException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -56,6 +58,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(RegraNegocioException.class)
     public ResponseEntity<ErrorCustomResponse> regraNegocio(RegraNegocioException ex, HttpServletRequest request) {
         return erro(HttpStatus.CONFLICT, ex.getMessage(), request);
+    }
+
+    // duas requisições alteraram o mesmo registro ao mesmo tempo (@Version no Abrigo): a segunda não sobrescreve a primeira
+    @ExceptionHandler({OptimisticLockingFailureException.class, PessimisticLockingFailureException.class})
+    public ResponseEntity<ErrorCustomResponse> alteracaoSimultanea(RuntimeException ex, HttpServletRequest request) {
+        return erro(HttpStatus.CONFLICT, "O registro foi alterado por outra requisição ao mesmo tempo. Tente de novo", request);
     }
 
     // rede de segurança para FK ou unique violada no banco (ex.: excluir registro ainda referenciado)

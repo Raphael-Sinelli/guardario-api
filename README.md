@@ -198,6 +198,7 @@ erDiagram
         varchar endereco
         int capacidade
         int ocupacao
+        bigint versao "bloqueio otimista"
         boolean aceita_pets
         boolean acessivel_pcd
         varchar status "ABERTO, LOTADO ou FECHADO"
@@ -232,7 +233,7 @@ erDiagram
 
 **DTOs.** O controller nunca recebe nem devolve entidade. Os records de resposta levam só o id do pai (`areaId`, `estacaoId`, `autorId`), o que evita ciclo na serialização e não expõe o hash da senha. `spring.jpa.open-in-view` está desligado, então todo mapeamento para DTO acontece dentro do `@Transactional` do service.
 
-**Outros detalhes.** Enums gravados como texto (`EnumType.STRING`), datas em `Instant` (UTC) e índice em `leitura(estacao_id, medida_em)`, que é a busca do histórico.
+**Outros detalhes.** Enums gravados como texto (`EnumType.STRING`), datas em `Instant` (UTC) e índice em `leitura(estacao_id, medida_em)`, que é a busca do histórico. O `Abrigo` tem `@Version` (bloqueio otimista): durante a cheia vários agentes registram entradas no mesmo abrigo ao mesmo tempo, e sem a versão o segundo UPDATE sobrescreveria o primeiro, perdendo uma entrada já confirmada. Com ela, a requisição que perde a corrida recebe 409 e tenta de novo.
 
 ## Consultas: por que cada tipo
 
@@ -374,7 +375,7 @@ Os demais erros seguem o formato `ErrorCustomResponse`:
 | 404 | Id inexistente ou rota que não existe |
 | 405 | Método HTTP que a rota não aceita |
 | 415 | Corpo enviado sem `Content-Type: application/json` (no Postman, body raw como "Text") |
-| 409 | Regra de negócio: email repetido, transição de status inválida, abrigo lotado ou fechado, alerta já encerrado, exclusão de registro com vínculos |
+| 409 | Regra de negócio: email repetido, transição de status inválida, abrigo lotado ou fechado, alerta já encerrado, exclusão de registro com vínculos, ou duas requisições alterando o mesmo abrigo ao mesmo tempo |
 | 500 | Erro inesperado: o detalhe fica no log e o cliente recebe uma mensagem genérica |
 
 ## Endpoints

@@ -32,6 +32,11 @@ public class Abrigo {
     @Column(nullable = false)
     private Integer ocupacao = 0;
 
+    // bloqueio otimista: se dois agentes registram entrada ao mesmo tempo, o segundo UPDATE encontra a versão
+    // já mudada e falha (409), em vez de sobrescrever a ocupação e perder uma entrada já confirmada
+    @Version
+    private Long versao;
+
     @Column(nullable = false)
     private Boolean aceitaPets;
 

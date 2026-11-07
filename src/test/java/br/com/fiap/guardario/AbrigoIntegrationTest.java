@@ -1,9 +1,18 @@
 package br.com.fiap.guardario;
 
+import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -42,6 +51,32 @@ class AbrigoIntegrationTest extends IntegracaoBase {
     private org.springframework.test.web.servlet.ResultActions putJson(String url, String json) throws Exception {
         return mockMvc.perform(put(url).header(HttpHeaders.AUTHORIZATION, bearer(tokenAgente()))
                 .contentType(MediaType.APPLICATION_JSON).content(json));
+    }
+
+    // durante a cheia vários agentes registram entradas ao mesmo tempo: nenhuma entrada confirmada pode se perder
+    @Test
+    void entradasSimultaneasNaoConfirmamPessoaQueNaoFoiRegistrada() throws Exception {
+        long abrigo = criarAbrigo(criarArea("Área Concorrência " + sufixoUnico()), 10, 0, true, true);
+        String agente = tokenAgente();
+        ExecutorService agentes = Executors.newFixedThreadPool(10);
+        List<Future<Integer>> respostas = new ArrayList<>();
+        for (int i = 0; i < 30; i++) {
+            respostas.add(agentes.submit(() -> postJson("/api/abrigos/" + abrigo + "/entradas", agente, "{\"pessoas\": 1}")
+                    .andReturn().getResponse().getStatus()));
+        }
+        agentes.shutdown();
+
+        int confirmadas = 0;
+        for (Future<Integer> resposta : respostas) {
+            int codigo = resposta.get(60, TimeUnit.SECONDS);
+            assertThat(codigo).isIn(200, 409);
+            if (codigo == 200) {
+                confirmadas++;
+            }
+        }
+        String json = mockMvc.perform(get("/api/abrigos/" + abrigo)).andReturn().getResponse().getContentAsString();
+        int ocupacao = JsonPath.read(json, "$.ocupacao");
+        assertThat(confirmadas).isEqualTo(ocupacao);
     }
 
     @Test
