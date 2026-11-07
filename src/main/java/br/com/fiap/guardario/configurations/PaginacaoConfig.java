@@ -1,5 +1,6 @@
 package br.com.fiap.guardario.configurations;
 
+import br.com.fiap.guardario.exceptions.CampoInvalidoException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Configuration;
@@ -42,7 +43,7 @@ public class PaginacaoConfig implements WebMvcConfigurer {
         long pagina = numero(request.getParameter("page"), 0);
         long tamanho = Math.min(numero(request.getParameter("size"), TAMANHO_PADRAO), TAMANHO_MAXIMO);
         if (pagina * tamanho > Integer.MAX_VALUE) {
-            throw new IllegalArgumentException("Parâmetro page fora do intervalo: page vezes size passa de " + Integer.MAX_VALUE);
+            throw new CampoInvalidoException("page", "fora do intervalo: page vezes size passa de " + Integer.MAX_VALUE);
         }
     }
 
@@ -60,7 +61,7 @@ public class PaginacaoConfig implements WebMvcConfigurer {
             for (String termo : ordenacao.split(",")) {
                 String campo = termo.trim();
                 if (!campo.isEmpty() && !PALAVRAS_DE_DIRECAO.contains(campo.toLowerCase(Locale.ROOT)) && !aceitos.contains(campo)) {
-                    throw new IllegalArgumentException(aceitos.isEmpty()
+                    throw new CampoInvalidoException("sort", aceitos.isEmpty()
                             ? "Esta rota não aceita ordenação"
                             : "Ordenação não permitida por " + campo + ". Campos aceitos: " + String.join(", ", aceitos));
                 }

@@ -1,5 +1,6 @@
 package br.com.fiap.guardario.service;
 
+import br.com.fiap.guardario.exceptions.CampoInvalidoException;
 import br.com.fiap.guardario.dto.AlertaEdicaoRequest;
 import br.com.fiap.guardario.dto.AlertaRequest;
 import br.com.fiap.guardario.dto.AlertaResponse;
@@ -80,7 +81,7 @@ public class AlertaServiceImpl implements AlertaService {
             estacao = estacaoRepository.findById(request.estacaoId())
                     .orElseThrow(() -> new ResourceNotFoundException("estação", request.estacaoId()));
             if (!estacao.getArea().getId().equals(area.getId())) {
-                throw new IllegalArgumentException("A estação informada não pertence à área do alerta");
+                throw new CampoInvalidoException("estacaoId", "a estação informada não pertence à área do alerta");
             }
         }
 

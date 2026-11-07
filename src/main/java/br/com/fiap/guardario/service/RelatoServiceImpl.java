@@ -1,5 +1,6 @@
 package br.com.fiap.guardario.service;
 
+import br.com.fiap.guardario.exceptions.CampoInvalidoException;
 import br.com.fiap.guardario.dto.AlterarStatusRelatoRequest;
 import br.com.fiap.guardario.dto.RelatoRequest;
 import br.com.fiap.guardario.dto.RelatoResponse;
@@ -58,7 +59,7 @@ public class RelatoServiceImpl implements RelatoService {
     public Page<RelatoResponse> listar(TipoRelato tipo, StatusRelato status, Long areaId, Integer prioridadeMinima,
                                        Instant de, Instant ate, Pageable pageable) {
         if (de != null && ate != null && de.isAfter(ate)) {
-            throw new IllegalArgumentException("O parâmetro 'de' precisa ser anterior ao 'ate'");
+            throw new CampoInvalidoException("de", "precisa ser anterior ao parâmetro 'ate'");
         }
         var filtro = RelatoSpecification.comFiltros(tipo, status, areaId, prioridadeMinima, de, ate);
         return relatoRepository.findAll(filtro, pageable).map(RelatoMapper::toResponse);

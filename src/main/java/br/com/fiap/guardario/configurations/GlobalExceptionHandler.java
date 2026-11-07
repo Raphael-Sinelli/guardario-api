@@ -3,6 +3,7 @@ package br.com.fiap.guardario.configurations;
 import br.com.fiap.guardario.dto.ErrorCustomResponse;
 import br.com.fiap.guardario.dto.ErrorFieldCustom;
 import br.com.fiap.guardario.dto.ValidationErrorResponse;
+import br.com.fiap.guardario.exceptions.CampoInvalidoException;
 import br.com.fiap.guardario.exceptions.RegraNegocioException;
 import br.com.fiap.guardario.exceptions.ResourceNotFoundException;
 import br.com.fiap.guardario.security.RestAccessDeniedHandler;
@@ -91,6 +92,12 @@ public class GlobalExceptionHandler {
         ex.getBindingResult().getGlobalErrors()
                 .forEach(e -> erros.add(new ErrorFieldCustom(e.getObjectName(), e.getDefaultMessage())));
         return erroValidacao(erros, request);
+    }
+
+    // regra de um campo ou parâmetro conferida no service ou no interceptor de paginação: mesmo formato da Bean Validation
+    @ExceptionHandler(CampoInvalidoException.class)
+    public ResponseEntity<ValidationErrorResponse> campoInvalido(CampoInvalidoException ex, HttpServletRequest request) {
+        return erroValidacao(List.of(new ErrorFieldCustom(ex.getCampo(), ex.getMessage())), request);
     }
 
     // @Positive no @PathVariable com @Validated na classe

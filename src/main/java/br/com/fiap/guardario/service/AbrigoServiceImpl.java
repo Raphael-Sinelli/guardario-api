@@ -1,5 +1,6 @@
 package br.com.fiap.guardario.service;
 
+import br.com.fiap.guardario.exceptions.CampoInvalidoException;
 import br.com.fiap.guardario.dto.AbrigoRequest;
 import br.com.fiap.guardario.dto.AbrigoResponse;
 import br.com.fiap.guardario.exceptions.RegraNegocioException;
@@ -98,7 +99,7 @@ public class AbrigoServiceImpl implements AbrigoService {
         switch (status) {
             case FECHADO -> abrigo.fechar();
             case ABERTO -> abrigo.reabrir();
-            case LOTADO -> throw new IllegalArgumentException("LOTADO é definido pelo sistema quando a ocupação chega à capacidade");
+            case LOTADO -> throw new CampoInvalidoException("status", "LOTADO é definido pelo sistema quando a ocupação chega à capacidade");
         }
         return AbrigoMapper.toResponse(abrigo);
     }

@@ -6,6 +6,7 @@ import org.springframework.http.MediaType;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -142,7 +143,7 @@ class ErrosPadronizadosIntegrationTest extends IntegracaoBase {
     void paginaForaDoIntervaloDevolve400() throws Exception {
         mockMvc.perform(get("/api/alertas").param("page", "2147483647").param("size", "100"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message", containsString("page")));
+                .andExpect(jsonPath("$.errors[0].field").value("page"));
         mockMvc.perform(get("/api/alertas").param("page", "3").param("size", "100")).andExpect(status().isOk());
     }
 
@@ -151,7 +152,8 @@ class ErrosPadronizadosIntegrationTest extends IntegracaoBase {
     void ordenacaoSoPorCamposDoProprioRecurso() throws Exception {
         mockMvc.perform(get("/api/alertas").param("sort", "emitidoPor.senha"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message", containsString("emitidoPor.senha")));
+                .andExpect(jsonPath("$.errors[0].field").value("sort"))
+                .andExpect(jsonPath("$.errors[0].message", containsString("emitidoPor.senha")));
         mockMvc.perform(get("/api/usuarios").param("sort", "senha,desc").header(HttpHeaders.AUTHORIZATION, bearer(tokenAdmin())))
                 .andExpect(status().isBadRequest());
         mockMvc.perform(get("/api/areas").param("sort", "nome,desc")).andExpect(status().isOk());
@@ -159,7 +161,7 @@ class ErrosPadronizadosIntegrationTest extends IntegracaoBase {
         // o Spring Data resolve emitidoPorSenha como emitidoPor.senha pelo camelCase: só vale a lista de cada rota
         mockMvc.perform(get("/api/alertas").param("sort", "emitidoPorSenha"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message", containsString("emitidoEm")));
+                .andExpect(jsonPath("$.errors[0].message", containsString("emitidoEm")));
         mockMvc.perform(get("/api/relatos").param("sort", "autorSenha").header(HttpHeaders.AUTHORIZATION, bearer(tokenAgente())))
                 .andExpect(status().isBadRequest());
         mockMvc.perform(get("/api/relatos").param("sort", "prioridade,desc").header(HttpHeaders.AUTHORIZATION, bearer(tokenAgente())))
@@ -173,6 +175,29 @@ class ErrosPadronizadosIntegrationTest extends IntegracaoBase {
         // vários campos válidos e as palavras de direção continuam aceitos
         mockMvc.perform(get("/api/areas").param("sort", "uf,nome,ASC")).andExpect(status().isOk());
         mockMvc.perform(get("/api/areas").param("sort", "nome,desc,ignorecase")).andExpect(status().isOk());
+    }
+
+    // erro de um campo ou parâmetro sai sempre em errors com o nome dele, mesmo quando a regra está no service
+    @Test
+    void erroDeCampoConferidoNoServiceTambemApontaOCampo() throws Exception {
+        String agente = tokenAgente();
+        long areaDoAlerta = criarArea("Área Alerta Campo " + sufixoUnico());
+        long estacaoDeOutraArea = criarEstacao(criarArea("Área Outra " + sufixoUnico()));
+        postJson("/api/alertas", agente, """
+                {"areaId": %d, "estacaoId": %d, "nivel": "ALERTA", "titulo": "Teste", "mensagem": "Mensagem do alerta"}"""
+                .formatted(areaDoAlerta, estacaoDeOutraArea))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0].field").value("estacaoId"));
+
+        mockMvc.perform(patch("/api/abrigos/1/status").header(HttpHeaders.AUTHORIZATION, bearer(agente))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"status\": \"LOTADO\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0].field").value("status"));
+
+        mockMvc.perform(get("/api/relatos").header(HttpHeaders.AUTHORIZATION, bearer(agente))
+                        .param("de", "2026-11-05T00:00:00Z").param("ate", "2026-11-01T00:00:00Z"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0].field").value("de"));
     }
 
     // o 403 do SecurityConfig (área de URL) e o do @PreAuthorize têm a mesma mensagem
