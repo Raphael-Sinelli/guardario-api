@@ -6,6 +6,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 
 @Entity
 @Table(indexes = @Index(name = "idx_leitura_estacao_medida", columnList = "estacao_id, medida_em"))
@@ -40,4 +41,10 @@ public class Leitura {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "estacao_id", nullable = false)
     private Estacao estacao;
+
+    // o Java mede o horário em frações de 100 ns e o banco guarda microssegundos, arredondando. Sem o corte, a leitura
+    // voltava do banco até 1 µs mais tarde, e a próxima, no mesmo instante, parecia atrasada e não virava a leitura atual
+    public void setMedidaEm(Instant medidaEm) {
+        this.medidaEm = medidaEm == null ? null : medidaEm.truncatedTo(ChronoUnit.MICROS);
+    }
 }

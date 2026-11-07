@@ -298,6 +298,27 @@ class LeituraAlertaIntegrationTest extends IntegracaoBase {
                 .andExpect(jsonPath("$.alertaGeradoId").isNumber());
     }
 
+    // o Java mede o horário em frações de 100 ns e o banco guarda microssegundos, arredondando: sem cortar a fração,
+    // a leitura gravada voltava do banco 1 µs mais tarde, e a seguinte, no mesmo instante, parecia atrasada e não valia
+    @Test
+    void duasLeiturasNoMesmoInstanteContamAMaisNovaComoAtual() throws Exception {
+        long estacao = criarEstacao(criarArea("Área Mesmo Instante " + sufixoUnico()));
+        String medidaEm = java.time.Instant.now().minusSeconds(60).truncatedTo(java.time.temporal.ChronoUnit.SECONDS)
+                .plusNanos(999_999_900).toString(); // fração ,9999999 s: arredondada, iria para o segundo seguinte
+        postJson("/api/estacoes/" + estacao + "/leituras", tokenAgente(),
+                "{\"nivelCm\": 10, \"chuvaMmH\": 0, \"medidaEm\": \"" + medidaEm + "\"}")
+                .andExpect(status().isCreated());
+
+        postJson("/api/estacoes/" + estacao + "/leituras", tokenAgente(),
+                "{\"nivelCm\": 400, \"chuvaMmH\": 0, \"medidaEm\": \"" + medidaEm + "\"}")
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.nivelArea").value("EMERGENCIA"))
+                .andExpect(jsonPath("$.alertaGeradoId").isNumber());
+        mockMvc.perform(get("/api/estacoes/" + estacao))
+                .andExpect(jsonPath("$.ultimoNivelCm").value(400))
+                .andExpect(jsonPath("$.ultimoRisco").value("EMERGENCIA"));
+    }
+
     @Test
     void leituraComDataNoFuturoDevolve400() throws Exception {
         long estacao = criarEstacao(criarArea("Área Futuro " + sufixoUnico()));
