@@ -16,6 +16,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasKey;
 import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -82,6 +84,17 @@ class InfraIntegrationTest extends IntegracaoBase {
                         .header(HttpHeaders.AUTHORIZATION, bearer(tokenAdmin())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.measurements[0].value", greaterThanOrEqualTo(1.0)));
+    }
+
+    // a documentação dos parâmetros de lista fica em português e o sort mostra os campos aceitos daquela rota
+    @Test
+    void swaggerDocumentaPaginacaoEmPortuguesEO409DoAbrigo() throws Exception {
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(jsonPath("$.paths['/api/areas'].get.parameters[?(@.name == 'page')].description",
+                        hasItem(containsString("começando em 0"))))
+                .andExpect(jsonPath("$.paths['/api/areas'].get.parameters[?(@.name == 'sort')].description",
+                        hasItem(containsString("populacaoEstimada"))))
+                .andExpect(jsonPath("$.paths['/api/abrigos/{id}'].put.responses['409'].description").exists());
     }
 
     // o app segue o href como está: link com template ({?page,size} ou {&aceitaPets}) levaria a uma URL inválida

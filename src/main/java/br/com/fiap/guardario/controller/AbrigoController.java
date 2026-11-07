@@ -95,11 +95,14 @@ public class AbrigoController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('AGENTE', 'ADMIN')")
-    @Operation(summary = "Atualiza um abrigo", description = "AGENTE ou ADMIN. O status LOTADO ou ABERTO é recalculado pela ocupação.")
+    @Operation(summary = "Atualiza um abrigo", description = "AGENTE ou ADMIN. O status LOTADO ou ABERTO é recalculado pela ocupação. "
+            + "Sem ocupacao no corpo, fica a ocupação atual.")
     @ApiResponse(responseCode = "200", description = "Abrigo atualizado")
     @ApiResponse(responseCode = "400", description = "Campos inválidos ou ocupação maior que a capacidade")
     @ApiResponse(responseCode = "403", description = "Usuário logado é CIDADAO")
     @ApiResponse(responseCode = "404", description = "Abrigo ou área não existe")
+    @ApiResponse(responseCode = "409", description = "A capacidade ficaria abaixo das pessoas que já estão no abrigo, "
+            + "ou outro agente alterou o abrigo ao mesmo tempo")
     public ResponseEntity<EntityModel<AbrigoResponse>> atualizar(@PathVariable @Positive Long id,
                                                                  @RequestBody @Valid AbrigoRequest request) {
         return ResponseEntity.ok(assembler.toModel(abrigoService.atualizar(id, request)));

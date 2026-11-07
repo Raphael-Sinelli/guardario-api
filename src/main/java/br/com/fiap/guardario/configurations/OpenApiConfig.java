@@ -14,9 +14,11 @@ import io.swagger.v3.oas.models.Operation;
 import io.swagger.v3.oas.models.media.Content;
 import io.swagger.v3.oas.models.media.MediaType;
 import io.swagger.v3.oas.models.media.Schema;
+import io.swagger.v3.oas.models.parameters.Parameter;
 import io.swagger.v3.oas.models.responses.ApiResponse;
 import io.swagger.v3.oas.models.responses.ApiResponses;
 import org.springdoc.core.customizers.OpenApiCustomizer;
+import org.springdoc.core.customizers.OperationCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -112,6 +114,36 @@ public class OpenApiConfig {
                 .sorted(Map.Entry.comparingByKey())
                 .forEach(entrada -> emOrdem.addApiResponse(entrada.getKey(), entrada.getValue()));
         operacao.setResponses(emOrdem);
+    }
+
+    /*
+     * O springdoc descreve page, size e sort com o texto do Spring Data, em inglês, e não sabe por quais campos cada
+     * rota deixa ordenar. Este customizer põe a descrição em português e lista no sort os campos do @CamposDeOrdenacao.
+     */
+    @Bean
+    public OperationCustomizer parametrosDeListaEmPortugues() {
+        return (operacao, metodo) -> {
+            if (operacao.getParameters() == null) {
+                return operacao;
+            }
+            CamposDeOrdenacao campos = metodo.getMethodAnnotation(CamposDeOrdenacao.class);
+            for (Parameter parametro : operacao.getParameters()) {
+                if (!"query".equals(parametro.getIn())) {
+                    continue;
+                }
+                switch (parametro.getName()) {
+                    case "page" -> parametro.setDescription("Número da página, começando em 0");
+                    case "size" -> parametro.setDescription("Itens por página, no máximo 100");
+                    case "sort" -> parametro.setDescription(campos == null
+                            ? "Esta rota não aceita ordenação"
+                            : "Ordenação no formato campo,asc ou campo,desc (pode repetir o parâmetro). Campos aceitos: "
+                            + String.join(", ", campos.value()));
+                    default -> {
+                    }
+                }
+            }
+            return operacao;
+        };
     }
 
     private void registrarSchema(Components components, Class<?> tipo) {
