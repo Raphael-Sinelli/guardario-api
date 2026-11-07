@@ -39,17 +39,31 @@ class RegrasDeDominioTest {
         assertThat(estacaoComCotas(100, 200, 300).classificar(nivel, chuva)).isEqualTo(esperado);
     }
 
+    // datas relativas a agora: com datas fixas, o teste quebraria quando elas ficassem mais velhas que a janela de 1 hora
     @Test
     void leituraAtrasadaNaoMudaOUltimoNivelDaEstacao() {
         Estacao estacao = estacaoComCotas(100, 200, 300);
-        Leitura recente = leitura(250, NivelRisco.ALERTA, java.time.Instant.parse("2026-11-18T12:00:00Z"));
-        Leitura atrasada = leitura(80, NivelRisco.NORMAL, java.time.Instant.parse("2026-11-18T11:00:00Z"));
+        java.time.Instant agora = java.time.Instant.now();
+        Leitura recente = leitura(250, NivelRisco.ALERTA, agora.minusSeconds(60));
+        Leitura atrasada = leitura(80, NivelRisco.NORMAL, agora.minusSeconds(120));
 
         assertThat(estacao.registrarLeitura(recente)).isTrue();
         assertThat(estacao.registrarLeitura(atrasada)).isFalse();
         assertThat(estacao.getUltimoNivelCm()).isEqualTo(250);
         assertThat(estacao.getUltimoRisco()).isEqualTo(NivelRisco.ALERTA);
         assertThat(estacao.getLeituras()).hasSize(2);
+    }
+
+    // leitura medida há mais de 1 hora (estação que ficou sem internet, ou relógio errado) não descreve a situação de agora
+    @Test
+    void leituraMedidaHaMaisDeUmaHoraSoEntraNoHistorico() {
+        Estacao estacao = estacaoComCotas(100, 200, 300);
+        Leitura antiga = leitura(290, NivelRisco.ALERTA, java.time.Instant.now().minusSeconds(2 * 3600));
+
+        assertThat(estacao.registrarLeitura(antiga)).isFalse();
+        assertThat(estacao.getUltimoRisco()).isNull();
+        assertThat(estacao.getUltimaLeituraEm()).isNull();
+        assertThat(estacao.getLeituras()).hasSize(1);
     }
 
     // RN03: estação INATIVA ou em MANUTENCAO não mede mais, então o último risco dela não segura o nível da área

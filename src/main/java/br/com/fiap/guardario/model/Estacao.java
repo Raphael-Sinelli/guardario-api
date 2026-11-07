@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -20,6 +21,9 @@ public class Estacao {
 
     // 50 mm/h ou mais é chuva muito forte: o risco sobe um nível (RN01)
     public static final double CHUVA_MUITO_FORTE_MM_H = 50.0;
+
+    // leitura medida há mais tempo que isso entra só no histórico (ver registrarLeitura)
+    public static final Duration JANELA_LEITURA_ATUAL = Duration.ofHours(1);
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -84,15 +88,18 @@ public class Estacao {
     }
 
     /**
-     * Liga a leitura à estação e, se ela for a mais recente, atualiza o último nível.
-     * Devolve true quando a leitura passou a ser a mais recente da estação.
+     * Liga a leitura à estação e, se ela descreve a situação de agora, atualiza o último nível.
+     * Devolve true quando a leitura passou a ser a leitura atual da estação: só ela pode gerar alerta.
      */
     public boolean registrarLeitura(Leitura leitura) {
         leitura.setEstacao(this);
         leituras.add(leitura);
 
-        // leitura atrasada (chegou fora de ordem) entra no histórico, mas não muda o estado atual
-        if (ultimaLeituraEm != null && leitura.getMedidaEm().isBefore(ultimaLeituraEm)) {
+        // leitura atrasada (mais antiga que a última) ou medida há mais de 1 hora entra no histórico,
+        // mas não muda o estado atual: o alerta precisa olhar para o rio de agora, não para uma medição velha
+        boolean atrasada = ultimaLeituraEm != null && leitura.getMedidaEm().isBefore(ultimaLeituraEm);
+        boolean antiga = leitura.getMedidaEm().isBefore(Instant.now().minus(JANELA_LEITURA_ATUAL));
+        if (atrasada || antiga) {
             return false;
         }
         ultimoNivelCm = leitura.getNivelCm();

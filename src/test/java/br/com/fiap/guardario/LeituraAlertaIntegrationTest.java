@@ -56,6 +56,22 @@ class LeituraAlertaIntegrationTest extends IntegracaoBase {
     }
 
     @Test
+    void leituraComDataAntigaNaoAbreAlertaNemMudaONivelDaArea() throws Exception {
+        long area = criarArea("Área Data Antiga " + sufixoUnico());
+        long estacao = criarEstacao(area);
+
+        postJson("/api/estacoes/" + estacao + "/leituras", tokenAgente(),
+                "{\"nivelCm\": 290, \"chuvaMmH\": 0, \"medidaEm\": \"1970-01-01T00:00:00Z\"}")
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.leitura.nivelRisco").value("ALERTA"))
+                .andExpect(jsonPath("$.alertaGeradoId").value(nullValue()))
+                .andExpect(jsonPath("$.nivelArea").value("NORMAL"));
+
+        mockMvc.perform(get("/api/estacoes/" + estacao + "/leituras"))
+                .andExpect(jsonPath("$.page.totalElements").value(1));
+    }
+
+    @Test
     void leituraEmAlertaGeraAlertaAutomaticoQueApareceNosAtivos() throws Exception {
         long area = criarArea("Área Alerta " + sufixoUnico());
         long estacao = criarEstacao(area);

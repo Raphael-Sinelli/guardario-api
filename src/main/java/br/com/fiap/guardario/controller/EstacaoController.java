@@ -135,7 +135,8 @@ public class EstacaoController {
             description = """
                     AGENTE ou ADMIN (é a rota que a ponte MQTT chama). O servidor classifica o risco pela régua da estação,
                     sobe um nível com chuva de 50 mm/h ou mais, recalcula o nível da área e, se o risco for ALERTA ou pior,
-                    abre um alerta automático. O corpo da resposta traz o alertaGeradoId quando isso acontece.""")
+                    abre um alerta automático. O corpo da resposta traz o alertaGeradoId quando isso acontece.
+                    Leitura mais antiga que a última da estação, ou medida há mais de 1 hora, entra só no histórico.""")
     @ApiResponse(responseCode = "201", description = "Leitura registrada. O Location aponta para a leitura, e o link alerta aparece quando um alerta automático nasce")
     @ApiResponse(responseCode = "400", description = "Valores fora da faixa ou data no futuro")
     @ApiResponse(responseCode = "403", description = "Usuário logado é CIDADAO")
