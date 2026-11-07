@@ -166,15 +166,15 @@ public class GlobalExceptionHandler {
         return "valor em formato inválido";
     }
 
-    // ?status=XYZ ou /api/areas/abc
+    // ?status=XYZ ou /api/areas/abc: erro de um parâmetro, no mesmo formato do /api/areas/0 (@Positive), com o campo em errors
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
-    public ResponseEntity<ErrorCustomResponse> tipoInvalido(MethodArgumentTypeMismatchException ex, HttpServletRequest request) {
-        return erro(HttpStatus.BAD_REQUEST, "Valor inválido para o parâmetro '" + ex.getName() + "': " + ex.getValue(), request);
+    public ResponseEntity<ValidationErrorResponse> tipoInvalido(MethodArgumentTypeMismatchException ex, HttpServletRequest request) {
+        return erroValidacao(List.of(new ErrorFieldCustom(ex.getName(), motivo(ex.getRequiredType()))), request);
     }
 
     @ExceptionHandler(MissingServletRequestParameterException.class)
-    public ResponseEntity<ErrorCustomResponse> parametroAusente(MissingServletRequestParameterException ex, HttpServletRequest request) {
-        return erro(HttpStatus.BAD_REQUEST, "Parâmetro obrigatório ausente: " + ex.getParameterName(), request);
+    public ResponseEntity<ValidationErrorResponse> parametroAusente(MissingServletRequestParameterException ex, HttpServletRequest request) {
+        return erroValidacao(List.of(new ErrorFieldCustom(ex.getParameterName(), "é obrigatório")), request);
     }
 
     // ?sort=campoQueNaoExiste

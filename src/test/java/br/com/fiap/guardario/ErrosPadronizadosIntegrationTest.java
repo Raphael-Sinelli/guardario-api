@@ -64,6 +64,21 @@ class ErrosPadronizadosIntegrationTest extends IntegracaoBase {
                 .andExpect(jsonPath("$.errors[0].message", containsString("fora do intervalo")));
     }
 
+    // id "abc" e id 0 são o mesmo tipo de erro (parâmetro inválido): os dois saem com o campo em errors
+    @Test
+    void parametroDeRotaOuDeConsultaComTipoErradoApontaOCampo() throws Exception {
+        mockMvc.perform(get("/api/areas/abc"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0].field").value("id"))
+                .andExpect(jsonPath("$.errors[0].message").value("deve ser um número inteiro"));
+        mockMvc.perform(get("/api/areas/0"))
+                .andExpect(jsonPath("$.errors[0].field").value("id"));
+        mockMvc.perform(get("/api/alertas").param("status", "XYZ"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0].field").value("status"))
+                .andExpect(jsonPath("$.errors[0].message", containsString("ATIVO")));
+    }
+
     @Test
     void jsonMalFormadoContinuaComMensagemSobreOJson() throws Exception {
         postJson("/api/relatos", tokenCidadao(), "{\"tipo\": ")

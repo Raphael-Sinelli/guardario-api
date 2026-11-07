@@ -372,7 +372,7 @@ Os demais erros seguem o formato `ErrorCustomResponse`:
 
 | Status | Quando |
 |---|---|
-| 400 | Bean Validation, valor de tipo errado num campo do corpo (sai em `errors` com o nome do campo), JSON mal formado, id que não é número ou não é positivo, parâmetro fora do enum, campo de ordenação inexistente |
+| 400 | Saem em `errors`, com o nome do campo: Bean Validation, valor de tipo errado no corpo, id que não é número ou não é positivo, parâmetro fora do enum ou ausente. Saem só com `message`: JSON mal formado, ordenação por campo não aceito, página fora do intervalo |
 | 401 | Sem token, token inválido ou expirado, login com senha errada |
 | 403 | Papel sem permissão (mesma mensagem no `SecurityConfig` e no `@PreAuthorize`) ou recurso de outra pessoa (a mensagem diz o motivo) |
 | 404 | Id inexistente, ou rota que não existe quando a requisição tem token. Sem token, a rota desconhecida dá 401: toda rota fora da lista pública exige login, e a segurança responde antes de o Spring procurar a rota |
