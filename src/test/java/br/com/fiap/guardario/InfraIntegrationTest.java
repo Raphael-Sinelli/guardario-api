@@ -226,6 +226,13 @@ class InfraIntegrationTest extends IntegracaoBase {
 
         mockMvc.perform(get("/api/usuarios").header(HttpHeaders.AUTHORIZATION, bearer(tokenCidadao())))
                 .andExpect(status().isForbidden());
+
+        // o link de ação só aparece onde a ação é possível: no próprio registro do ADMIN ela daria 409
+        mockMvc.perform(get("/api/usuarios/" + adminId).header(HttpHeaders.AUTHORIZATION, bearer(admin)))
+                .andExpect(jsonPath("$._links['alterar-papel']").doesNotExist());
+        long cidadaoId = id(mockMvc.perform(get("/api/auth/me").header(HttpHeaders.AUTHORIZATION, bearer(tokenCidadao()))));
+        mockMvc.perform(get("/api/usuarios/" + cidadaoId).header(HttpHeaders.AUTHORIZATION, bearer(admin)))
+                .andExpect(jsonPath("$._links['alterar-papel'].href").exists());
         mockMvc.perform(get("/api/usuarios").header(HttpHeaders.AUTHORIZATION, bearer(admin)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$._embedded.usuarios[0].senha").doesNotExist());

@@ -305,6 +305,7 @@ As respostas usam o formato HAL. As listas vêm com os itens em `_embedded`, os 
 | Leitura | `estacao`, `estatisticas-24h`. Na resposta do registro: `estacao`, `area` e, quando a leitura abre um alerta automático, `alerta` | nenhuma: leitura não muda depois de gravada |
 | Área | `estacoes`, `abrigos-com-vaga`, `alertas-ativos` | ADMIN: `atualizar`, `excluir` |
 | Linha do ranking | `area`, `abrigos-com-vaga` | nenhuma: é um relatório |
+| Usuário (rotas do ADMIN) | `area`, `usuarios` | `alterar-papel`, menos no registro do próprio ADMIN, que não pode mudar o próprio papel |
 
 Quem não está logado não recebe link de ação. O link orienta o cliente, mas não substitui a checagem: o servidor confere a permissão em toda requisição.
 
