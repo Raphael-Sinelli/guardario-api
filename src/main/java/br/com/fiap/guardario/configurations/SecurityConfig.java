@@ -1,6 +1,8 @@
 package br.com.fiap.guardario.configurations;
 
 import br.com.fiap.guardario.repository.UsuarioRepository;
+import br.com.fiap.guardario.security.CorsComErroEmJson;
+import br.com.fiap.guardario.security.JsonErrorWriter;
 import br.com.fiap.guardario.security.JwtAuthenticationFilter;
 import br.com.fiap.guardario.security.JwtService;
 import br.com.fiap.guardario.security.RestAccessDeniedHandler;
@@ -11,7 +13,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -23,6 +24,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.authentication.logout.LogoutFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -46,10 +48,12 @@ public class SecurityConfig {
     private final RestAccessDeniedHandler accessDeniedHandler;
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http, CorsConfigurationSource corsConfigurationSource,
+                                           JsonErrorWriter jsonErrorWriter) throws Exception {
         http
                 .csrf(csrf -> csrf.disable()) // API stateless com token no header: não há cookie de sessão para o CSRF explorar
-                .cors(Customizer.withDefaults())
+                // o CORS roda no CorsComErroEmJson, adicionado abaixo, para a origem recusada receber o JSON padrão
+                .cors(cors -> cors.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/login").permitAll()
@@ -69,6 +73,7 @@ public class SecurityConfig {
                 )
                 // só por causa do console do H2 (perfil dev), que roda dentro de um frame
                 .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
+                .addFilterBefore(new CorsComErroEmJson(corsConfigurationSource, jsonErrorWriter), LogoutFilter.class)
                 .addFilterBefore(new JwtAuthenticationFilter(jwtService, usuarioRepository), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

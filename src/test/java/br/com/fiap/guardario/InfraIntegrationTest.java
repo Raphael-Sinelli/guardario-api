@@ -207,7 +207,15 @@ class InfraIntegrationTest extends IntegracaoBase {
         mockMvc.perform(options("/api/relatos")
                         .header(HttpHeaders.ORIGIN, "http://site-malicioso.com")
                         .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "POST"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isForbidden())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(403))
+                .andExpect(jsonPath("$.message", containsString("site-malicioso.com")));
+
+        // requisição comum (não preflight) de origem recusada também recebe o JSON padrão
+        mockMvc.perform(get("/api/areas").header(HttpHeaders.ORIGIN, "http://site-malicioso.com"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.status").value(403));
     }
 
     @Test
