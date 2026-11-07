@@ -15,6 +15,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.data.core.PropertyReferenceException;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
@@ -48,6 +49,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -255,7 +257,15 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public ResponseEntity<ErrorCustomResponse> metodoNaoSuportado(HttpRequestMethodNotSupportedException ex, HttpServletRequest request) {
-        return erro(HttpStatus.METHOD_NOT_ALLOWED, "Método " + ex.getMethod() + " não é aceito nesta rota", request);
+        ResponseEntity<ErrorCustomResponse> resposta =
+                erro(HttpStatus.METHOD_NOT_ALLOWED, "Método " + ex.getMethod() + " não é aceito nesta rota", request);
+        // o 405 diz no header Allow quais métodos a rota aceita (RFC 9110)
+        Set<HttpMethod> aceitos = ex.getSupportedHttpMethods();
+        if (aceitos == null || aceitos.isEmpty()) {
+            return resposta;
+        }
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).allow(aceitos.toArray(HttpMethod[]::new))
+                .contentType(MediaType.APPLICATION_JSON).body(resposta.getBody());
     }
 
     // corpo enviado como texto ou sem Content-Type

@@ -5,10 +5,12 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -181,6 +183,16 @@ class ErrosPadronizadosIntegrationTest extends IntegracaoBase {
                 .andExpect(status().isBadRequest())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.errors").isArray());
+    }
+
+    // método que a rota não aceita: 405 no JSON padrão e o header Allow com os métodos que ela aceita
+    @Test
+    void metodoNaoAceitoDevolve405ComOHeaderAllow() throws Exception {
+        mockMvc.perform(delete("/api/areas").header(HttpHeaders.AUTHORIZATION, bearer(tokenAdmin())))
+                .andExpect(status().isMethodNotAllowed())
+                .andExpect(jsonPath("$.status").value(405))
+                .andExpect(header().string(HttpHeaders.ALLOW, containsString("GET")))
+                .andExpect(header().string(HttpHeaders.ALLOW, containsString("POST")));
     }
 
     // sem isto o Jackson arredondava 1.7 cm para 1 em silêncio
