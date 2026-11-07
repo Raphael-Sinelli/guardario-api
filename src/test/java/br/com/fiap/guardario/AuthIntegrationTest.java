@@ -38,6 +38,17 @@ class AuthIntegrationTest extends IntegracaoBase {
                 .andExpect(jsonPath("$.errors[0].field").value("senha"));
     }
 
+    // a mensagem e o Swagger mostram o limite real da senha, e não o maior inteiro do Java
+    @Test
+    void senhaCurtaMostraOLimiteDe8A72() throws Exception {
+        postJson("/api/auth/register", null, """
+                {"nome": "Pessoa", "email": "curta%s@email.com", "senha": "123"}""".formatted(sufixoUnico().toLowerCase()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0].message").value("tamanho deve ser entre 8 e 72"));
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(jsonPath("$.components.schemas.RegisterRequest.properties.senha.maxLength").value(72));
+    }
+
     @Test
     void emailRepetidoDevolve409() throws Exception {
         postJson("/api/auth/register", null, """

@@ -18,8 +18,9 @@ public record RegisterRequest(
         @Email(regexp = ".+@.+\\..+", message = "deve ser um email válido, como maria@email.com")
         String email,
 
-        // o BCrypt só considera os primeiros 72 bytes: o limite é em bytes, não em caracteres
-        @Schema(example = "Senha@123") @NotBlank @Size(min = 8) @TamanhoEmBytes(max = 72)
+        // o BCrypt só considera os primeiros 72 bytes: o @Size dá o limite que aparece no Swagger, e o @TamanhoEmBytes
+        // pega a senha com acento, que tem menos de 72 caracteres mas passa de 72 bytes
+        @Schema(example = "Senha@123") @NotBlank @Size(min = 8, max = 72) @TamanhoEmBytes(max = 72)
         String senha,
 
         @Schema(description = "DDD e número, só dígitos", example = "11987654321")
