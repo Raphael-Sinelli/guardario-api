@@ -159,7 +159,9 @@ class AreaEstacaoIntegrationTest extends IntegracaoBase {
     void rankingDeAreasPorJpql() throws Exception {
         mockMvc.perform(get("/api/areas/ranking"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].relatosEmAberto").isNumber())
-                .andExpect(jsonPath("$[*].nome", hasItem("Sarandi")));
+                .andExpect(jsonPath("$._embedded.ranking[0].relatosEmAberto").isNumber())
+                .andExpect(jsonPath("$._embedded.ranking[*].nome", hasItem("Sarandi")))
+                .andExpect(jsonPath("$._embedded.ranking[0]._links.area.href", containsString("/api/areas/")))
+                .andExpect(jsonPath("$._links.self.href", endsWith("/api/areas/ranking")));
     }
 }

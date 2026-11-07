@@ -17,6 +17,7 @@ import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.data.web.PagedResourcesAssembler;
+import org.springframework.hateoas.CollectionModel;
 import org.springframework.hateoas.EntityModel;
 import org.springframework.hateoas.IanaLinkRelations;
 import org.springframework.hateoas.PagedModel;
@@ -24,8 +25,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/areas")
@@ -64,8 +63,8 @@ public class AreaController {
     @Operation(summary = "Ranking das áreas por relatos em aberto",
             description = "Consulta JPQL com left join, group by, count e max. Ajuda a Defesa Civil a decidir para onde mandar equipes.")
     @ApiResponse(responseCode = "200", description = "Áreas ordenadas pela quantidade de relatos em aberto")
-    public ResponseEntity<List<RankingAreaResponse>> ranking() {
-        return ResponseEntity.ok(areaService.ranking());
+    public ResponseEntity<CollectionModel<EntityModel<RankingAreaResponse>>> ranking() {
+        return ResponseEntity.ok(assembler.toRankingModel(areaService.ranking()));
     }
 
     @PostMapping

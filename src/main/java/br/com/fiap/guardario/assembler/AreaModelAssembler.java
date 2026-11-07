@@ -5,11 +5,15 @@ import br.com.fiap.guardario.controller.AlertaController;
 import br.com.fiap.guardario.controller.AreaController;
 import br.com.fiap.guardario.controller.EstacaoController;
 import br.com.fiap.guardario.dto.AreaResponse;
+import br.com.fiap.guardario.dto.RankingAreaResponse;
 import br.com.fiap.guardario.model.Papel;
 import br.com.fiap.guardario.security.SecurityUtils;
+import org.springframework.hateoas.CollectionModel;
 import org.springframework.hateoas.EntityModel;
 import org.springframework.hateoas.server.RepresentationModelAssembler;
 import org.springframework.stereotype.Component;
+
+import java.util.List;
 
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
@@ -32,5 +36,15 @@ public class AreaModelAssembler implements RepresentationModelAssembler<AreaResp
             model.add(linkTo(methodOn(AreaController.class).excluir(area.id())).withRel("excluir"));
         }
         return model;
+    }
+
+    // ranking (JPQL): cada linha aponta para a área e para os abrigos com vaga dela
+    public CollectionModel<EntityModel<RankingAreaResponse>> toRankingModel(List<RankingAreaResponse> ranking) {
+        List<EntityModel<RankingAreaResponse>> linhas = ranking.stream()
+                .map(linha -> EntityModel.of(linha,
+                        linkTo(methodOn(AreaController.class).buscarPorId(linha.areaId())).withRel("area"),
+                        linkTo(methodOn(AbrigoController.class).listar(linha.areaId(), null, null, true, null, null)).withRel("abrigos-com-vaga")))
+                .toList();
+        return CollectionModel.of(linhas, linkTo(methodOn(AreaController.class).ranking()).withSelfRel());
     }
 }

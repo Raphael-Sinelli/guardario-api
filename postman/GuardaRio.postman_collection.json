@@ -1024,7 +1024,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
-                  "pm.test(\"Lista com contagem\", () => pm.expect(pm.response.json()[0]).to.have.property(\"relatosEmAberto\"));"
+                  "pm.test(\"Lista com contagem\", () => pm.expect(pm.response.json()._embedded.ranking[0]).to.have.property(\"relatosEmAberto\"));",
+                  "pm.test(\"Cada linha aponta para a área\", () => pm.response.json()._embedded.ranking.forEach(l => pm.expect(l._links.area.href).to.include(\"/api/areas/\")));"
                 ]
               }
             }
