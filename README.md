@@ -275,7 +275,7 @@ Quem mantém o cache correto é o `@CacheEvict` nas escritas. A configuração `
 
 | Cache | O que guarda | Quando é limpo | Por que cachear |
 |---|---|---|---|
-| `alertasAtivos` | `AlertaServiceImpl.ativos()`, usado por `GET /api/alertas/ativos` | `@CacheEvict(allEntries = true)` ao emitir, editar, encerrar ou excluir alerta. No alerta automático, só quando um alerta nasce de fato (`condition = "#result != null"`) | É a consulta que o app faz toda vez que abre, e só muda quando um alerta muda |
+| `alertasAtivos` | `AlertaServiceImpl.ativos()`, usado por `GET /api/alertas/ativos` | `@CacheEvict(allEntries = true)` ao emitir, editar, encerrar ou excluir alerta. No alerta automático, só quando um alerta nasce de fato (`condition = "#result != null"`). Também ao atualizar uma área, porque cada alerta guardado leva o nome dela | É a consulta que o app faz toda vez que abre, e só muda quando um alerta muda |
 | `abrigosDisponiveis` | `AbrigoServiceImpl.disponiveis()`, usado por `GET /api/abrigos/disponiveis` | Em toda escrita de abrigo: criar, atualizar, abrir ou fechar, entrada, saída e exclusão | Durante a cheia muita gente procura vaga ao mesmo tempo |
 | `areas` (chave: id) | `AreaServiceImpl.buscarPorId`, usado por `GET /api/areas/{id}` | Ao atualizar ou excluir a área (`key = "#id"`) e no registro de leitura, só quando o nível da área muda (`key = "#result.areaId()"`, `condition = "#result.nivelAreaAlterado()"`) | A tela do bairro mostra o nível de risco. As leituras chegam a cada 10 segundos, mas o nível muda raramente; limpar a cada leitura anularia o cache |
 

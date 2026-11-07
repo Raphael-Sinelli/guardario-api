@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -66,9 +67,13 @@ public class AreaServiceImpl implements AreaService {
         return AreaMapper.toResponse(areaRepository.save(area));
     }
 
+    // os alertas ativos em cache guardam o nome da área: renomear a área também invalida esse cache
     @Override
     @Transactional
-    @CacheEvict(cacheNames = "areas", key = "#id")
+    @Caching(evict = {
+            @CacheEvict(cacheNames = "areas", key = "#id"),
+            @CacheEvict(cacheNames = "alertasAtivos", allEntries = true)
+    })
     public AreaResponse atualizar(Long id, AreaRequest request) {
         AreaRisco area = buscarEntidade(id);
         preencher(area, request); // nivelAtual não muda aqui: só as leituras mudam o risco

@@ -38,6 +38,23 @@ class InfraIntegrationTest extends IntegracaoBase {
         assertThat(cacheManager.getCache("alertasAtivos").get(SimpleKey.EMPTY)).isNull();
     }
 
+    // o cache de alertas ativos guarda o nome da área: renomear a área precisa limpar esse cache também
+    @Test
+    void renomearAreaAtualizaONomeNosAlertasAtivosEmCache() throws Exception {
+        long area = criarArea("Área Antiga " + sufixoUnico());
+        registrarLeitura(criarEstacao(area), 250, 0.0).andExpect(jsonPath("$.alertaGeradoId").isNumber());
+        mockMvc.perform(get("/api/alertas/ativos")).andExpect(status().isOk()); // enche o cache
+
+        String nomeNovo = "Área Renomeada " + sufixoUnico();
+        mockMvc.perform(put("/api/areas/" + area).header(HttpHeaders.AUTHORIZATION, bearer(tokenAdmin()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"nome\": \"%s\", \"cidade\": \"São Paulo\", \"uf\": \"SP\"}".formatted(nomeNovo)))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/alertas/ativos"))
+                .andExpect(jsonPath("$._embedded.alertas[?(@.areaId == %d)].areaNome".formatted(area)).value(nomeNovo));
+    }
+
     @Test
     void cacheDaAreaSoEhLimpoQuandoONivelMuda() throws Exception {
         long area = criarArea("Área Cache Nível " + sufixoUnico());
