@@ -15,12 +15,14 @@ import java.io.IOException;
 @RequiredArgsConstructor
 public class RestAccessDeniedHandler implements AccessDeniedHandler {
 
+    // a mesma mensagem do 403 do @PreAuthorize, no GlobalExceptionHandler
+    public static final String SEM_PERMISSAO = "Você não tem permissão para esta operação";
+
     private final JsonErrorWriter jsonErrorWriter;
 
     @Override
     public void handle(HttpServletRequest request, HttpServletResponse response, AccessDeniedException accessDeniedException)
             throws IOException {
-        jsonErrorWriter.escrever(request, response, HttpStatus.FORBIDDEN,
-                "Seu papel não tem permissão para acessar este recurso");
+        jsonErrorWriter.escrever(request, response, HttpStatus.FORBIDDEN, SEM_PERMISSAO);
     }
 }

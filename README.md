@@ -340,13 +340,14 @@ Quem não está logado não recebe link de ação. O link orienta o cliente, mas
 
 Bean Validation nos records de entrada (`@NotBlank`, `@Size`, `@Email`, `@Positive`, `@PastOrPresent`, `@DecimalMin` e outras) e três constraints próprias: duas de classe, porque comparam campos entre si (`@CotasCrescentes` na estação e `@OcupacaoDentroDaCapacidade` no abrigo), e uma de campo, `@TamanhoEmBytes(max = 72)` na senha, porque o BCrypt só considera 72 bytes e letra com acento ocupa 2. Os controllers têm `@Validated`, o que faz valer `@Positive` e `@Max` nos parâmetros de rota e de query.
 
-O `GlobalExceptionHandler` (`@RestControllerAdvice`) padroniza todas as respostas de erro. Erro de validação lista todos os campos, inclusive os erros de classe:
+O `GlobalExceptionHandler` (`@RestControllerAdvice`) padroniza todas as respostas de erro: `error` é sempre o nome do status HTTP e `message` explica o problema em português. Erro de campo lista todos os campos em `errors`, inclusive os erros de classe e os valores que nem chegam a ser lidos, como um enum que não existe ou texto no lugar de número:
 
 ```json
 {
   "timestamp": "2026-11-18T14:30:00Z",
   "status": 400,
-  "error": "Dados inválidos",
+  "error": "Bad Request",
+  "message": "Dados inválidos: confira os campos em errors",
   "path": "/api/estacoes",
   "errors": [
     { "field": "nome", "message": "não deve estar em branco" },
@@ -369,13 +370,13 @@ Os demais erros seguem o formato `ErrorCustomResponse`:
 
 | Status | Quando |
 |---|---|
-| 400 | Bean Validation, JSON mal formado, valor fora do enum, id que não é número ou não é positivo, campo de ordenação inexistente |
+| 400 | Bean Validation, valor de tipo errado num campo do corpo (sai em `errors` com o nome do campo), JSON mal formado, id que não é número ou não é positivo, parâmetro fora do enum, campo de ordenação inexistente |
 | 401 | Sem token, token inválido ou expirado, login com senha errada |
-| 403 | Papel sem permissão ou recurso de outra pessoa |
+| 403 | Papel sem permissão (mesma mensagem no `SecurityConfig` e no `@PreAuthorize`) ou recurso de outra pessoa (a mensagem diz o motivo) |
 | 404 | Id inexistente ou rota que não existe |
 | 405 | Método HTTP que a rota não aceita |
-| 415 | Corpo enviado sem `Content-Type: application/json` (no Postman, body raw como "Text") |
 | 409 | Regra de negócio: email repetido, transição de status inválida, abrigo lotado ou fechado, alerta já encerrado, exclusão de registro com vínculos, ou duas requisições alterando o mesmo abrigo ao mesmo tempo |
+| 415 | Corpo enviado sem `Content-Type: application/json` (no Postman, body raw como "Text") |
 | 500 | Erro inesperado: o detalhe fica no log e o cliente recebe uma mensagem genérica |
 
 ## Endpoints

@@ -5,6 +5,7 @@ import br.com.fiap.guardario.dto.ErrorFieldCustom;
 import br.com.fiap.guardario.dto.ValidationErrorResponse;
 import br.com.fiap.guardario.exceptions.RegraNegocioException;
 import br.com.fiap.guardario.exceptions.ResourceNotFoundException;
+import br.com.fiap.guardario.security.RestAccessDeniedHandler;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +18,7 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.method.ParameterErrors;
@@ -32,10 +34,13 @@ import org.springframework.web.method.annotation.HandlerMethodValidationExceptio
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
+import tools.jackson.databind.exc.MismatchedInputException;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @RestControllerAdvice
@@ -120,10 +125,40 @@ public class GlobalExceptionHandler {
 
     // ---------- 400: requisição mal formada ----------
 
-    // JSON quebrado ou valor fora do enum no corpo (ex.: "tipo": "XYZ")
+    // Valor de tipo errado num campo ("tipo": "XYZ" fora do enum, texto no lugar de número): sai como erro de campo,
+    // no mesmo formato da Bean Validation. JSON quebrado não tem campo, então sai no formato padrão.
     @ExceptionHandler(HttpMessageNotReadableException.class)
-    public ResponseEntity<ErrorCustomResponse> corpoIlegivel(HttpMessageNotReadableException ex, HttpServletRequest request) {
-        return erro(HttpStatus.BAD_REQUEST, "Corpo da requisição inválido: confira o JSON e os valores dos campos", request);
+    public ResponseEntity<?> corpoIlegivel(HttpMessageNotReadableException ex, HttpServletRequest request) {
+        if (ex.getCause() instanceof MismatchedInputException erro && !erro.getPath().isEmpty()) {
+            return erroValidacao(List.of(new ErrorFieldCustom(caminhoDoCampo(erro), motivo(erro.getTargetType()))), request);
+        }
+        return erro(HttpStatus.BAD_REQUEST, "JSON mal formado: confira aspas, vírgulas e chaves", request);
+    }
+
+    private static String caminhoDoCampo(MismatchedInputException erro) {
+        return erro.getPath().stream()
+                .map(parte -> parte.getPropertyName() != null ? parte.getPropertyName() : "[" + parte.getIndex() + "]")
+                .collect(Collectors.joining(".")).replace(".[", "[");
+    }
+
+    private static String motivo(Class<?> tipo) {
+        if (tipo != null && tipo.isEnum()) {
+            String aceitos = Arrays.stream(tipo.getEnumConstants()).map(Object::toString).collect(Collectors.joining(", "));
+            return "valor inválido; os aceitos são " + aceitos;
+        }
+        if (tipo == Integer.class || tipo == int.class || tipo == Long.class || tipo == long.class) {
+            return "deve ser um número inteiro";
+        }
+        if (tipo == Double.class || tipo == double.class) {
+            return "deve ser um número";
+        }
+        if (tipo == Boolean.class || tipo == boolean.class) {
+            return "deve ser true ou false";
+        }
+        if (tipo == Instant.class) {
+            return "deve ser uma data e hora em UTC, como 2026-11-18T14:30:00Z";
+        }
+        return "valor em formato inválido";
     }
 
     // ?status=XYZ ou /api/areas/abc
@@ -157,10 +192,13 @@ public class GlobalExceptionHandler {
         return erro(HttpStatus.UNAUTHORIZED, mensagem, request);
     }
 
-    // @PreAuthorize negado ou regra de posse; sem este handler o catch-all abaixo devolveria 500
+    // @PreAuthorize negado ou regra de posse; sem este handler o catch-all abaixo devolveria 500.
+    // A negação do @PreAuthorize vem com "Access Denied" em inglês: sai a mesma mensagem do 403 do SecurityConfig.
+    // A regra de posse lança a exceção com o motivo em português, que é mantido.
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ErrorCustomResponse> acessoNegado(AccessDeniedException ex, HttpServletRequest request) {
-        return erro(HttpStatus.FORBIDDEN, "Você não tem permissão para esta operação", request);
+        String mensagem = ex instanceof AuthorizationDeniedException ? RestAccessDeniedHandler.SEM_PERMISSAO : ex.getMessage();
+        return erro(HttpStatus.FORBIDDEN, mensagem, request);
     }
 
     // ---------- outros ----------
@@ -202,8 +240,8 @@ public class GlobalExceptionHandler {
     }
 
     private ResponseEntity<ValidationErrorResponse> erroValidacao(List<ErrorFieldCustom> erros, HttpServletRequest request) {
-        ValidationErrorResponse corpo = new ValidationErrorResponse(
-                Instant.now(), HttpStatus.BAD_REQUEST.value(), "Dados inválidos", request.getRequestURI(), erros);
+        ValidationErrorResponse corpo = new ValidationErrorResponse(Instant.now(), HttpStatus.BAD_REQUEST.value(),
+                HttpStatus.BAD_REQUEST.getReasonPhrase(), "Dados inválidos: confira os campos em errors", request.getRequestURI(), erros);
         return ResponseEntity.badRequest().body(corpo);
     }
 }

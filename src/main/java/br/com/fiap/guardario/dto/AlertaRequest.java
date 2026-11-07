@@ -1,6 +1,7 @@
 package br.com.fiap.guardario.dto;
 
 import br.com.fiap.guardario.model.NivelRisco;
+import br.com.fiap.guardario.validation.NivelDeAlerta;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -15,7 +16,7 @@ public record AlertaRequest(
         @Schema(description = "Opcional: estação relacionada ao alerta", example = "1") @Positive
         Long estacaoId,
 
-        @Schema(description = "ATENCAO, ALERTA ou EMERGENCIA", example = "ALERTA") @NotNull
+        @Schema(description = "ATENCAO, ALERTA ou EMERGENCIA", example = "ALERTA") @NotNull @NivelDeAlerta
         NivelRisco nivel,
 
         @Schema(example = "Previsão de chuva forte na madrugada") @NotBlank @Size(max = 150)

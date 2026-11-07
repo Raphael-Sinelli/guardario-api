@@ -7,6 +7,7 @@ public record ValidationErrorResponse(
         Instant timestamp,
         int status,
         String error,
+        String message,
         String path,
         List<ErrorFieldCustom> errors
 ) {

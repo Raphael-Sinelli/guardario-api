@@ -71,9 +71,6 @@ public class AlertaServiceImpl implements AlertaService {
     @Transactional
     @CacheEvict(cacheNames = "alertasAtivos", allEntries = true)
     public AlertaResponse criarManual(AlertaRequest request) {
-        if (request.nivel() == NivelRisco.NORMAL) {
-            throw new IllegalArgumentException("Um alerta precisa ter nível ATENCAO, ALERTA ou EMERGENCIA");
-        }
         AreaRisco area = areaRepository.findById(request.areaId())
                 .orElseThrow(() -> new ResourceNotFoundException("área", request.areaId()));
 
