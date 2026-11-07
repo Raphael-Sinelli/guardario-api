@@ -196,6 +196,12 @@ class InfraIntegrationTest extends IntegracaoBase {
         mockMvc.perform(get("/actuator/health/db").header(HttpHeaders.AUTHORIZATION, bearer(tokenAdmin())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("UP"));
+        // componente que não existe: o Actuator responde 404 com o corpo vazio; sai o JSON de erro da API
+        mockMvc.perform(get("/actuator/health/xyz").header(HttpHeaders.AUTHORIZATION, bearer(tokenAdmin())))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.path").value("/actuator/health/xyz"));
         mockMvc.perform(get("/actuator/info"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.app.name").value("GuardaRio API"))

@@ -290,7 +290,7 @@ public class GlobalExceptionHandler {
     }
 
     // mensagem em português para os status que chegam sem texto próprio (exceções do Spring e erros do servidor)
-    static String mensagemPadrao(HttpStatusCode status) {
+    public static String mensagemPadrao(HttpStatusCode status) {
         return switch (status.value()) {
             case 400 -> "Requisição inválida";
             case 401 -> "Token ausente, inválido ou expirado. Faça login em /api/auth/login";

@@ -324,7 +324,7 @@ Quem não está logado não recebe link de ação. O `excluir` só aparece quand
 
 | Endpoint | Acesso | O que mostra |
 |---|---|---|
-| `/actuator/health` | público; detalhes só para ADMIN | Público: só o status (`UP`). Com o token de ADMIN: banco de dados e disco (`show-details: when-authorized`), que mostram o tipo de banco e o caminho da pasta e não devem ficar abertos. Cada componente em separado (`/actuator/health/db`) também é só do ADMIN: sem token, 401 |
+| `/actuator/health` | público; detalhes só para ADMIN | Público: só o status (`UP`). Com o token de ADMIN: banco de dados e disco (`show-details: when-authorized`), que mostram o tipo de banco e o caminho da pasta e não devem ficar abertos. Cada componente em separado (`/actuator/health/db`) também é só do ADMIN: sem token, 401. Componente que não existe dá 404 com o JSON de erro da API (o `ErroVazioDoActuatorEmJson` preenche o corpo que o Actuator deixa vazio) |
 | `/actuator/info` | público | Nome, descrição e versão da aplicação e dados do build. Versão do Java e do sistema operacional ficam de fora, pelo mesmo motivo |
 | `/actuator/metrics` | ADMIN | Métricas da JVM e do HTTP, acertos e erros do cache (`cache.gets`) e a métrica do domínio `guardario.alertas.emitidos`, com as tags `origem` e `nivel` |
 | `/actuator/caches` | ADMIN | Os três caches da aplicação |
@@ -472,7 +472,7 @@ src/main/java/br/com/fiap/guardario
 ├── mapper           entidade para DTO
 ├── model            entidades JPA e enums, com as regras que pertencem a elas
 ├── repository       Spring Data JPA: derived queries e JPQL
-├── security         JWT, filtros (JWT e CORS), handlers de 401 e 403
+├── security         JWT, filtros (JWT, CORS e o erro vazio do Actuator), handlers de 401 e 403
 ├── service          interfaces e implementações (regras, transações e cache)
 ├── specification    filtros dinâmicos
 └── validation       constraints customizadas
