@@ -164,6 +164,15 @@ class ErrosPadronizadosIntegrationTest extends IntegracaoBase {
                 .andExpect(status().isBadRequest());
         mockMvc.perform(get("/api/relatos").param("sort", "prioridade,desc").header(HttpHeaders.AUTHORIZATION, bearer(tokenAgente())))
                 .andExpect(status().isOk());
+
+        // cada termo do sort que não é direção vira mais um campo para o Spring Data: todos passam pela lista
+        mockMvc.perform(get("/api/alertas").param("sort", "emitidoEm,emitidoPor.senha")).andExpect(status().isBadRequest());
+        mockMvc.perform(get("/api/alertas").param("sort", "titulo,emitidoPorSenha")).andExpect(status().isBadRequest());
+        mockMvc.perform(get("/api/relatos/meus").param("sort", "criadoEm,autor.senha")
+                .header(HttpHeaders.AUTHORIZATION, bearer(tokenCidadao()))).andExpect(status().isBadRequest());
+        // vários campos válidos e as palavras de direção continuam aceitos
+        mockMvc.perform(get("/api/areas").param("sort", "uf,nome,ASC")).andExpect(status().isOk());
+        mockMvc.perform(get("/api/areas").param("sort", "nome,desc,ignorecase")).andExpect(status().isOk());
     }
 
     // o 403 do SecurityConfig (área de URL) e o do @PreAuthorize têm a mesma mensagem

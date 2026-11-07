@@ -9,6 +9,8 @@ import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 
 /**
  * Confere os parâmetros de lista (page, size e sort) antes do controller. Erro aqui vira 400 no GlobalExceptionHandler.
@@ -22,6 +24,7 @@ public class PaginacaoConfig implements WebMvcConfigurer {
 
     private static final int TAMANHO_PADRAO = 20;
     private static final int TAMANHO_MAXIMO = 100; // o mesmo de spring.data.web.pageable.max-page-size
+    private static final Set<String> PALAVRAS_DE_DIRECAO = Set.of("asc", "desc", "ignorecase");
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
@@ -51,12 +54,16 @@ public class PaginacaoConfig implements WebMvcConfigurer {
         CamposDeOrdenacao anotacao = handler instanceof HandlerMethod metodo
                 ? metodo.getMethodAnnotation(CamposDeOrdenacao.class) : null;
         List<String> aceitos = anotacao == null ? List.of() : List.of(anotacao.value());
+        // "?sort=emitidoEm,titulo,desc": todo termo que não é direção (asc, desc, ignorecase) é mais um campo para o
+        // Spring Data, então todos passam pela lista, e não só o primeiro
         for (String ordenacao : ordenacoes) {
-            String campo = ordenacao.split(",")[0].trim();
-            if (!campo.isEmpty() && !aceitos.contains(campo)) {
-                throw new IllegalArgumentException(aceitos.isEmpty()
-                        ? "Esta rota não aceita ordenação"
-                        : "Ordenação não permitida por " + campo + ". Campos aceitos: " + String.join(", ", aceitos));
+            for (String termo : ordenacao.split(",")) {
+                String campo = termo.trim();
+                if (!campo.isEmpty() && !PALAVRAS_DE_DIRECAO.contains(campo.toLowerCase(Locale.ROOT)) && !aceitos.contains(campo)) {
+                    throw new IllegalArgumentException(aceitos.isEmpty()
+                            ? "Esta rota não aceita ordenação"
+                            : "Ordenação não permitida por " + campo + ". Campos aceitos: " + String.join(", ", aceitos));
+                }
             }
         }
     }
