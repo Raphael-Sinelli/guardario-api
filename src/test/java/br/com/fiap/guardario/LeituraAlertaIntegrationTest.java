@@ -282,6 +282,22 @@ class LeituraAlertaIntegrationTest extends IntegracaoBase {
                 .andExpect(status().isCreated());
     }
 
+    // a leitura adiantada é gravada com a hora do servidor: senão a próxima leitura, sem horário, pareceria atrasada
+    // e uma EMERGENCIA de verdade não abriria alerta
+    @Test
+    void leituraComRelogioAdiantadoNaoBloqueiaOAlertaDaLeituraSeguinte() throws Exception {
+        long estacao = criarEstacao(criarArea("Área Relógio Adiantado " + sufixoUnico()));
+        postJson("/api/estacoes/" + estacao + "/leituras", tokenAgente(),
+                "{\"nivelCm\": 10, \"chuvaMmH\": 0, \"medidaEm\": \"" + java.time.Instant.now().plusSeconds(55) + "\"}")
+                .andExpect(status().isCreated());
+
+        registrarLeitura(estacao, 400, 80.0)
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.leitura.nivelRisco").value("EMERGENCIA"))
+                .andExpect(jsonPath("$.nivelArea").value("EMERGENCIA"))
+                .andExpect(jsonPath("$.alertaGeradoId").isNumber());
+    }
+
     @Test
     void leituraComDataNoFuturoDevolve400() throws Exception {
         long estacao = criarEstacao(criarArea("Área Futuro " + sufixoUnico()));
