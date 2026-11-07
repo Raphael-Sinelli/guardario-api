@@ -96,6 +96,26 @@ class AbrigoIntegrationTest extends IntegracaoBase {
         String json = mockMvc.perform(get("/api/abrigos/" + abrigo)).andReturn().getResponse().getContentAsString();
         int ocupacao = JsonPath.read(json, "$.ocupacao");
         assertThat(confirmadas).isEqualTo(ocupacao);
+        // enquanto houver vaga, toda entrada é aceita: só as que chegam com o abrigo cheio recebem 409
+        assertThat(confirmadas).isEqualTo(10);
+    }
+
+    // com vaga sobrando, nenhuma entrada simultânea é recusada: o agente não precisa repetir o registro na cheia
+    @Test
+    void entradasSimultaneasComVagaSaoTodasAceitas() throws Exception {
+        long abrigo = criarAbrigo(criarArea("Área Muitas Vagas " + sufixoUnico()), 100, 0, true, true);
+        String agente = tokenAgente();
+        ExecutorService agentes = Executors.newFixedThreadPool(10);
+        List<Future<Integer>> respostas = new ArrayList<>();
+        for (int i = 0; i < 30; i++) {
+            respostas.add(agentes.submit(() -> postJson("/api/abrigos/" + abrigo + "/entradas", agente, "{\"pessoas\": 1}")
+                    .andReturn().getResponse().getStatus()));
+        }
+        agentes.shutdown();
+        for (Future<Integer> resposta : respostas) {
+            assertThat(resposta.get(60, TimeUnit.SECONDS)).isEqualTo(200);
+        }
+        mockMvc.perform(get("/api/abrigos/" + abrigo)).andExpect(jsonPath("$.ocupacao").value(30));
     }
 
     @Test

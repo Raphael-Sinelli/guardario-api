@@ -108,7 +108,7 @@ public class AbrigoServiceImpl implements AbrigoService {
     @Transactional
     @CacheEvict(cacheNames = "abrigosDisponiveis", allEntries = true)
     public AbrigoResponse registrarEntrada(Long id, int pessoas) {
-        Abrigo abrigo = buscarEntidade(id);
+        Abrigo abrigo = buscarComTrava(id);
         abrigo.registrarEntrada(pessoas);
         return AbrigoMapper.toResponse(abrigo);
     }
@@ -117,7 +117,7 @@ public class AbrigoServiceImpl implements AbrigoService {
     @Transactional
     @CacheEvict(cacheNames = "abrigosDisponiveis", allEntries = true)
     public AbrigoResponse registrarSaida(Long id, int pessoas) {
-        Abrigo abrigo = buscarEntidade(id);
+        Abrigo abrigo = buscarComTrava(id);
         abrigo.registrarSaida(pessoas);
         return AbrigoMapper.toResponse(abrigo);
     }
@@ -127,6 +127,13 @@ public class AbrigoServiceImpl implements AbrigoService {
     @CacheEvict(cacheNames = "abrigosDisponiveis", allEntries = true)
     public void excluir(Long id) {
         abrigoRepository.delete(buscarEntidade(id));
+    }
+
+    // trava a linha do abrigo até o fim da transação (SELECT ... FOR UPDATE): as entradas e saídas simultâneas
+    // esperam a vez em vez de falhar no @Version, e o agente não precisa repetir o registro durante a cheia
+    private Abrigo buscarComTrava(Long id) {
+        return abrigoRepository.buscarComTrava(id)
+                .orElseThrow(() -> new ResourceNotFoundException("abrigo", id));
     }
 
     private Abrigo buscarEntidade(Long id) {
