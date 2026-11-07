@@ -5,6 +5,9 @@ spring:
     default: dev # sem perfil informado, sobe com H2 em memória e dados de teste
   jpa:
     open-in-view: false # o mapeamento para DTO acontece dentro da transação do service
+  jackson:
+    deserialization:
+      accept-float-as-int: false # 1.7 num campo inteiro é erro (400), não vira 1 em silêncio
   data:
     web:
       pageable:

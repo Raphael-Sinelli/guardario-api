@@ -24,7 +24,8 @@ public record AbrigoRequest(
         @Schema(example = "true") @NotNull
         Boolean acessivelPcd,
 
-        @Schema(example = "1125550101") @Size(max = 20)
+        @Schema(description = "DDD e número, só dígitos", example = "1125550101")
+        @Pattern(regexp = "\\d{10,11}", message = "deve ter DDD e número, só dígitos (10 ou 11)")
         String telefone,
 
         @Schema(example = "-23.4991") @DecimalMin("-90.0") @DecimalMax("90.0")

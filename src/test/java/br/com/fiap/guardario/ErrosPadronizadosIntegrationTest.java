@@ -57,6 +57,31 @@ class ErrosPadronizadosIntegrationTest extends IntegracaoBase {
                 .andExpect(jsonPath("$.errors[0].field").value("nivel"));
     }
 
+    @Test
+    void ufQueNaoExisteDevolve400() throws Exception {
+        postJson("/api/areas", tokenAdmin(), """
+                {"nome": "Vila", "cidade": "Cidade", "uf": "XX"}""")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0].field").value("uf"));
+    }
+
+    @Test
+    void cadastroRecusaEmailSemDominioETelefoneComLetras() throws Exception {
+        postJson("/api/auth/register", null, """
+                {"nome": "Pessoa", "email": "x@y", "senha": "Senha@123", "telefone": "abc!!"}""")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[*].field", org.hamcrest.Matchers.containsInAnyOrder("email", "telefone")));
+    }
+
+    // sem isto o Jackson arredondava 1.7 cm para 1 em silêncio
+    @Test
+    void numeroDecimalEmCampoInteiroDevolve400() throws Exception {
+        postJson("/api/estacoes/1/leituras", tokenAgente(), """
+                {"nivelCm": 1.7, "chuvaMmH": 0}""")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0].field").value("nivelCm"));
+    }
+
     // o 403 do SecurityConfig (área de URL) e o do @PreAuthorize têm a mesma mensagem
     @Test
     void forbiddenTemAMesmaMensagemNaUrlENoPreAuthorize() throws Exception {

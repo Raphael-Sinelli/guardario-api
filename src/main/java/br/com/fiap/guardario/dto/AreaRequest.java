@@ -11,7 +11,9 @@ public record AreaRequest(
         @Schema(example = "São Paulo") @NotBlank @Size(max = 80)
         String cidade,
 
-        @Schema(example = "SP") @NotBlank @Pattern(regexp = "[A-Za-z]{2}", message = "deve ter duas letras, como SP")
+        @Schema(example = "SP") @NotBlank
+        @Pattern(regexp = "(?i)AC|AL|AP|AM|BA|CE|DF|ES|GO|MA|MT|MS|MG|PA|PB|PR|PE|PI|RJ|RN|RS|RO|RR|SC|SP|SE|TO",
+                message = "deve ser a sigla de um estado brasileiro, como SP")
         String uf,
 
         @Schema(example = "48000") @PositiveOrZero

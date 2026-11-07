@@ -4,6 +4,7 @@ import br.com.fiap.guardario.validation.TamanhoEmBytes;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 
@@ -12,14 +13,17 @@ public record RegisterRequest(
         @Schema(example = "Maria Aparecida") @NotBlank @Size(max = 120)
         String nome,
 
-        @Schema(example = "maria@email.com") @NotBlank @Email @Size(max = 150)
+        // o @Email aceita "x@y"; o regexp exige um ponto no domínio
+        @Schema(example = "maria@email.com") @NotBlank @Size(max = 150)
+        @Email(regexp = ".+@.+\\..+", message = "deve ser um email válido, como maria@email.com")
         String email,
 
         // o BCrypt só considera os primeiros 72 bytes: o limite é em bytes, não em caracteres
         @Schema(example = "Senha@123") @NotBlank @Size(min = 8) @TamanhoEmBytes(max = 72)
         String senha,
 
-        @Schema(example = "11987654321") @Size(max = 20)
+        @Schema(description = "DDD e número, só dígitos", example = "11987654321")
+        @Pattern(regexp = "\\d{10,11}", message = "deve ter DDD e número, só dígitos (10 ou 11)")
         String telefone,
 
         @Schema(description = "Área (bairro) onde a pessoa mora", example = "1") @Positive
