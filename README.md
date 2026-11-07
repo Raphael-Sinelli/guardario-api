@@ -302,13 +302,13 @@ As respostas usam o formato HAL. As listas vêm com os itens em `_embedded`, os 
 | Alerta | `area`, `estacao`, `abrigos-com-vaga` | ATIVO e usuário AGENTE ou ADMIN: `encerrar`, `editar`. ADMIN: `excluir`. Alerta encerrado não tem ação |
 | Relato | `area`, `meus-relatos` | Para AGENTE ou ADMIN: ABERTO tem `atender` e `descartar`; EM_ATENDIMENTO tem `resolver`. Para o autor, enquanto ABERTO: `editar`, `excluir` |
 | Abrigo | `area`, `abrigos-disponiveis` | Com vaga: `registrar-entrada`. Com gente: `registrar-saida`. Aberto ou lotado: `fechar`. Fechado: `reabrir` |
-| Estação | `area`, `leituras`, `estatisticas-24h` | Estação ATIVA e usuário AGENTE ou ADMIN: `registrar-leitura` |
+| Estação | `area`, `leituras`, `estatisticas-24h` | Estação ATIVA e usuário AGENTE ou ADMIN: `registrar-leitura`. ADMIN: `atualizar` e, se a estação não tem alerta no histórico, `excluir` |
 | Leitura | `estacao`, `estatisticas-24h`. Na resposta do registro: `estacao`, `area` e, quando a leitura abre um alerta automático, `alerta` | nenhuma: leitura não muda depois de gravada |
-| Área | `estacoes`, `abrigos-com-vaga`, `alertas-ativos` | ADMIN: `atualizar`, `excluir` |
+| Área | `estacoes`, `abrigos-com-vaga`, `alertas-ativos` | ADMIN: `atualizar` e, se a área não tem estações, abrigos, alertas, relatos nem moradores, `excluir` |
 | Linha do ranking | `area`, `abrigos-com-vaga` | nenhuma: é um relatório |
 | Usuário (rotas do ADMIN) | `area`, `usuarios` | `alterar-papel`, menos no registro do próprio ADMIN, que não pode mudar o próprio papel |
 
-Quem não está logado não recebe link de ação. O link orienta o cliente, mas não substitui a checagem: o servidor confere a permissão em toda requisição.
+Quem não está logado não recebe link de ação. O `excluir` só aparece quando a exclusão vai dar certo: numa lista, uma consulta agregada por página (`AreaRiscoRepository.buscarIdsComVinculos`, `AlertaRepository.buscarEstacaoIdsComAlertas`) diz quais itens têm vínculo, sem uma consulta por item. O link orienta o cliente, mas não substitui a checagem: o servidor confere a permissão em toda requisição.
 
 ## Actuator
 

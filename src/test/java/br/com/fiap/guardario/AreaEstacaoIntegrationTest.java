@@ -1,15 +1,25 @@
 package br.com.fiap.guardario;
 
 import com.jayway.jsonpath.JsonPath;
+import jakarta.persistence.EntityManagerFactory;
+import org.hibernate.SessionFactory;
+import org.hibernate.stat.Statistics;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 class AreaEstacaoIntegrationTest extends IntegracaoBase {
+
+    @Autowired
+    private EntityManagerFactory entityManagerFactory;
 
     @Test
     void listaDeAreasEhPublicaPaginadaEComLinks() throws Exception {
@@ -206,6 +216,49 @@ class AreaEstacaoIntegrationTest extends IntegracaoBase {
                                  "cotaAlertaCm": 200, "cotaTransbordoCm": 300, "status": "%s", "areaId": %d}"""
                                 .formatted(codigo, status, area)))
                 .andExpect(status().isOk());
+    }
+
+    // HATEOAS: o link de ação só aparece quando a ação vai dar certo; área ou estação com vínculo daria 409
+    @Test
+    void linkExcluirSoApareceQuandoAExclusaoEhPossivel() throws Exception {
+        String admin = tokenAdmin();
+        long areaVazia = criarArea("Área Vazia " + sufixoUnico());
+        long areaOcupada = criarArea("Área Ocupada " + sufixoUnico());
+        long semAlerta = criarEstacao(areaOcupada);
+        long comAlerta = criarEstacao(areaOcupada);
+        registrarLeitura(comAlerta, 250, 0.0).andExpect(jsonPath("$.alertaGeradoId").isNumber());
+
+        mockMvc.perform(get("/api/areas/" + areaVazia).header(HttpHeaders.AUTHORIZATION, bearer(admin)))
+                .andExpect(jsonPath("$._links.excluir.href").exists());
+        mockMvc.perform(get("/api/areas/" + areaOcupada).header(HttpHeaders.AUTHORIZATION, bearer(admin)))
+                .andExpect(jsonPath("$._links.excluir").doesNotExist())
+                .andExpect(jsonPath("$._links.atualizar.href").exists());
+        mockMvc.perform(get("/api/estacoes/" + semAlerta).header(HttpHeaders.AUTHORIZATION, bearer(admin)))
+                .andExpect(jsonPath("$._links.excluir.href").exists());
+        mockMvc.perform(get("/api/estacoes/" + comAlerta).header(HttpHeaders.AUTHORIZATION, bearer(admin)))
+                .andExpect(jsonPath("$._links.excluir").doesNotExist());
+
+        // na lista vale a mesma regra
+        mockMvc.perform(get("/api/estacoes").param("areaId", String.valueOf(areaOcupada))
+                        .header(HttpHeaders.AUTHORIZATION, bearer(admin)))
+                .andExpect(jsonPath("$._embedded.estacoes[?(@.id == %d)]._links.excluir".formatted(semAlerta), hasSize(1)))
+                .andExpect(jsonPath("$._embedded.estacoes[?(@.id == %d)]._links.excluir".formatted(comAlerta), empty()));
+    }
+
+    // a checagem do link é uma consulta por página: uma página de 1 e uma de 3 itens fazem o mesmo número de SELECTs
+    @Test
+    void linkExcluirNaListaNaoFazUmaConsultaPorItem() throws Exception {
+        String admin = tokenAdmin();
+        for (String rota : List.of("/api/areas", "/api/estacoes")) {
+            assertThat(comandosSql(rota + "?size=3", admin)).isEqualTo(comandosSql(rota + "?size=1", admin));
+        }
+    }
+
+    private long comandosSql(String rota, String token) throws Exception {
+        Statistics estatisticas = entityManagerFactory.unwrap(SessionFactory.class).getStatistics();
+        estatisticas.clear();
+        mockMvc.perform(get(rota).header(HttpHeaders.AUTHORIZATION, bearer(token))).andExpect(status().isOk());
+        return estatisticas.getPrepareStatementCount();
     }
 
     @Test

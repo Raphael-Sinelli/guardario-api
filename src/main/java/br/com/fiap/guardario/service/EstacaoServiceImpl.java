@@ -19,8 +19,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -43,6 +45,12 @@ public class EstacaoServiceImpl implements EstacaoService {
     @Transactional(readOnly = true)
     public EstacaoResponse buscarPorId(Long id) {
         return EstacaoMapper.toResponse(buscarEntidade(id));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Set<Long> idsComAlertas(Collection<Long> ids) {
+        return ids.isEmpty() ? Set.of() : alertaRepository.buscarEstacaoIdsComAlertas(ids);
     }
 
     @Override

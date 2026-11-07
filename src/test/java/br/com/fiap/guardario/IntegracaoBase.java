@@ -20,7 +20,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 @SpringBootTest(properties = {
         "spring.jpa.show-sql=false",
-        "spring.jpa.properties.hibernate.format_sql=false"
+        "spring.jpa.properties.hibernate.format_sql=false",
+        // conta os comandos SQL de cada requisição, para provar que uma lista não faz N+1
+        "spring.jpa.properties.hibernate.generate_statistics=true",
+        "logging.level.org.hibernate.engine.internal.StatisticalLoggingSessionEventListener=WARN"
 })
 @AutoConfigureMockMvc
 public abstract class IntegracaoBase {

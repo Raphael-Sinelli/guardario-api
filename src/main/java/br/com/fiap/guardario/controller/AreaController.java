@@ -47,7 +47,7 @@ public class AreaController {
     public ResponseEntity<PagedModel<EntityModel<AreaResponse>>> listar(
             @Parameter(description = "Sigla do estado", example = "SP") @RequestParam(required = false) String uf,
             @ParameterObject @PageableDefault(size = 10, sort = "nome") Pageable pageable) {
-        return ResponseEntity.ok(pagedAssembler.toModel(areaService.listar(uf, pageable), assembler));
+        return ResponseEntity.ok(assembler.toPagedModel(areaService.listar(uf, pageable), pagedAssembler));
     }
 
     @GetMapping("/{id}")

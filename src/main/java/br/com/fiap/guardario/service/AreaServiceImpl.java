@@ -19,7 +19,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 import java.util.Locale;
 
 @Slf4j
@@ -57,6 +59,12 @@ public class AreaServiceImpl implements AreaService {
     @Transactional(readOnly = true)
     public List<RankingAreaResponse> ranking() {
         return areaRepository.rankingPorRelatosEmAberto(RELATOS_EM_ABERTO);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Set<Long> idsComVinculos(Collection<Long> ids) {
+        return ids.isEmpty() ? Set.of() : areaRepository.buscarIdsComVinculos(ids);
     }
 
     @Override

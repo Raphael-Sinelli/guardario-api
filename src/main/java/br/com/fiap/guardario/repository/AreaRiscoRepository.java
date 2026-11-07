@@ -14,6 +14,7 @@ import org.springframework.data.repository.query.Param;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public interface AreaRiscoRepository extends JpaRepository<AreaRisco, Long> {
 
@@ -23,6 +24,21 @@ public interface AreaRiscoRepository extends JpaRepository<AreaRisco, Long> {
      * SELECT ... FOR UPDATE: a linha da área fica travada até o fim da transação. Duas leituras da mesma área
      * passam a entrar uma de cada vez, e a segunda já enxerga o que a primeira gravou (RN02 e RN03).
      */
+    /*
+     * Quais áreas da página têm algum vínculo (e por isso não podem ser excluídas): uma consulta para a página
+     * inteira, em vez de cinco exists por área. Serve para o link HATEOAS "excluir" só aparecer quando dá certo.
+     */
+    @Query("""
+            select a.id from AreaRisco a
+            where a.id in :ids and (
+                exists (select 1 from Estacao e where e.area = a)
+                or exists (select 1 from Abrigo b where b.area = a)
+                or exists (select 1 from Alerta al where al.area = a)
+                or exists (select 1 from Relato r where r.area = a)
+                or exists (select 1 from Usuario u where u.area = a))
+            """)
+    Set<Long> buscarIdsComVinculos(@Param("ids") Collection<Long> ids);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select a from AreaRisco a where a.id = :id")
     Optional<AreaRisco> buscarComTrava(@Param("id") Long id);
