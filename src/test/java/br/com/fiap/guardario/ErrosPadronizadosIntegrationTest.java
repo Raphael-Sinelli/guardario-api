@@ -200,6 +200,31 @@ class ErrosPadronizadosIntegrationTest extends IntegracaoBase {
                 .andExpect(jsonPath("$.errors[0].field").value("de"));
     }
 
+    // id em branco na rota (/api/areas/%20): erro do parâmetro id, como o id 0 ou "abc"
+    @Test
+    void idEmBrancoNaRotaApontaOParametro() throws Exception {
+        mockMvc.perform(get("/api/areas/{id}", " "))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0].field").value("id"));
+    }
+
+    // erro devolvido pelo servidor fora do Spring MVC (TRACE recusado pelo Tomcat, URL inválida) passa pelo /error,
+    // que responde no formato padrão e em português; o /error chamado direto é rota que não existe
+    @Test
+    void paginaDeErroDoServidorSaiNoFormatoPadrao() throws Exception {
+        mockMvc.perform(get("/error")
+                        .requestAttr(jakarta.servlet.RequestDispatcher.ERROR_STATUS_CODE, 405)
+                        .requestAttr(jakarta.servlet.RequestDispatcher.ERROR_REQUEST_URI, "/api/areas"))
+                .andExpect(status().isMethodNotAllowed())
+                .andExpect(jsonPath("$.status").value(405))
+                .andExpect(jsonPath("$.message").value("Método HTTP não aceito nesta rota"))
+                .andExpect(jsonPath("$.path").value("/api/areas"));
+        mockMvc.perform(get("/error"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.message").value("Rota não encontrada"));
+    }
+
     // o 403 do SecurityConfig (área de URL) e o do @PreAuthorize têm a mesma mensagem
     @Test
     void forbiddenTemAMesmaMensagemNaUrlENoPreAuthorize() throws Exception {

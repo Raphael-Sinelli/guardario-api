@@ -28,6 +28,7 @@ import org.springframework.web.ErrorResponse;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingPathVariableException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -183,6 +184,12 @@ public class GlobalExceptionHandler {
         return erroValidacao(List.of(new ErrorFieldCustom(ex.getName(), motivo(ex.getRequiredType()))), request);
     }
 
+    // /api/areas/%20: o id em branco vira nulo na conversão; é erro do parâmetro, como o id 0
+    @ExceptionHandler(MissingPathVariableException.class)
+    public ResponseEntity<ValidationErrorResponse> parametroDeRotaAusente(MissingPathVariableException ex, HttpServletRequest request) {
+        return erroValidacao(List.of(new ErrorFieldCustom(ex.getVariableName(), "é obrigatório e deve ser um número inteiro")), request);
+    }
+
     @ExceptionHandler(MissingServletRequestParameterException.class)
     public ResponseEntity<ValidationErrorResponse> parametroAusente(MissingServletRequestParameterException ex, HttpServletRequest request) {
         return erroValidacao(List.of(new ErrorFieldCustom(ex.getParameterName(), "é obrigatório")), request);
@@ -242,10 +249,26 @@ public class GlobalExceptionHandler {
         // exceções do Spring MVC que não têm handler acima já sabem o próprio status (406, por exemplo): não viram 500
         if (ex instanceof ErrorResponse erroDoSpring) {
             HttpStatusCode status = erroDoSpring.getStatusCode();
-            return erro(status, HttpStatus.valueOf(status.value()).getReasonPhrase(), request);
+            return erro(status, mensagemPadrao(status), request);
         }
         log.error("Erro inesperado em {} {}", request.getMethod(), request.getRequestURI(), ex);
         return erro(HttpStatus.INTERNAL_SERVER_ERROR, "Erro interno. Tente novamente em instantes", request);
+    }
+
+    // mensagem em português para os status que chegam sem texto próprio (exceções do Spring e erros do servidor)
+    static String mensagemPadrao(HttpStatusCode status) {
+        return switch (status.value()) {
+            case 400 -> "Requisição inválida";
+            case 401 -> "Token ausente, inválido ou expirado. Faça login em /api/auth/login";
+            case 403 -> RestAccessDeniedHandler.SEM_PERMISSAO;
+            case 404 -> "Rota não encontrada";
+            case 405 -> "Método HTTP não aceito nesta rota";
+            case 406 -> "Formato de resposta não suportado: a API responde em JSON";
+            case 413 -> "Corpo da requisição grande demais";
+            case 415 -> "Envie o corpo em JSON, com o header Content-Type: application/json";
+            default -> status.is5xxServerError() ? "Erro interno. Tente novamente em instantes"
+                    : "Não foi possível atender a requisição";
+        };
     }
 
     private ResponseEntity<ErrorCustomResponse> erro(HttpStatusCode status, String mensagem, HttpServletRequest request) {
