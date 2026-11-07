@@ -32,6 +32,16 @@ class RelatoIntegrationTest extends IntegracaoBase {
                 .andExpect(jsonPath("$.prioridade").value(5)); // teto
     }
 
+    // o mínimo de 10 caracteres vale para o texto, não para os espaços em volta
+    @Test
+    void descricaoSoComEspacosEmVoltaNaoPassaDoMinimo() throws Exception {
+        long area = criarArea("Área Espaços " + sufixoUnico());
+        postJson("/api/relatos", tokenCidadao(), """
+                {"tipo": "OUTRO", "descricao": "                    x", "areaId": %d}""".formatted(area))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0].field").value("descricao"));
+    }
+
     @Test
     void maquinaDeEstadosComLinksQueAcompanham() throws Exception {
         long relato = criarRelato(tokenCidadao(), criarArea("Área Status " + sufixoUnico()), "RIO_SUBINDO");

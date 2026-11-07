@@ -11,4 +11,8 @@ public record LoginRequest(
         @Schema(example = "Cidadao@123") @NotBlank
         String senha
 ) {
+    // tira o espaço que o autocompletar do celular deixa antes de o @Email validar
+    public LoginRequest {
+        email = email == null ? null : email.strip();
+    }
 }

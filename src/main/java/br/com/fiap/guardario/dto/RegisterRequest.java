@@ -24,4 +24,9 @@ public record RegisterRequest(
         @Schema(description = "Área (bairro) onde a pessoa mora", example = "1") @Positive
         Long areaId
 ) {
+    // normaliza antes do @Valid; a senha fica como veio, porque espaço pode fazer parte dela
+    public RegisterRequest {
+        nome = nome == null ? null : nome.strip();
+        email = email == null ? null : email.strip();
+    }
 }

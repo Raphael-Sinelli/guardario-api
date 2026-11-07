@@ -45,6 +45,15 @@ class AuthIntegrationTest extends IntegracaoBase {
                 .andExpect(jsonPath("$.papel").value("CIDADAO"));
     }
 
+    // o app pode mandar o email com o espaço que o teclado do celular coloca depois do autocompletar
+    @Test
+    void loginAceitaEmailComEspacoEmVolta() throws Exception {
+        postJson("/api/auth/login", null, """
+                {"email": " cidadao@guardario.com ", "senha": "Cidadao@123"}""")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.email").value(CIDADAO));
+    }
+
     @Test
     void senhaErradaDevolve401ComMensagemGenerica() throws Exception {
         postJson("/api/auth/login", null, """

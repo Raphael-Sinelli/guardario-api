@@ -22,4 +22,8 @@ public record RelatoRequest(
         @Schema(example = "1") @NotNull @Positive
         Long areaId
 ) {
+    // construtor compacto: roda na desserialização, antes do @Valid, então o mínimo de 10 vale para o texto sem os espaços
+    public RelatoRequest {
+        descricao = descricao == null ? null : descricao.strip();
+    }
 }
