@@ -54,6 +54,16 @@ class ErrosPadronizadosIntegrationTest extends IntegracaoBase {
                 .andExpect(jsonPath("$.errors[0].field").value("nivelCm"));
     }
 
+    // o JSON é válido; o número é que não cabe no campo inteiro
+    @Test
+    void numeroForaDoIntervaloApontaOCampo() throws Exception {
+        postJson("/api/areas", tokenAdmin(), """
+                {"nome": "Vila Grande", "cidade": "São Paulo", "uf": "SP", "populacaoEstimada": 99999999999}""")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0].field").value("populacaoEstimada"))
+                .andExpect(jsonPath("$.errors[0].message", containsString("fora do intervalo")));
+    }
+
     @Test
     void jsonMalFormadoContinuaComMensagemSobreOJson() throws Exception {
         postJson("/api/relatos", tokenCidadao(), "{\"tipo\": ")

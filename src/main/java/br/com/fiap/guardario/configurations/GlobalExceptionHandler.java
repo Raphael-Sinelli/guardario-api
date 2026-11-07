@@ -34,6 +34,8 @@ import org.springframework.web.method.annotation.HandlerMethodValidationExceptio
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.exc.InputCoercionException;
 import tools.jackson.databind.exc.MismatchedInputException;
 
 import java.time.Instant;
@@ -125,17 +127,20 @@ public class GlobalExceptionHandler {
 
     // ---------- 400: requisição mal formada ----------
 
-    // Valor de tipo errado num campo ("tipo": "XYZ" fora do enum, texto no lugar de número): sai como erro de campo,
-    // no mesmo formato da Bean Validation. JSON quebrado não tem campo, então sai no formato padrão.
+    // Valor de tipo errado num campo ("tipo": "XYZ" fora do enum, texto no lugar de número, número que não cabe no tipo):
+    // sai como erro de campo, no mesmo formato da Bean Validation. JSON quebrado não tem campo, então sai no formato padrão.
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<?> corpoIlegivel(HttpMessageNotReadableException ex, HttpServletRequest request) {
-        if (ex.getCause() instanceof MismatchedInputException erro && !erro.getPath().isEmpty()) {
-            return erroValidacao(List.of(new ErrorFieldCustom(caminhoDoCampo(erro), motivo(erro.getTargetType()))), request);
+        if (ex.getCause() instanceof JacksonException erro && !erro.getPath().isEmpty()) {
+            String motivo = erro instanceof MismatchedInputException desencontro ? motivo(desencontro.getTargetType())
+                    : erro instanceof InputCoercionException ? "número fora do intervalo aceito pelo campo"
+                    : "valor em formato inválido";
+            return erroValidacao(List.of(new ErrorFieldCustom(caminhoDoCampo(erro), motivo)), request);
         }
         return erro(HttpStatus.BAD_REQUEST, "JSON mal formado: confira aspas, vírgulas e chaves", request);
     }
 
-    private static String caminhoDoCampo(MismatchedInputException erro) {
+    private static String caminhoDoCampo(JacksonException erro) {
         return erro.getPath().stream()
                 .map(parte -> parte.getPropertyName() != null ? parte.getPropertyName() : "[" + parte.getIndex() + "]")
                 .collect(Collectors.joining(".")).replace(".[", "[");
