@@ -17,13 +17,13 @@ public record EstacaoRequest(
         @Schema(example = "Rio Tietê") @NotBlank @Size(max = 80)
         String rio,
 
-        @Schema(example = "150") @NotNull @Positive
+        @Schema(example = "150") @NotNull @Positive @Max(5000)
         Integer cotaAtencaoCm,
 
-        @Schema(example = "220") @NotNull @Positive
+        @Schema(example = "220") @NotNull @Positive @Max(5000)
         Integer cotaAlertaCm,
 
-        @Schema(example = "300") @NotNull @Positive
+        @Schema(example = "300") @NotNull @Positive @Max(5000)
         Integer cotaTransbordoCm,
 
         @Schema(description = "Se não vier, a estação nasce ATIVA e, na atualização, mantém o status atual", example = "ATIVA")

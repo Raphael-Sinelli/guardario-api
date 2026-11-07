@@ -92,6 +92,16 @@ class AreaEstacaoIntegrationTest extends IntegracaoBase {
                 .andExpect(jsonPath("$.errors[0].message", containsString("crescentes")));
     }
 
+    // a leitura aceita até 5000 cm: cota acima disso deixaria a estação presa em NORMAL
+    @Test
+    void cotaAcimaDoMaiorNivelQueALeituraAceitaDevolve400() throws Exception {
+        postJson("/api/estacoes", tokenAdmin(), """
+                {"codigo": "T-%s", "nome": "Cotas altas", "rio": "Rio", "cotaAtencaoCm": 6000,
+                 "cotaAlertaCm": 7000, "cotaTransbordoCm": 8000, "areaId": 1}""".formatted(sufixoUnico()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[*].field", hasItems("cotaAtencaoCm", "cotaAlertaCm", "cotaTransbordoCm")));
+    }
+
     @Test
     void parametrosInvalidosDevolvem400() throws Exception {
         mockMvc.perform(get("/api/areas/0")).andExpect(status().isBadRequest())
