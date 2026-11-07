@@ -98,7 +98,9 @@ public class OpenApiConfig {
     /*
      * Quem declara @ApiResponse perde as respostas automáticas do springdoc, e ele não deduz o 401 da segurança.
      * Rota protegida (sem @SecurityRequirements vazio) ganha o 401; rota com parâmetro ganha o 400 (id que não é
-     * número positivo, valor fora do enum, campo de ordenação inexistente). No fim, os códigos ficam em ordem.
+     * número positivo, valor fora do enum, campo de ordenação inexistente). Toda rota ganha o 406 (Accept sem JSON)
+     * e toda rota com corpo, o 415 (corpo sem Content-Type: application/json), que o GlobalExceptionHandler devolve
+     * em qualquer rota. No fim, os códigos ficam em ordem.
      */
     private void completarRespostasDeErro(Operation operacao) {
         ApiResponses respostas = operacao.getResponses();
@@ -109,6 +111,12 @@ public class OpenApiConfig {
         boolean temParametro = operacao.getParameters() != null && !operacao.getParameters().isEmpty();
         if (temParametro && !respostas.containsKey("400")) {
             respostas.addApiResponse("400", new ApiResponse().description("Parâmetro inválido"));
+        }
+        if (!respostas.containsKey("406")) {
+            respostas.addApiResponse("406", new ApiResponse().description("Accept com um formato que a API não produz: ela responde em JSON"));
+        }
+        if (operacao.getRequestBody() != null && !respostas.containsKey("415")) {
+            respostas.addApiResponse("415", new ApiResponse().description("Corpo sem o header Content-Type: application/json"));
         }
 
         ApiResponses emOrdem = new ApiResponses();

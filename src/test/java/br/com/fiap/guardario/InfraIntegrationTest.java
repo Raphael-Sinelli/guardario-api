@@ -240,6 +240,7 @@ class InfraIntegrationTest extends IntegracaoBase {
         List<String> semO401 = new ArrayList<>();
         List<String> semO400 = new ArrayList<>();
         List<String> semDescricao = new ArrayList<>();
+        List<String> semO406OuO415 = new ArrayList<>();
 
         rotas.forEach((rota, operacoes) -> operacoes.forEach((metodo, operacao) -> {
             if (operacao.get("summary") == null || operacao.get("description") == null) {
@@ -253,11 +254,16 @@ class InfraIntegrationTest extends IntegracaoBase {
             if (operacao.containsKey("parameters") && !respostas.containsKey("400")) {
                 semO400.add(metodo.toUpperCase() + " " + rota);
             }
+            // o 406 vale para toda rota, e o 415 para toda rota com corpo: o GlobalExceptionHandler responde os dois
+            if (!respostas.containsKey("406") || (operacao.containsKey("requestBody") && !respostas.containsKey("415"))) {
+                semO406OuO415.add(metodo.toUpperCase() + " " + rota);
+            }
         }));
 
         assertThat(semDescricao).isEmpty();
         assertThat(semO401).isEmpty();
         assertThat(semO400).isEmpty();
+        assertThat(semO406OuO415).isEmpty();
         mockMvc.perform(get("/v3/api-docs"))
                 .andExpect(jsonPath("$.paths['/api/alertas/ativos'].get.responses", not(hasKey("401"))))
                 .andExpect(jsonPath("$.paths['/api/alertas/{id}/encerrar'].patch.responses['401'].content['application/json'].schema['$ref']")
