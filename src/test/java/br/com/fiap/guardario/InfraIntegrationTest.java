@@ -1,5 +1,6 @@
 package br.com.fiap.guardario;
 
+import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.CacheManager;
@@ -7,9 +8,14 @@ import org.springframework.cache.interceptor.SimpleKey;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasKey;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -93,6 +99,34 @@ class InfraIntegrationTest extends IntegracaoBase {
                 .andExpect(jsonPath("$.paths['/api/areas/{id}'].get.responses['404'].content['application/json'].schema['$ref']")
                         .value("#/components/schemas/ErrorCustomResponse"))
                 .andExpect(jsonPath("$.components.schemas", hasKey("ValidationErrorResponse")));
+    }
+
+    // quem declara @ApiResponse perde os códigos automáticos do springdoc, então o 401 e o 400 precisam ser conferidos
+    @Test
+    @SuppressWarnings("unchecked")
+    void swaggerDocumenta401NasRotasProtegidasE400NasRotasComParametro() throws Exception {
+        String json = mockMvc.perform(get("/v3/api-docs")).andReturn().getResponse().getContentAsString();
+        Map<String, Map<String, Map<String, Object>>> rotas = JsonPath.read(json, "$.paths");
+        List<String> semO401 = new ArrayList<>();
+        List<String> semO400 = new ArrayList<>();
+
+        rotas.forEach((rota, operacoes) -> operacoes.forEach((metodo, operacao) -> {
+            Map<String, Object> respostas = (Map<String, Object>) operacao.get("responses");
+            boolean publica = operacao.get("security") instanceof List<?> seguranca && seguranca.isEmpty();
+            if (!publica && !respostas.containsKey("401")) {
+                semO401.add(metodo.toUpperCase() + " " + rota);
+            }
+            if (operacao.containsKey("parameters") && !respostas.containsKey("400")) {
+                semO400.add(metodo.toUpperCase() + " " + rota);
+            }
+        }));
+
+        assertThat(semO401).isEmpty();
+        assertThat(semO400).isEmpty();
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(jsonPath("$.paths['/api/alertas/ativos'].get.responses", not(hasKey("401"))))
+                .andExpect(jsonPath("$.paths['/api/alertas/{id}/encerrar'].patch.responses['401'].content['application/json'].schema['$ref']")
+                        .value("#/components/schemas/ErrorCustomResponse"));
     }
 
     @Test

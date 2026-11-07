@@ -10,14 +10,18 @@ import io.swagger.v3.oas.annotations.info.Info;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
 import io.swagger.v3.oas.models.Components;
+import io.swagger.v3.oas.models.Operation;
 import io.swagger.v3.oas.models.media.Content;
 import io.swagger.v3.oas.models.media.MediaType;
 import io.swagger.v3.oas.models.media.Schema;
+import io.swagger.v3.oas.models.responses.ApiResponse;
+import io.swagger.v3.oas.models.responses.ApiResponses;
 import org.springdoc.core.customizers.OpenApiCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import java.util.List;
+import java.util.Map;
 
 /*
  * Todas as rotas ganham o cadeado do bearerAuth; as públicas tiram o cadeado com @SecurityRequirements vazio.
@@ -75,6 +79,7 @@ public class OpenApiConfig {
                 if (operacao.getResponses() == null) {
                     return;
                 }
+                completarRespostasDeErro(operacao);
                 operacao.getResponses().forEach((codigo, resposta) -> {
                     boolean ehErro = codigo.startsWith("4") || codigo.startsWith("5");
                     if (ehErro) {
@@ -84,6 +89,29 @@ public class OpenApiConfig {
                 });
             }));
         };
+    }
+
+    /*
+     * Quem declara @ApiResponse perde as respostas automáticas do springdoc, e ele não deduz o 401 da segurança.
+     * Rota protegida (sem @SecurityRequirements vazio) ganha o 401; rota com parâmetro ganha o 400 (id que não é
+     * número positivo, valor fora do enum, campo de ordenação inexistente). No fim, os códigos ficam em ordem.
+     */
+    private void completarRespostasDeErro(Operation operacao) {
+        ApiResponses respostas = operacao.getResponses();
+        boolean protegida = operacao.getSecurity() == null || !operacao.getSecurity().isEmpty();
+        if (protegida && !respostas.containsKey("401")) {
+            respostas.addApiResponse("401", new ApiResponse().description("Sem token, ou token inválido ou expirado"));
+        }
+        boolean temParametro = operacao.getParameters() != null && !operacao.getParameters().isEmpty();
+        if (temParametro && !respostas.containsKey("400")) {
+            respostas.addApiResponse("400", new ApiResponse().description("Parâmetro inválido"));
+        }
+
+        ApiResponses emOrdem = new ApiResponses();
+        respostas.entrySet().stream()
+                .sorted(Map.Entry.comparingByKey())
+                .forEach(entrada -> emOrdem.addApiResponse(entrada.getKey(), entrada.getValue()));
+        operacao.setResponses(emOrdem);
     }
 
     private void registrarSchema(Components components, Class<?> tipo) {
