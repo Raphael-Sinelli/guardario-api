@@ -63,6 +63,8 @@ public class SecurityConfig {
                         .requestMatchers("/h2-console/**").permitAll()
                         // informação de segurança é pública: nível do rio, alertas e abrigos não exigem login
                         .requestMatchers(HttpMethod.GET, "/api/areas/**", "/api/estacoes/**", "/api/alertas/**", "/api/abrigos/**").permitAll()
+                        // ver um cadastro pelo id: qualquer logado, com a posse conferida no service; o resto da área é do ADMIN
+                        .requestMatchers(HttpMethod.GET, "/api/usuarios/*").authenticated()
                         .requestMatchers("/api/usuarios/**").hasRole("ADMIN")
                         .requestMatchers("/error").permitAll()
                         .anyRequest().authenticated()

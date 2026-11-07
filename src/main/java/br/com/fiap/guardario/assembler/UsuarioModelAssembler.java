@@ -3,6 +3,7 @@ package br.com.fiap.guardario.assembler;
 import br.com.fiap.guardario.controller.AreaController;
 import br.com.fiap.guardario.controller.UsuarioController;
 import br.com.fiap.guardario.dto.UsuarioResponse;
+import br.com.fiap.guardario.model.Papel;
 import br.com.fiap.guardario.security.SecurityUtils;
 import org.springframework.hateoas.EntityModel;
 import org.springframework.hateoas.server.RepresentationModelAssembler;
@@ -18,15 +19,17 @@ public class UsuarioModelAssembler implements RepresentationModelAssembler<Usuar
     @Override
     public EntityModel<UsuarioResponse> toModel(UsuarioResponse usuario) {
         EntityModel<UsuarioResponse> model = EntityModel.of(usuario,
-                linkTo(methodOn(UsuarioController.class).buscarPorId(usuario.id())).withSelfRel(),
-                linkTo(methodOn(UsuarioController.class).listar(null)).withRel("usuarios").expand());
+                linkTo(methodOn(UsuarioController.class).buscarPorId(usuario.id())).withSelfRel());
 
-        // o ADMIN não altera o próprio papel (409): no registro dele a ação não aparece
-        boolean ehOProprioUsuario = SecurityUtils.usuarioOpcional()
-                .map(logado -> logado.getId().equals(usuario.id()))
-                .orElse(false);
-        if (!ehOProprioUsuario) {
-            model.add(linkTo(methodOn(UsuarioController.class).alterarPapel(usuario.id(), null)).withRel("alterar-papel"));
+        // a lista e a troca de papel são do ADMIN; e o ADMIN não altera o próprio papel (409)
+        if (SecurityUtils.temPapel(Papel.ADMIN)) {
+            model.add(linkTo(methodOn(UsuarioController.class).listar(null)).withRel("usuarios").expand());
+            boolean ehOProprioUsuario = SecurityUtils.usuarioOpcional()
+                    .map(logado -> logado.getId().equals(usuario.id()))
+                    .orElse(false);
+            if (!ehOProprioUsuario) {
+                model.add(linkTo(methodOn(UsuarioController.class).alterarPapel(usuario.id(), null)).withRel("alterar-papel"));
+            }
         }
 
         if (usuario.areaId() != null) {

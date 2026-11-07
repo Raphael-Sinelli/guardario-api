@@ -29,7 +29,7 @@ public class AuthController {
     @SecurityRequirements
     @Operation(summary = "Cadastra um morador",
             description = "Rota pública. O cadastro sempre cria o papel CIDADAO; só um ADMIN promove alguém a AGENTE.")
-    @ApiResponse(responseCode = "201", description = "Usuário criado; o header Location aponta para ele")
+    @ApiResponse(responseCode = "201", description = "Usuário criado; o header Location aponta para o cadastro, que o próprio usuário consulta depois do login")
     @ApiResponse(responseCode = "400", description = "Campos inválidos (email mal formado, senha com menos de 8 caracteres...)")
     @ApiResponse(responseCode = "404", description = "A área informada não existe")
     @ApiResponse(responseCode = "409", description = "Email já cadastrado")

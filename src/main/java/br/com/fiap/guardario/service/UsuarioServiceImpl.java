@@ -10,6 +10,7 @@ import br.com.fiap.guardario.repository.UsuarioRepository;
 import br.com.fiap.guardario.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,7 +30,12 @@ public class UsuarioServiceImpl implements UsuarioService {
     @Override
     @Transactional(readOnly = true)
     public UsuarioResponse buscarPorId(Long id) {
-        return UsuarioMapper.toResponse(buscarEntidade(id));
+        Usuario usuario = buscarEntidade(id); // 404 antes de 403: primeiro confere se existe
+        // posse: o ADMIN vê qualquer cadastro; os outros papéis, só o próprio (é o Location devolvido no cadastro)
+        if (!SecurityUtils.temPapel(Papel.ADMIN) && !usuario.getId().equals(SecurityUtils.usuarioLogado().getId())) {
+            throw new AccessDeniedException("Você só pode ver o seu próprio cadastro");
+        }
+        return UsuarioMapper.toResponse(usuario);
     }
 
     @Override

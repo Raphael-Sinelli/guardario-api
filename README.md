@@ -307,7 +307,7 @@ As respostas usam o formato HAL. As listas vêm com os itens em `_embedded`, os 
 | Leitura | `estacao`, `estatisticas-24h`. Na resposta do registro: `estacao`, `area` e, quando a leitura abre um alerta automático, `alerta` | nenhuma: leitura não muda depois de gravada |
 | Área | `estacoes`, `abrigos-com-vaga`, `alertas-ativos` | ADMIN: `atualizar` e, se a área não tem estações, abrigos, alertas, relatos nem moradores, `excluir` |
 | Linha do ranking | `area`, `abrigos-com-vaga` | nenhuma: é um relatório |
-| Usuário (rotas do ADMIN) | `area`, `usuarios` | `alterar-papel`, menos no registro do próprio ADMIN, que não pode mudar o próprio papel |
+| Usuário | `area`; para o ADMIN, também `usuarios` | ADMIN: `alterar-papel`, menos no registro dele mesmo, que não pode mudar o próprio papel |
 
 Quem não está logado não recebe link de ação. O `excluir` só aparece quando a exclusão vai dar certo: numa lista, uma consulta agregada por página (`AreaRiscoRepository.buscarIdsComVinculos`, `AlertaRepository.buscarEstacaoIdsComAlertas`) diz quais itens têm vínculo, sem uma consulta por item. O link orienta o cliente, mas não substitui a checagem: o servidor confere a permissão em toda requisição.
 
@@ -329,7 +329,7 @@ Quem não está logado não recebe link de ação. O `excluir` só aparece quand
 3. O `JwtService` gera um token HS256 que vale 1 hora, com o email no `sub` e o papel numa claim informativa.
 4. O app manda `Authorization: Bearer <token>` em cada requisição.
 5. O `JwtAuthenticationFilter` (um `OncePerRequestFilter`) valida assinatura e expiração, carrega o usuário do banco e coloca no `SecurityContext`. O papel que vale é o do banco: uma promoção feita pelo ADMIN vale na hora, e um papel forjado no token não adianta.
-6. O `SecurityConfig` controla as áreas de URL (rotas públicas, `/api/usuarios/**` e `/actuator/**` só para ADMIN), o `@PreAuthorize` de cada método controla a ação, e o service confere a posse (relato de outra pessoa dá 403, sempre depois de verificar se existe: 404 vem antes de 403).
+6. O `SecurityConfig` controla as áreas de URL (rotas públicas, `/api/usuarios/**` e `/actuator/**` só para ADMIN, menos o `GET /api/usuarios/{id}`, que o próprio usuário também faz), o `@PreAuthorize` de cada método controla a ação, e o service confere a posse (relato de outra pessoa dá 403, sempre depois de verificar se existe: 404 vem antes de 403).
 
 **401 x 403.** Sem token, ou com token inválido ou expirado, o `RestAuthenticationEntryPoint` responde 401. Usuário logado sem permissão recebe 403, do `RestAccessDeniedHandler` (área de URL) ou do `GlobalExceptionHandler` (`@PreAuthorize` e regra de posse). Os dois handlers da cadeia de filtros escrevem o mesmo JSON de erro do resto da API.
 
@@ -386,11 +386,11 @@ Os demais erros seguem o formato `ErrorCustomResponse`:
 
 | Método | Rota | Acesso | Sucesso |
 |---|---|---|---|
-| POST | `/api/auth/register` | público | 201 + Location |
+| POST | `/api/auth/register` | público | 201 + Location (o cadastro criado, que o próprio usuário consulta depois do login) |
 | POST | `/api/auth/login` | público | 200 |
 | GET | `/api/auth/me` | logado | 200 |
 | GET | `/api/usuarios` | ADMIN | 200 |
-| GET | `/api/usuarios/{id}` | ADMIN | 200 |
+| GET | `/api/usuarios/{id}` | ADMIN, ou o próprio usuário (é o `Location` do cadastro) | 200 |
 | PUT | `/api/usuarios/{id}/papel` | ADMIN | 200 |
 | GET | `/api/areas?uf=` | público | 200 |
 | GET | `/api/areas/{id}` | público (cache) | 200 |

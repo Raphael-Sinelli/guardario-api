@@ -22,13 +22,13 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-// a área /api/usuarios já é só do ADMIN no SecurityConfig; o @PreAuthorize repete a regra na ação
+// a área /api/usuarios é do ADMIN no SecurityConfig, menos o GET de um cadastro pelo id, que o próprio usuário também faz;
+// o @PreAuthorize repete a regra em cada ação
 @RestController
 @RequestMapping("/api/usuarios")
 @Validated
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('ADMIN')")
-@Tag(name = "Usuários", description = "Gestão de usuários e papéis (somente ADMIN)")
+@Tag(name = "Usuários", description = "Gestão de usuários e papéis (ADMIN); cada usuário consulta o próprio cadastro")
 public class UsuarioController {
 
     private final UsuarioService usuarioService;
@@ -37,6 +37,7 @@ public class UsuarioController {
 
     @CamposDeOrdenacao({"nome", "email", "papel", "criadoEm", "id"})
     @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Lista os usuários", description = "Paginado e ordenável, ex.: ?page=0&size=10&sort=nome,asc")
     @ApiResponse(responseCode = "200", description = "Página de usuários")
     @ApiResponse(responseCode = "401", description = "Sem token")
@@ -47,16 +48,20 @@ public class UsuarioController {
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Busca um usuário pelo id", description = "Somente ADMIN. A resposta não traz a senha.")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Busca um usuário pelo id",
+            description = "O ADMIN vê qualquer cadastro; os outros papéis, só o próprio. É o endereço do Location "
+                    + "devolvido no cadastro (POST /api/auth/register). A resposta não traz a senha.")
     @ApiResponse(responseCode = "200", description = "Usuário encontrado")
     @ApiResponse(responseCode = "400", description = "Id menor ou igual a zero")
-    @ApiResponse(responseCode = "403", description = "Usuário logado não é ADMIN")
+    @ApiResponse(responseCode = "403", description = "O cadastro é de outra pessoa e o usuário logado não é ADMIN")
     @ApiResponse(responseCode = "404", description = "Usuário não existe")
     public ResponseEntity<EntityModel<UsuarioResponse>> buscarPorId(@PathVariable @Positive Long id) {
         return ResponseEntity.ok(assembler.toModel(usuarioService.buscarPorId(id)));
     }
 
     @PutMapping("/{id}/papel")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Altera o papel de um usuário", description = "Usado para promover um cidadão a AGENTE da Defesa Civil.")
     @ApiResponse(responseCode = "200", description = "Papel alterado")
     @ApiResponse(responseCode = "400", description = "Papel inválido")

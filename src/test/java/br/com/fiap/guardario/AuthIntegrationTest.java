@@ -49,6 +49,35 @@ class AuthIntegrationTest extends IntegracaoBase {
                 .andExpect(jsonPath("$.components.schemas.RegisterRequest.properties.senha.maxLength").value(72));
     }
 
+    // o Location do cadastro aponta para o recurso criado, e o próprio usuário consegue segui-lo depois do login
+    @Test
+    void locationDoCadastroEhAcessivelPeloProprioUsuario() throws Exception {
+        String email = "location" + sufixoUnico().toLowerCase() + "@email.com";
+        String location = postJson("/api/auth/register", null, """
+                {"nome": "Pessoa Nova", "email": "%s", "senha": "Senha@123"}""".formatted(email))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getHeader(HttpHeaders.LOCATION);
+
+        mockMvc.perform(get(location).header(HttpHeaders.AUTHORIZATION, bearer(token(email, "Senha@123"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.email").value(email))
+                .andExpect(jsonPath("$._links.self.href").value(location))
+                .andExpect(jsonPath("$._links.usuarios").doesNotExist())
+                .andExpect(jsonPath("$._links['alterar-papel']").doesNotExist());
+
+        // regra de posse: outro cidadão recebe 403; id que não existe, 404 (404 antes de 403)
+        mockMvc.perform(get(location).header(HttpHeaders.AUTHORIZATION, bearer(tokenMaria())))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/usuarios/999999").header(HttpHeaders.AUTHORIZATION, bearer(tokenMaria())))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(get(location).header(HttpHeaders.AUTHORIZATION, bearer(tokenAdmin())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$._links['alterar-papel'].href").exists());
+        // a lista continua só do ADMIN
+        mockMvc.perform(get("/api/usuarios").header(HttpHeaders.AUTHORIZATION, bearer(tokenMaria())))
+                .andExpect(status().isForbidden());
+    }
+
     @Test
     void emailRepetidoDevolve409() throws Exception {
         postJson("/api/auth/register", null, """
