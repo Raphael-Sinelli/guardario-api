@@ -20,6 +20,30 @@ class AbrigoIntegrationTest extends IntegracaoBase {
                 .andExpect(jsonPath("$.errors[0].message", containsString("capacidade")));
     }
 
+    // PUT sem ocupacao não pode sumir com as pessoas que já estão no abrigo
+    @Test
+    void atualizarSemOcupacaoMantemAsPessoasAcolhidas() throws Exception {
+        long area = criarArea("Área Abrigo PUT " + sufixoUnico());
+        long abrigo = criarAbrigo(area, 10, 4, true, true);
+        String corpoSemOcupacao = """
+                {"nome": "Abrigo Renomeado", "endereco": "Rua 2", "capacidade": %d,
+                 "aceitaPets": true, "acessivelPcd": true, "areaId": %d}""";
+
+        putJson("/api/abrigos/" + abrigo, corpoSemOcupacao.formatted(12, area))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.ocupacao").value(4))
+                .andExpect(jsonPath("$.vagas").value(8));
+
+        // capacidade abaixo de quem já está lá dentro
+        putJson("/api/abrigos/" + abrigo, corpoSemOcupacao.formatted(3, area))
+                .andExpect(status().isConflict());
+    }
+
+    private org.springframework.test.web.servlet.ResultActions putJson(String url, String json) throws Exception {
+        return mockMvc.perform(put(url).header(HttpHeaders.AUTHORIZATION, bearer(tokenAgente()))
+                .contentType(MediaType.APPLICATION_JSON).content(json));
+    }
+
     @Test
     void entradaAteLotarESaidaReabre() throws Exception {
         long abrigo = criarAbrigo(criarArea("Área Lotação " + sufixoUnico()), 10, 0, true, true);

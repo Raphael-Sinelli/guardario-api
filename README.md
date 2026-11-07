@@ -118,7 +118,7 @@ A coleção conta com os dados de uma API recém-iniciada. Para rodar tudo de no
 | RN09 | O cidadão vê e edita só os próprios relatos, e só exclui enquanto estão ABERTO | `RelatoServiceImpl` |
 | RN10 | As cotas da estação precisam ser crescentes: atenção < alerta < transbordo | `@CotasCrescentes` |
 
-Outras regras: estação em MANUTENCAO ou INATIVA não recebe leitura (409); leitura que chega atrasada entra no histórico mas não muda o nível atual nem gera alerta; estação com alerta no histórico não pode ser excluída, só desativada; área com estações, abrigos, alertas ou relatos não pode ser excluída; o ADMIN não pode alterar o próprio papel.
+Outras regras: estação em MANUTENCAO ou INATIVA não recebe leitura (409); leitura que chega atrasada entra no histórico mas não muda o nível atual nem gera alerta; estação com alerta no histórico não pode ser excluída, só desativada; área com estações, abrigos, alertas ou relatos não pode ser excluída; o ADMIN não pode alterar o próprio papel; no PUT, abrigo sem `ocupacao` mantém as pessoas que já estão lá (e a capacidade não pode ficar abaixo delas, 409) e estação sem `status` mantém o status atual.
 
 ## Diagrama das entidades
 

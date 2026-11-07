@@ -15,7 +15,7 @@ public record AbrigoRequest(
         @Schema(example = "120") @NotNull @Positive @Max(5000)
         Integer capacidade,
 
-        @Schema(description = "Pessoas já acolhidas. Se não vier, começa em 0", example = "0") @PositiveOrZero
+        @Schema(description = "Pessoas já acolhidas. Se não vier, começa em 0 no cadastro e mantém o valor atual na atualização", example = "0") @PositiveOrZero
         Integer ocupacao,
 
         @Schema(example = "true") @NotNull

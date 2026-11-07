@@ -119,7 +119,10 @@ public class EstacaoServiceImpl implements EstacaoService {
         estacao.setCotaAtencaoCm(request.cotaAtencaoCm());
         estacao.setCotaAlertaCm(request.cotaAlertaCm());
         estacao.setCotaTransbordoCm(request.cotaTransbordoCm());
-        estacao.setStatus(request.status() != null ? request.status() : StatusEstacao.ATIVA);
+        // sem status no corpo, fica o atual (a estação nova já nasce ATIVA): um PUT não pode reativar a estação sem querer
+        if (request.status() != null) {
+            estacao.setStatus(request.status());
+        }
         estacao.setArea(area);
     }
 }

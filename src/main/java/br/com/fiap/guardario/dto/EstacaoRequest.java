@@ -26,7 +26,7 @@ public record EstacaoRequest(
         @Schema(example = "300") @NotNull @Positive
         Integer cotaTransbordoCm,
 
-        @Schema(description = "Se não vier, a estação nasce ATIVA", example = "ATIVA")
+        @Schema(description = "Se não vier, a estação nasce ATIVA e, na atualização, mantém o status atual", example = "ATIVA")
         StatusEstacao status,
 
         @Schema(example = "1") @NotNull @Positive

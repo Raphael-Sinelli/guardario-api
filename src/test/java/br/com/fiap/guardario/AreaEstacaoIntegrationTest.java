@@ -168,6 +168,24 @@ class AreaEstacaoIntegrationTest extends IntegracaoBase {
         mockMvc.perform(get("/api/areas/" + area)).andExpect(jsonPath("$.nivelAtual").value("NORMAL"));
     }
 
+    @Test
+    void atualizarEstacaoSemStatusMantemOStatusAtual() throws Exception {
+        long area = criarArea("Área Status " + sufixoUnico());
+        long estacao = criarEstacao(area);
+        atualizarEstacao(estacao, area, "INATIVA");
+        String codigo = JsonPath.read(mockMvc.perform(get("/api/estacoes/" + estacao))
+                .andReturn().getResponse().getContentAsString(), "$.codigo");
+
+        mockMvc.perform(put("/api/estacoes/" + estacao).header(HttpHeaders.AUTHORIZATION, bearer(tokenAdmin()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"codigo": "%s", "nome": "Estação renomeada", "rio": "Rio Teste", "cotaAtencaoCm": 100,
+                                 "cotaAlertaCm": 200, "cotaTransbordoCm": 300, "areaId": %d}""".formatted(codigo, area)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.nome").value("Estação renomeada"))
+                .andExpect(jsonPath("$.status").value("INATIVA"));
+    }
+
     private void atualizarEstacao(long estacao, long area, String status) throws Exception {
         String codigo = JsonPath.read(mockMvc.perform(get("/api/estacoes/" + estacao))
                 .andReturn().getResponse().getContentAsString(), "$.codigo");

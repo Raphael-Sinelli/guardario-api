@@ -2,6 +2,7 @@ package br.com.fiap.guardario.service;
 
 import br.com.fiap.guardario.dto.AbrigoRequest;
 import br.com.fiap.guardario.dto.AbrigoResponse;
+import br.com.fiap.guardario.exceptions.RegraNegocioException;
 import br.com.fiap.guardario.exceptions.ResourceNotFoundException;
 import br.com.fiap.guardario.mapper.AbrigoMapper;
 import br.com.fiap.guardario.model.Abrigo;
@@ -62,6 +63,7 @@ public class AbrigoServiceImpl implements AbrigoService {
     public AbrigoResponse criar(AbrigoRequest request) {
         Abrigo abrigo = new Abrigo();
         preencher(abrigo, request);
+        abrigo.setOcupacao(request.ocupacao() != null ? request.ocupacao() : 0);
         abrigo.atualizarStatus(); // pode já nascer LOTADO se a ocupação informada for igual à capacidade
         return AbrigoMapper.toResponse(abrigoRepository.save(abrigo));
     }
@@ -72,6 +74,14 @@ public class AbrigoServiceImpl implements AbrigoService {
     public AbrigoResponse atualizar(Long id, AbrigoRequest request) {
         Abrigo abrigo = buscarEntidade(id);
         preencher(abrigo, request);
+        // sem ocupacao no corpo, fica a atual: as pessoas que já estão no abrigo não podem sumir num PUT
+        if (request.ocupacao() != null) {
+            abrigo.setOcupacao(request.ocupacao());
+        }
+        if (abrigo.getOcupacao() > abrigo.getCapacidade()) {
+            throw new RegraNegocioException("A capacidade não pode ficar abaixo das " + abrigo.getOcupacao()
+                    + " pessoas que já estão no abrigo");
+        }
         abrigo.atualizarStatus();
         return AbrigoMapper.toResponse(abrigo);
     }
@@ -125,7 +135,6 @@ public class AbrigoServiceImpl implements AbrigoService {
         abrigo.setNome(request.nome().trim());
         abrigo.setEndereco(request.endereco().trim());
         abrigo.setCapacidade(request.capacidade());
-        abrigo.setOcupacao(request.ocupacao() != null ? request.ocupacao() : 0);
         abrigo.setAceitaPets(request.aceitaPets());
         abrigo.setAcessivelPcd(request.acessivelPcd());
         abrigo.setTelefone(request.telefone());
