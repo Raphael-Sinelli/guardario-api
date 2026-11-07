@@ -5,16 +5,27 @@ import br.com.fiap.guardario.model.AreaRisco;
 import br.com.fiap.guardario.model.StatusRelato;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 public interface AreaRiscoRepository extends JpaRepository<AreaRisco, Long> {
 
     Page<AreaRisco> findByUfIgnoreCase(String uf, Pageable pageable);
+
+    /*
+     * SELECT ... FOR UPDATE: a linha da área fica travada até o fim da transação. Duas leituras da mesma área
+     * passam a entrar uma de cada vez, e a segunda já enxerga o que a primeira gravou (RN02 e RN03).
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select a from AreaRisco a where a.id = :id")
+    Optional<AreaRisco> buscarComTrava(@Param("id") Long id);
 
     /*
      * Ranking das áreas pelos relatos ainda em aberto. Derived query não faz isso:

@@ -55,6 +55,56 @@ class LeituraAlertaIntegrationTest extends IntegracaoBase {
                 .andExpect(status().isNotFound());
     }
 
+    // RN02 com leituras simultâneas: dez leituras em ALERTA ao mesmo tempo abrem um alerta só
+    @Test
+    void leiturasSimultaneasNaoDuplicamOAlertaAutomatico() throws Exception {
+        long area = criarArea("Área Simultânea " + sufixoUnico());
+        long estacao = criarEstacao(area);
+        String agente = tokenAgente();
+
+        emParalelo(10, () -> postJson("/api/estacoes/" + estacao + "/leituras", agente,
+                "{\"nivelCm\": 240, \"chuvaMmH\": 5}").andReturn().getResponse().getStatus());
+
+        mockMvc.perform(get("/api/alertas/ativos"))
+                .andExpect(jsonPath("$._embedded.alertas[?(@.areaId == %d)]".formatted(area), hasSize(1)));
+    }
+
+    // RN03 com leituras simultâneas: uma estação baixa e a outra sobe ao mesmo tempo; a área fica no maior risco
+    @Test
+    void leiturasSimultaneasDeDuasEstacoesNaoPerdemONivelDaArea() throws Exception {
+        long area = criarArea("Área Duas Estações " + sufixoUnico());
+        long primeira = criarEstacao(area);
+        long segunda = criarEstacao(area);
+        String agente = tokenAgente();
+
+        for (int rodada = 0; rodada < 5; rodada++) {
+            registrarLeitura(primeira, 320, 0.0);
+            registrarLeitura(segunda, 10, 0.0);
+            long sobe = segunda;
+            long desce = primeira;
+            emParalelo(2,
+                    () -> postJson("/api/estacoes/" + desce + "/leituras", agente, "{\"nivelCm\": 10, \"chuvaMmH\": 0}")
+                            .andReturn().getResponse().getStatus(),
+                    () -> postJson("/api/estacoes/" + sobe + "/leituras", agente, "{\"nivelCm\": 320, \"chuvaMmH\": 0}")
+                            .andReturn().getResponse().getStatus());
+            mockMvc.perform(get("/api/areas/" + area)).andExpect(jsonPath("$.nivelAtual").value("EMERGENCIA"));
+        }
+    }
+
+    // roda as tarefas ao mesmo tempo (a última se repete até completar o total) e confere que todas responderam 201
+    @SafeVarargs
+    private void emParalelo(int total, java.util.concurrent.Callable<Integer>... tarefas) throws Exception {
+        java.util.concurrent.ExecutorService pool = java.util.concurrent.Executors.newFixedThreadPool(total);
+        java.util.List<java.util.concurrent.Future<Integer>> respostas = new java.util.ArrayList<>();
+        for (int i = 0; i < total; i++) {
+            respostas.add(pool.submit(tarefas[Math.min(i, tarefas.length - 1)]));
+        }
+        pool.shutdown();
+        for (java.util.concurrent.Future<Integer> resposta : respostas) {
+            org.assertj.core.api.Assertions.assertThat(resposta.get(60, java.util.concurrent.TimeUnit.SECONDS)).isEqualTo(201);
+        }
+    }
+
     @Test
     void leituraComDataAntigaNaoAbreAlertaNemMudaONivelDaArea() throws Exception {
         long area = criarArea("Área Data Antiga " + sufixoUnico());

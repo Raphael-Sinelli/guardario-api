@@ -71,7 +71,8 @@ public class AlertaServiceImpl implements AlertaService {
     @Transactional
     @CacheEvict(cacheNames = "alertasAtivos", allEntries = true)
     public AlertaResponse criarManual(AlertaRequest request) {
-        AreaRisco area = areaRepository.findById(request.areaId())
+        // a mesma trava das leituras: alerta manual e automático da mesma área não se cruzam (RN02)
+        AreaRisco area = areaRepository.buscarComTrava(request.areaId())
                 .orElseThrow(() -> new ResourceNotFoundException("área", request.areaId()));
 
         Estacao estacao = null;
@@ -127,7 +128,8 @@ public class AlertaServiceImpl implements AlertaService {
         alertaRepository.delete(buscarEntidade(id));
     }
 
-    // RN02: só abre alerta se não houver um ativo de nível igual ou maior; os de nível menor são substituídos
+    // RN02: só abre alerta se não houver um ativo de nível igual ou maior; os de nível menor são substituídos.
+    // Roda dentro da transação do registro da leitura, que já travou a área: a verificação e a inserção não se cruzam.
     @Override
     @Transactional
     @CacheEvict(cacheNames = "alertasAtivos", allEntries = true, condition = "#result != null")

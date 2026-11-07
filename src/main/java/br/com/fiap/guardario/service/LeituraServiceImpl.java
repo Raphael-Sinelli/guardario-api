@@ -11,6 +11,7 @@ import br.com.fiap.guardario.model.AreaRisco;
 import br.com.fiap.guardario.model.Estacao;
 import br.com.fiap.guardario.model.Leitura;
 import br.com.fiap.guardario.model.NivelRisco;
+import br.com.fiap.guardario.repository.AreaRiscoRepository;
 import br.com.fiap.guardario.repository.EstacaoRepository;
 import br.com.fiap.guardario.repository.LeituraRepository;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +29,7 @@ import java.time.temporal.ChronoUnit;
 public class LeituraServiceImpl implements LeituraService {
 
     private final EstacaoRepository estacaoRepository;
+    private final AreaRiscoRepository areaRepository;
     private final LeituraRepository leituraRepository;
     private final AlertaService alertaService;
 
@@ -40,11 +42,13 @@ public class LeituraServiceImpl implements LeituraService {
     @Transactional
     @CacheEvict(cacheNames = "areas", key = "#result.areaId()", condition = "#result.nivelAreaAlterado()")
     public LeituraRegistradaResponse registrar(Long estacaoId, LeituraRequest request) {
-        Estacao estacao = estacaoRepository.findById(estacaoId)
+        // trava a estação e depois a área (sempre nessa ordem): leituras simultâneas da mesma área entram uma de cada vez
+        Estacao estacao = estacaoRepository.buscarComTrava(estacaoId)
                 .orElseThrow(() -> new ResourceNotFoundException("estação", estacaoId));
         if (!estacao.isAtiva()) {
             throw new RegraNegocioException("A estação " + estacao.getCodigo() + " está " + estacao.getStatus() + " e não recebe leituras");
         }
+        areaRepository.buscarComTrava(estacao.getArea().getId());
 
         NivelRisco risco = estacao.classificar(request.nivelCm(), request.chuvaMmH());
 
