@@ -2,9 +2,11 @@ package br.com.fiap.guardario;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -22,6 +24,17 @@ class ErrosPadronizadosIntegrationTest extends IntegracaoBase {
                 .andExpect(jsonPath("$.error").value("Bad Request"))
                 .andExpect(jsonPath("$.message").isString())
                 .andExpect(jsonPath("$.errors[0].field").value("descricao"));
+    }
+
+    // o idioma não pode depender do Accept-Language nem do locale da JVM (VM Linux em inglês, por exemplo)
+    @Test
+    void mensagensDeValidacaoSaemEmPortuguesMesmoComNavegadorEmIngles() throws Exception {
+        mockMvc.perform(post("/api/auth/register").header(HttpHeaders.ACCEPT_LANGUAGE, "en-US")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"nome\": \"\", \"email\": \"pessoa@email.com\", \"senha\": \"Senha@123\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0].field").value("nome"))
+                .andExpect(jsonPath("$.errors[0].message").value("não deve estar em branco"));
     }
 
     @Test

@@ -342,7 +342,7 @@ Quem não está logado não recebe link de ação. O link orienta o cliente, mas
 
 Bean Validation nos records de entrada (`@NotBlank`, `@Size`, `@Email`, `@Pattern`, `@Positive`, `@PastOrPresent`, `@DecimalMin` e outras) e quatro constraints próprias: duas de classe, porque comparam campos entre si (`@CotasCrescentes` na estação e `@OcupacaoDentroDaCapacidade` no abrigo), e duas de campo: `@TamanhoEmBytes(max = 72)` na senha, porque o BCrypt só considera 72 bytes e letra com acento ocupa 2, e `@NivelDeAlerta`, que recusa alerta manual com nível NORMAL. A UF precisa ser a sigla de um estado, o telefone tem só dígitos com DDD, o email precisa de domínio com ponto e número decimal em campo inteiro dá 400 (o Jackson arredondaria em silêncio). Os records de relato, login e cadastro tiram os espaços em volta do texto no construtor compacto, antes da validação. Os controllers têm `@Validated`, o que faz valer `@Positive` e `@Max` nos parâmetros de rota e de query.
 
-O `GlobalExceptionHandler` (`@RestControllerAdvice`) padroniza todas as respostas de erro: `error` é sempre o nome do status HTTP e `message` explica o problema em português. Erro de campo lista todos os campos em `errors`, inclusive os erros de classe e os valores que nem chegam a ser lidos, como um enum que não existe ou texto no lugar de número:
+O `GlobalExceptionHandler` (`@RestControllerAdvice`) padroniza todas as respostas de erro: `error` é sempre o nome do status HTTP e `message` explica o problema em português. O `IdiomaConfig` fixa o idioma em pt-BR, para as mensagens da Bean Validation não mudarem com o `Accept-Language` do navegador nem com o idioma do servidor. Erro de campo lista todos os campos em `errors`, inclusive os erros de classe e os valores que nem chegam a ser lidos, como um enum que não existe ou texto no lugar de número:
 
 ```json
 {
@@ -452,7 +452,7 @@ As rotas de listagem aceitam também `page`, `size` e `sort`. A descrição de c
 ```
 src/main/java/br/com/fiap/guardario
 ├── assembler        links HATEOAS de cada recurso
-├── configurations   SecurityConfig, GlobalExceptionHandler, OpenApiConfig, PaginacaoConfig e @CamposDeOrdenacao, DataInitializer, AdminInitializer
+├── configurations   SecurityConfig, GlobalExceptionHandler, OpenApiConfig, PaginacaoConfig e @CamposDeOrdenacao, IdiomaConfig, DataInitializer, AdminInitializer
 ├── controller       rotas REST e documentação do Swagger
 ├── dto              records de entrada e saída
 ├── exceptions       exceções de negócio (404 e 409)
