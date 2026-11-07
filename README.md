@@ -112,7 +112,7 @@ A coleção conta com os dados de uma API recém-iniciada. Para rodar tudo de no
 | RN02 | Leitura em ALERTA ou pior abre alerta automático para a área, se ela ainda não tiver alerta ativo de nível igual ou maior. Alertas ativos de nível menor são substituídos | `AlertaServiceImpl.gerarAutomatico` |
 | RN03 | O nível da área é o maior risco entre as últimas leituras das suas estações ATIVAS. É recalculado a cada leitura e quando uma estação muda de área, muda de status ou é excluída | `AreaRisco.recalcularNivel`, `EstacaoServiceImpl.atualizar` e `excluir` |
 | RN04 | Só AGENTE ou ADMIN encerra alerta, e alerta encerrado não reabre (409) | `@PreAuthorize` no `AlertaController`, `Alerta.encerrar` |
-| RN05 | A ocupação do abrigo nunca passa da capacidade. Cheio vira LOTADO, com vaga volta a ABERTO, FECHADO não recebe ninguém | `Abrigo.registrarEntrada`, `registrarSaida`, `atualizarStatus`; `@OcupacaoDentroDaCapacidade` |
+| RN05 | A ocupação do abrigo nunca passa da capacidade. Cheio vira LOTADO, com vaga volta a ABERTO, FECHADO não recebe ninguém e aparece com 0 vaga | `Abrigo.registrarEntrada`, `registrarSaida`, `atualizarStatus`; `@OcupacaoDentroDaCapacidade` |
 | RN06 | Prioridade do relato de 1 a 5: base do tipo (pessoa ilhada 5, deslizamento 4, rio subindo e alagamento 3, bueiro 2, outro 1), mais 1 se a área estiver em ALERTA ou EMERGENCIA | `TipoRelato`, `Relato.definirPrioridade` |
 | RN07 | Status do relato: ABERTO vai para EM_ATENDIMENTO ou DESCARTADO; EM_ATENDIMENTO vai para RESOLVIDO. Transição inválida dá 409 | `StatusRelato.podeMudarPara`, `Relato.alterarStatus` |
 | RN08 | O cadastro público sempre cria CIDADAO; só o ADMIN promove alguém | `AuthServiceImpl.registrar`, `UsuarioController` |

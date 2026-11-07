@@ -106,6 +106,8 @@ class RegrasDeDominioTest {
         assertThatThrownBy(() -> abrigo.registrarEntrada(1))
                 .isInstanceOf(RegraNegocioException.class)
                 .hasMessageContaining("fechado");
+        // o app não pode mostrar vaga num abrigo que não recebe ninguém
+        assertThat(abrigo.vagasDisponiveis()).isZero();
     }
 
     // RN06

@@ -58,7 +58,11 @@ public class Abrigo {
     @JoinColumn(name = "area_id", nullable = false)
     private AreaRisco area;
 
+    // abrigo fechado não recebe ninguém: para o app, ele tem 0 vaga, mesmo com espaço sobrando
     public int vagasDisponiveis() {
+        if (status == StatusAbrigo.FECHADO) {
+            return 0;
+        }
         return Math.max(capacidade - ocupacao, 0);
     }
 
