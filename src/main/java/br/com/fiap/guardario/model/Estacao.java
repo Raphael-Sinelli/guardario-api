@@ -108,6 +108,13 @@ public class Estacao {
         return true;
     }
 
+    // a régua mudou: o último nível é classificado de novo com as cotas novas e a chuva daquela leitura (RN01)
+    public void reclassificarUltimaLeitura(double chuvaMmH) {
+        if (ultimoNivelCm != null) {
+            ultimoRisco = classificar(ultimoNivelCm, chuvaMmH);
+        }
+    }
+
     public boolean isAtiva() {
         return status == StatusEstacao.ATIVA;
     }

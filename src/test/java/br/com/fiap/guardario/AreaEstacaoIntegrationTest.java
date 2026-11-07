@@ -176,6 +176,26 @@ class AreaEstacaoIntegrationTest extends IntegracaoBase {
         mockMvc.perform(get("/api/estacoes/criticas")).andExpect(jsonPath("$._embedded.estacoes[*].id", not(hasItem((int) estacao))));
     }
 
+    // mudar a régua reclassifica a última leitura com as cotas novas: o risco não espera a próxima leitura
+    @Test
+    void mudarAsCotasReclassificaOUltimoRiscoDaEstacao() throws Exception {
+        long area = criarArea("Área Régua " + sufixoUnico());
+        long estacao = criarEstacao(area);
+        registrarLeitura(estacao, 250, 0.0).andExpect(jsonPath("$.leitura.nivelRisco").value("ALERTA"));
+        String codigo = JsonPath.read(mockMvc.perform(get("/api/estacoes/" + estacao))
+                .andReturn().getResponse().getContentAsString(), "$.codigo");
+
+        mockMvc.perform(put("/api/estacoes/" + estacao).header(HttpHeaders.AUTHORIZATION, bearer(tokenAdmin()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"codigo": "%s", "nome": "Estação de teste", "rio": "Rio Teste", "cotaAtencaoCm": 1000,
+                                 "cotaAlertaCm": 2000, "cotaTransbordoCm": 3000, "areaId": %d}""".formatted(codigo, area)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.ultimoRisco").value("NORMAL"));
+        mockMvc.perform(get("/api/areas/" + area)).andExpect(jsonPath("$.nivelAtual").value("NORMAL"));
+        mockMvc.perform(get("/api/estacoes/criticas")).andExpect(jsonPath("$._embedded.estacoes[*].id", not(hasItem((int) estacao))));
+    }
+
     @Test
     void excluirEstacaoRecalculaONivelDaArea() throws Exception {
         long area = criarArea("Área Exclusão " + sufixoUnico());

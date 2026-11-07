@@ -119,7 +119,7 @@ A coleção conta com os dados de uma API recém-iniciada. Para rodar tudo de no
 | RN09 | O cidadão vê e edita só os próprios relatos, e só exclui enquanto estão ABERTO | `RelatoServiceImpl` |
 | RN10 | As cotas da estação precisam ser crescentes: atenção < alerta < transbordo | `@CotasCrescentes` |
 
-Outras regras: estação em MANUTENCAO ou INATIVA não recebe leitura (409); leitura atrasada (mais antiga que a última da estação) ou medida há mais de 1 hora entra no histórico, mas não muda o nível atual nem gera alerta, porque o alerta precisa descrever o rio de agora; `medidaEm` precisa estar entre 30 dias atrás e agora, com 1 minuto de tolerância para o relógio da estação adiantado (`@JanelaDeMedicao`); estação com alerta no histórico não pode ser excluída, só desativada; área com estações, abrigos, alertas ou relatos não pode ser excluída; o ADMIN não pode alterar o próprio papel; no PUT, abrigo sem `ocupacao` mantém as pessoas que já estão lá (e a capacidade não pode ficar abaixo delas, 409) e estação sem `status` mantém o status atual.
+Outras regras: estação em MANUTENCAO ou INATIVA não recebe leitura (409); leitura atrasada (mais antiga que a última da estação) ou medida há mais de 1 hora entra no histórico, mas não muda o nível atual nem gera alerta, porque o alerta precisa descrever o rio de agora; `medidaEm` precisa estar entre 30 dias atrás e agora, com 1 minuto de tolerância para o relógio da estação adiantado (`@JanelaDeMedicao`); estação com alerta no histórico não pode ser excluída, só desativada; área com estações, abrigos, alertas ou relatos não pode ser excluída; o ADMIN não pode alterar o próprio papel; no PUT, abrigo sem `ocupacao` mantém as pessoas que já estão lá (e a capacidade não pode ficar abaixo delas, 409) e estação sem `status` mantém o status atual; mudar as cotas da estação reclassifica a última leitura com a régua nova na hora, e o nível da área acompanha.
 
 ## Diagrama das entidades
 
@@ -245,6 +245,7 @@ erDiagram
 | `UsuarioRepository.findByEmail`, `existsByEmail` | Login, filtro JWT e cadastro sem email repetido |
 | `RelatoRepository.findByAutorId(id, pageable)` | `GET /api/relatos/meus` |
 | `LeituraRepository.findByEstacaoId(id, pageable)` | Histórico de leituras da estação |
+| `LeituraRepository.findFirstByEstacaoIdAndMedidaEm` | Leitura atual da estação, para reclassificar quando as cotas mudam |
 | `LeituraRepository.findByIdAndEstacaoId` | `GET /api/estacoes/{id}/leituras/{leituraId}`: a leitura só aparece pela URL da estação dona dela |
 | `AreaRiscoRepository.findByUfIgnoreCase` | Filtro por estado em `GET /api/areas?uf=RS` |
 | `EstacaoRepository.findByAreaId` (com `@EntityGraph`) | Estações de uma área |

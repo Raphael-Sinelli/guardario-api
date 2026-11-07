@@ -12,6 +12,7 @@ import br.com.fiap.guardario.model.StatusEstacao;
 import br.com.fiap.guardario.repository.AlertaRepository;
 import br.com.fiap.guardario.repository.AreaRiscoRepository;
 import br.com.fiap.guardario.repository.EstacaoRepository;
+import br.com.fiap.guardario.repository.LeituraRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
@@ -31,6 +32,7 @@ public class EstacaoServiceImpl implements EstacaoService {
     private final EstacaoRepository estacaoRepository;
     private final AreaRiscoRepository areaRepository;
     private final AlertaRepository alertaRepository;
+    private final LeituraRepository leituraRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -88,6 +90,12 @@ public class EstacaoServiceImpl implements EstacaoService {
         AreaRisco areaAnterior = estacao.getArea();
         estacao.setCodigo(codigo);
         preencher(estacao, request); // último nível e último risco não mudam aqui: vêm das leituras
+
+        // com as cotas novas, o último risco pode mudar na hora, sem esperar a próxima leitura
+        if (estacao.getUltimaLeituraEm() != null) {
+            leituraRepository.findFirstByEstacaoIdAndMedidaEm(estacao.getId(), estacao.getUltimaLeituraEm())
+                    .ifPresent(ultima -> estacao.reclassificarUltimaLeitura(ultima.getChuvaMmH()));
+        }
 
         AreaRisco areaNova = estacao.getArea();
         if (areaNova != areaAnterior) {
