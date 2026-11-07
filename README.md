@@ -338,7 +338,7 @@ Quem não está logado não recebe link de ação. O link orienta o cliente, mas
 
 ## Validação e tratamento de erros
 
-Bean Validation nos records de entrada (`@NotBlank`, `@Size`, `@Email`, `@Positive`, `@PastOrPresent`, `@DecimalMin` e outras) e duas constraints próprias de classe, porque comparam campos entre si: `@CotasCrescentes` na estação e `@OcupacaoDentroDaCapacidade` no abrigo. Os controllers têm `@Validated`, o que faz valer `@Positive` e `@Max` nos parâmetros de rota e de query.
+Bean Validation nos records de entrada (`@NotBlank`, `@Size`, `@Email`, `@Positive`, `@PastOrPresent`, `@DecimalMin` e outras) e três constraints próprias: duas de classe, porque comparam campos entre si (`@CotasCrescentes` na estação e `@OcupacaoDentroDaCapacidade` no abrigo), e uma de campo, `@TamanhoEmBytes(max = 72)` na senha, porque o BCrypt só considera 72 bytes e letra com acento ocupa 2. Os controllers têm `@Validated`, o que faz valer `@Positive` e `@Max` nos parâmetros de rota e de query.
 
 O `GlobalExceptionHandler` (`@RestControllerAdvice`) padroniza todas as respostas de erro. Erro de validação lista todos os campos, inclusive os erros de classe:
 

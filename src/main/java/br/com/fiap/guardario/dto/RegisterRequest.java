@@ -1,5 +1,6 @@
 package br.com.fiap.guardario.dto;
 
+import br.com.fiap.guardario.validation.TamanhoEmBytes;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -14,8 +15,8 @@ public record RegisterRequest(
         @Schema(example = "maria@email.com") @NotBlank @Email @Size(max = 150)
         String email,
 
-        // o BCrypt só considera os primeiros 72 bytes
-        @Schema(example = "Senha@123") @NotBlank @Size(min = 8, max = 72)
+        // o BCrypt só considera os primeiros 72 bytes: o limite é em bytes, não em caracteres
+        @Schema(example = "Senha@123") @NotBlank @Size(min = 8) @TamanhoEmBytes(max = 72)
         String senha,
 
         @Schema(example = "11987654321") @Size(max = 20)

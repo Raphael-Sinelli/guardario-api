@@ -21,6 +21,23 @@ class AuthIntegrationTest extends IntegracaoBase {
                 .andExpect(jsonPath("$.senha").doesNotExist());
     }
 
+    // o BCrypt só considera 72 bytes, e letra com acento ocupa 2 bytes em UTF-8: 40 letras "á" são 80 bytes
+    @Test
+    void senhaComMaisDe72BytesDevolve400EmPortugues() throws Exception {
+        String senhaComAcento = "á".repeat(40);
+        postJson("/api/auth/register", null, """
+                {"nome": "Pessoa Acentuada", "email": "acento%s@email.com", "senha": "%s"}"""
+                .formatted(sufixoUnico().toLowerCase(), senhaComAcento))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0].field").value("senha"))
+                .andExpect(jsonPath("$.errors[0].message", containsString("72 bytes")));
+
+        postJson("/api/auth/login", null, """
+                {"email": "cidadao@guardario.com", "senha": "%s"}""".formatted(senhaComAcento))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0].field").value("senha"));
+    }
+
     @Test
     void emailRepetidoDevolve409() throws Exception {
         postJson("/api/auth/register", null, """

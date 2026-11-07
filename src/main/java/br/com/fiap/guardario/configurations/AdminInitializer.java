@@ -12,6 +12,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 
 /**
@@ -46,9 +47,9 @@ public class AdminInitializer implements ApplicationRunner {
         if (email.isEmpty() || senha.isEmpty()) {
             return;
         }
-        // mesmas regras do cadastro: o BCrypt só considera os primeiros 72 bytes
-        if (senha.length() < 8 || senha.length() > 72) {
-            throw new IllegalStateException("ADMIN_PASSWORD precisa ter de 8 a 72 caracteres");
+        // mesmas regras do cadastro: no mínimo 8 caracteres e no máximo 72 bytes, que é o que o BCrypt considera
+        if (senha.length() < 8 || senha.getBytes(StandardCharsets.UTF_8).length > 72) {
+            throw new IllegalStateException("ADMIN_PASSWORD precisa ter pelo menos 8 caracteres e no máximo 72 bytes");
         }
         // já existe: não troca a senha a cada subida, quem muda a senha é o próprio usuário
         if (usuarioRepository.existsByEmail(email)) {
