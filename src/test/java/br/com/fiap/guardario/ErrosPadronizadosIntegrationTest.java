@@ -111,6 +111,23 @@ class ErrosPadronizadosIntegrationTest extends IntegracaoBase {
                 .andExpect(jsonPath("$.errors[*].field", org.hamcrest.Matchers.containsInAnyOrder("email", "telefone")));
     }
 
+    // sem coerção: texto no lugar de número, número no lugar de booleano e número no lugar do enum são erros do cliente
+    @Test
+    void valorDeOutroTipoNaoEhConvertidoEmSilencio() throws Exception {
+        postJson("/api/estacoes/1/leituras", tokenAgente(), """
+                {"nivelCm": "100", "chuvaMmH": 0}""")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0].field").value("nivelCm"));
+        postJson("/api/abrigos", tokenAgente(), """
+                {"nome": "Abrigo", "endereco": "Rua 1", "capacidade": 10, "aceitaPets": 1, "acessivelPcd": true, "areaId": 1}""")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0].field").value("aceitaPets"));
+        postJson("/api/relatos", tokenCidadao(), """
+                {"tipo": 0, "descricao": "Descrição com tamanho suficiente", "areaId": 1}""")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0].field").value("tipo"));
+    }
+
     // sem isto o Jackson arredondava 1.7 cm para 1 em silêncio
     @Test
     void numeroDecimalEmCampoInteiroDevolve400() throws Exception {

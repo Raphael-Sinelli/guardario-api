@@ -6,8 +6,14 @@ spring:
   jpa:
     open-in-view: false # o mapeamento para DTO acontece dentro da transação do service
   jackson:
+    # o JSON precisa vir no tipo certo: o Jackson não converte valor de outro tipo em silêncio
     deserialization:
-      accept-float-as-int: false # 1.7 num campo inteiro é erro (400), não vira 1 em silêncio
+      accept-float-as-int: false # 1.7 num campo inteiro é erro, não vira 1
+    datatype:
+      enum:
+        fail-on-numbers-for-enums: true # "tipo": 0 é erro, não vira o primeiro valor do enum
+    mapper:
+      allow-coercion-of-scalars: false # "nivelCm": "100" e "aceitaPets": 1 são erro
   data:
     web:
       pageable:
