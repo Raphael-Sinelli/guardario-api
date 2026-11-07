@@ -102,7 +102,7 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource(@Value("${app.cors.allowed-origins}") String[] origens) {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOriginPatterns(Arrays.stream(origens).map(String::trim).filter(o -> !o.isEmpty()).toList());
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        config.setAllowedMethods(List.of("GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept"));
         config.setExposedHeaders(List.of("Location")); // o app lê o Location do 201
         config.setMaxAge(3600L);

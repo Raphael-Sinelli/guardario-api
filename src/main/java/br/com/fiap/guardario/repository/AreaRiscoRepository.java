@@ -21,10 +21,6 @@ public interface AreaRiscoRepository extends JpaRepository<AreaRisco, Long> {
     Page<AreaRisco> findByUfIgnoreCase(String uf, Pageable pageable);
 
     /*
-     * SELECT ... FOR UPDATE: a linha da área fica travada até o fim da transação. Duas leituras da mesma área
-     * passam a entrar uma de cada vez, e a segunda já enxerga o que a primeira gravou (RN02 e RN03).
-     */
-    /*
      * Quais áreas da página têm algum vínculo (e por isso não podem ser excluídas): uma consulta para a página
      * inteira, em vez de cinco exists por área. Serve para o link HATEOAS "excluir" só aparecer quando dá certo.
      */
@@ -39,6 +35,10 @@ public interface AreaRiscoRepository extends JpaRepository<AreaRisco, Long> {
             """)
     Set<Long> buscarIdsComVinculos(@Param("ids") Collection<Long> ids);
 
+    /*
+     * SELECT ... FOR UPDATE: a linha da área fica travada até o fim da transação. Duas leituras da mesma área
+     * passam a entrar uma de cada vez, e a segunda já enxerga o que a primeira gravou (RN02 e RN03).
+     */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select a from AreaRisco a where a.id = :id")
     Optional<AreaRisco> buscarComTrava(@Param("id") Long id);

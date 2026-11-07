@@ -198,13 +198,16 @@ erDiagram
     }
     Abrigo {
         bigint id PK
+        bigint versao "bloqueio otimista"
         varchar nome
         varchar endereco
         int capacidade
         int ocupacao
-        bigint versao "bloqueio otimista"
         boolean aceita_pets
         boolean acessivel_pcd
+        varchar telefone
+        double latitude
+        double longitude
         varchar status "ABERTO, LOTADO ou FECHADO"
         bigint area_id FK
     }
@@ -213,6 +216,8 @@ erDiagram
         bigint versao "bloqueio otimista"
         varchar tipo
         varchar descricao
+        double latitude
+        double longitude
         int prioridade "1 a 5"
         varchar status
         varchar observacao_agente
@@ -339,7 +344,7 @@ Quem não está logado não recebe link de ação. O `excluir` só aparece quand
 
 **Stateless.** Sem sessão no servidor (`SessionCreationPolicy.STATELESS`) e com o CSRF desligado, porque o token vai no header e não existe cookie de sessão para um site malicioso aproveitar.
 
-**CORS para o app.** O `CorsConfigurationSource` libera as origens de `CORS_ALLOWED_ORIGINS` (o padrão inclui `10.0.2.2`, endereço com que o emulador Android enxerga a máquina), os métodos GET, POST, PUT, PATCH, DELETE e OPTIONS, os headers `Authorization` e `Content-Type`, e expõe o header `Location` para o app ler o id do recurso criado. Origem fora da lista recebe 403 com o mesmo JSON de erro do resto da API: o CORS roda no `CorsComErroEmJson`, que usa o processador do Spring e escreve a recusa pelo `JsonErrorWriter`.
+**CORS para o app.** O `CorsConfigurationSource` libera as origens de `CORS_ALLOWED_ORIGINS` (o padrão inclui `10.0.2.2`, endereço com que o emulador Android enxerga a máquina), os métodos GET, HEAD, POST, PUT, PATCH, DELETE e OPTIONS, os headers `Authorization`, `Content-Type` e `Accept`, e expõe o header `Location` para o app ler o id do recurso criado. Origem fora da lista recebe 403 com o mesmo JSON de erro do resto da API: o CORS roda no `CorsComErroEmJson`, que usa o processador do Spring e escreve a recusa pelo `JsonErrorWriter`.
 
 **Segredos.** Nenhuma senha ou chave real está no repositório. A chave do JWT vem de `JWT_SECRET`; sem ela, a API gera uma chave aleatória a cada subida e avisa no log. A senha do PostgreSQL vem de `DB_PASSWORD`, sem valor padrão, e a do primeiro ADMIN de produção vem de `ADMIN_PASSWORD`. As senhas da tabela de usuários de teste existem só na carga do perfil `dev`.
 

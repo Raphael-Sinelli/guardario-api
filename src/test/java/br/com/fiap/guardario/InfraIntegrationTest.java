@@ -175,6 +175,9 @@ class InfraIntegrationTest extends IntegracaoBase {
         mockMvc.perform(head("/api/relatos").header(HttpHeaders.AUTHORIZATION, bearer(tokenAgente())))
                 .andExpect(status().isOk());
         mockMvc.perform(head("/api/usuarios")).andExpect(status().isUnauthorized());
+        mockMvc.perform(head("/api/areas").header(HttpHeaders.ORIGIN, "http://localhost:5173"))
+                .andExpect(status().isOk())
+                .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "http://localhost:5173"));
     }
 
     @Test
