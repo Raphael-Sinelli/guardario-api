@@ -26,13 +26,21 @@ public class JwtService {
     private final long expiracaoSegundos;
 
     public JwtService(@Value("${app.jwt.secret:}") String segredo,
-                      @Value("${app.jwt.expiration-seconds:3600}") long expiracaoSegundos) {
+                      @Value("${app.jwt.expiration-seconds:3600}") long expiracaoSegundos,
+                      @Value("${app.jwt.chave-temporaria-esperada:false}") boolean chaveTemporariaEsperada) {
         this.expiracaoSegundos = expiracaoSegundos;
 
         if (segredo == null || segredo.isBlank()) {
             // nenhuma chave fica no repositório; sem JWT_SECRET, cada subida gera uma chave nova
-            log.warn("JWT_SECRET não definido: usando uma chave aleatória. Os tokens deixam de valer quando a aplicação reinicia.");
             this.chave = Jwts.SIG.HS256.key().build();
+            if (chaveTemporariaEsperada) {
+                // perfil dev: é o comportamento esperado, por isso INFO e não WARN
+                log.info("Perfil dev sem JWT_SECRET: gerada uma chave temporária para esta subida. Nenhuma chave fica no "
+                        + "repositório; os tokens emitidos deixam de valer quando a aplicação reinicia.");
+            } else {
+                log.warn("JWT_SECRET não definido: usando uma chave aleatória. Os tokens deixam de valer quando a aplicação "
+                        + "reinicia; defina JWT_SECRET, com 32 caracteres ou mais, fora do desenvolvimento.");
+            }
             return;
         }
 

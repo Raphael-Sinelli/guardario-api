@@ -61,7 +61,7 @@ Nenhuma é obrigatória no perfil `dev`. O arquivo `.env.example` lista todas; o
 
 | Variável | Para que serve | Padrão |
 |---|---|---|
-| `JWT_SECRET` | Chave HS256 do JWT, com 32 caracteres ou mais | sem valor: a API gera uma chave aleatória a cada subida |
+| `JWT_SECRET` | Chave HS256 do JWT, com 32 caracteres ou mais | sem valor: o perfil dev gera uma chave temporária a cada subida e registra isso como INFO |
 | `CORS_ALLOWED_ORIGINS` | Origens liberadas para o app | `http://localhost:*`, `http://127.0.0.1:*`, `http://10.0.2.2:*` |
 | `SPRING_PROFILES_ACTIVE` | `dev` (H2) ou `prod` (PostgreSQL) | `dev` |
 | `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` | Banco do perfil `prod` | `DB_PASSWORD` não tem padrão |
@@ -346,7 +346,7 @@ Quem não está logado não recebe link de ação. O `excluir` só aparece quand
 
 **CORS para o app.** O `CorsConfigurationSource` libera as origens de `CORS_ALLOWED_ORIGINS` (o padrão inclui `10.0.2.2`, endereço com que o emulador Android enxerga a máquina), os métodos GET, HEAD, POST, PUT, PATCH, DELETE e OPTIONS, os headers `Authorization`, `Content-Type` e `Accept`, e expõe o header `Location` para o app ler o id do recurso criado. Origem fora da lista recebe 403 com o mesmo JSON de erro do resto da API: o CORS roda no `CorsComErroEmJson`, que usa o processador do Spring e escreve a recusa pelo `JsonErrorWriter`.
 
-**Segredos.** Nenhuma senha ou chave real está no repositório. A chave do JWT vem de `JWT_SECRET`; sem ela, a API gera uma chave aleatória a cada subida e avisa no log. A senha do PostgreSQL vem de `DB_PASSWORD`, sem valor padrão, e a do primeiro ADMIN de produção vem de `ADMIN_PASSWORD`. As senhas da tabela de usuários de teste existem só na carga do perfil `dev`.
+**Segredos.** Nenhuma senha ou chave real está no repositório. A chave do JWT vem de `JWT_SECRET`; sem ela, a API gera uma chave temporária a cada subida. No perfil dev isso é o esperado e sai no log como INFO; fora do dev, sai como WARN, porque os tokens deixam de valer a cada reinício. A senha do PostgreSQL vem de `DB_PASSWORD`, sem valor padrão, e a do primeiro ADMIN de produção vem de `ADMIN_PASSWORD`. As senhas da tabela de usuários de teste existem só na carga do perfil `dev`.
 
 ## Validação e tratamento de erros
 

@@ -15,3 +15,16 @@ spring:
     console:
       enabled: true
       path: /h2-console
+
+app:
+  jwt:
+    # sem JWT_SECRET, o dev gera uma chave temporária a cada subida; aqui isso é o esperado e sai no log como INFO
+    chave-temporaria-esperada: true
+
+# no dev a documentação fica ligada de propósito (no prod ela vem desligada); deixar isso escrito também evita
+# o aviso do springdoc de que ela está ligada só por padrão
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
