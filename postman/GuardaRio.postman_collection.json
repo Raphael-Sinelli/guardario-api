@@ -3487,6 +3487,59 @@
           ]
         },
         {
+          "name": "Corpo enviado como texto (415)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/plain"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/areas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "areas"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAdmin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"nome\": \"Vila Texto\", \"cidade\": \"Guarulhos\", \"uf\": \"SP\"}",
+              "options": {
+                "raw": {
+                  "language": "text"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 415\", () => pm.response.to.have.status(415));",
+                  "pm.test(\"Pede application/json\", () => pm.expect(pm.response.json().message).to.include(\"application/json\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Sem token em rota protegida (401)",
           "request": {
             "method": "POST",
