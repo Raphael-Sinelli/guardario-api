@@ -61,13 +61,13 @@ public class EstacaoModelAssembler implements RepresentationModelAssembler<Estac
 
         // só estação ATIVA recebe leitura
         if (estacao.status() == StatusEstacao.ATIVA && SecurityUtils.isAgenteOuAdmin()) {
-            model.add(linkTo(methodOn(EstacaoController.class).registrarLeitura(estacao.id(), null)).withRel("registrar-leitura"));
+            model.add(linkTo(methodOn(EstacaoController.class).registrarLeitura(estacao.id(), null)).withRel("registrar-leitura").withTitle("POST com {\"nivelCm\": 120, \"chuvaMmH\": 0}"));
         }
         // excluir só aparece quando a estação não tem alerta no histórico (senão daria 409)
         if (SecurityUtils.temPapel(Papel.ADMIN)) {
-            model.add(linkTo(methodOn(EstacaoController.class).atualizar(estacao.id(), null)).withRel("atualizar"));
+            model.add(linkTo(methodOn(EstacaoController.class).atualizar(estacao.id(), null)).withRel("atualizar").withTitle("PUT com a estação inteira"));
             if (excluiveis.contains(estacao.id())) {
-                model.add(linkTo(methodOn(EstacaoController.class).excluir(estacao.id())).withRel("excluir"));
+                model.add(linkTo(methodOn(EstacaoController.class).excluir(estacao.id())).withRel("excluir").withTitle("DELETE"));
             }
         }
         return model;

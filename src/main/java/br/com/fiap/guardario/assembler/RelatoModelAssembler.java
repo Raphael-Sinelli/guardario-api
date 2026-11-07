@@ -30,10 +30,10 @@ public class RelatoModelAssembler implements RepresentationModelAssembler<Relato
         if (SecurityUtils.isAgenteOuAdmin()) {
             var alterarStatus = linkTo(methodOn(RelatoController.class).alterarStatus(relato.id(), null));
             if (relato.status() == StatusRelato.ABERTO) {
-                model.add(alterarStatus.withRel("atender"));
-                model.add(alterarStatus.withRel("descartar"));
+                model.add(alterarStatus.withRel("atender").withTitle("PATCH com {\"status\": \"EM_ATENDIMENTO\"}"));
+                model.add(alterarStatus.withRel("descartar").withTitle("PATCH com {\"status\": \"DESCARTADO\"}"));
             } else if (relato.status() == StatusRelato.EM_ATENDIMENTO) {
-                model.add(alterarStatus.withRel("resolver"));
+                model.add(alterarStatus.withRel("resolver").withTitle("PATCH com {\"status\": \"RESOLVIDO\"}"));
             }
         }
 
@@ -44,11 +44,11 @@ public class RelatoModelAssembler implements RepresentationModelAssembler<Relato
         if (ehAutor) {
             model.add(linkTo(methodOn(RelatoController.class).meus(null)).withRel("meus-relatos").expand());
             if (relato.status() == StatusRelato.ABERTO) {
-                model.add(linkTo(methodOn(RelatoController.class).atualizar(relato.id(), null)).withRel("editar"));
+                model.add(linkTo(methodOn(RelatoController.class).atualizar(relato.id(), null)).withRel("editar").withTitle("PUT com o relato inteiro"));
             }
         }
         if ((ehAutor && relato.status() == StatusRelato.ABERTO) || SecurityUtils.temPapel(Papel.ADMIN)) {
-            model.add(linkTo(methodOn(RelatoController.class).excluir(relato.id())).withRel("excluir"));
+            model.add(linkTo(methodOn(RelatoController.class).excluir(relato.id())).withRel("excluir").withTitle("DELETE"));
         }
         return model;
     }

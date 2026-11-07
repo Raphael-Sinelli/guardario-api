@@ -305,7 +305,7 @@ Limitação conhecida: o Caffeine guarda o cache na memória de cada instância.
 
 ## HATEOAS
 
-As respostas usam o formato HAL. As listas vêm com os itens em `_embedded`, os dados de paginação em `page` e os links de navegação (`first`, `prev`, `self`, `next`, `last`) em `_links`. Lista vazia também traz o `_embedded`, com a lista vazia (`{"_embedded": {"abrigos": []}}`): o HAL padrão omite o `_embedded` nesse caso, e o `RespostaHal` o mantém para o cliente ler sempre o mesmo formato. Na página pedida depois da última, o link `prev` sai (apontaria para outra página vazia) e ficam `first` e `last`. Cada recurso traz o link `self`, os recursos relacionados e as ações possíveis no estado atual para quem fez a requisição:
+As respostas usam o formato HAL. As listas vêm com os itens em `_embedded`, os dados de paginação em `page` e os links de navegação (`first`, `prev`, `self`, `next`, `last`) em `_links`. Lista vazia também traz o `_embedded`, com a lista vazia (`{"_embedded": {"abrigos": []}}`): o HAL padrão omite o `_embedded` nesse caso, e o `RespostaHal` o mantém para o cliente ler sempre o mesmo formato. Na página pedida depois da última, o link `prev` sai (apontaria para outra página vazia) e ficam `first` e `last`. Cada recurso traz o link `self`, os recursos relacionados e as ações possíveis no estado atual para quem fez a requisição. Cada link de ação tem um `title` com o método e o corpo esperado (por exemplo `atender`: `PATCH com {"status": "EM_ATENDIMENTO"}`), porque `atender`, `descartar` e `resolver` levam à mesma URL:
 
 | Recurso | Relacionados | Ações (dependem do estado e do papel) |
 |---|---|---|

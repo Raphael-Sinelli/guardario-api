@@ -50,6 +50,9 @@ class RelatoIntegrationTest extends IntegracaoBase {
 
         mockMvc.perform(get("/api/relatos/" + relato).header(HttpHeaders.AUTHORIZATION, bearer(agente)))
                 .andExpect(jsonPath("$._links.atender.href").exists())
+                // os três links levam ao mesmo PATCH: o title diz o método e o corpo de cada ação
+                .andExpect(jsonPath("$._links.atender.title").value("PATCH com {\"status\": \"EM_ATENDIMENTO\"}"))
+                .andExpect(jsonPath("$._links.descartar.title").value("PATCH com {\"status\": \"DESCARTADO\"}"))
                 .andExpect(jsonPath("$._links.descartar.href").exists())
                 .andExpect(jsonPath("$._links.resolver").doesNotExist());
 

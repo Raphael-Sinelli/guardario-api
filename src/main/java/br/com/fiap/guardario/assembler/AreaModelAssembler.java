@@ -54,9 +54,9 @@ public class AreaModelAssembler implements RepresentationModelAssembler<AreaResp
 
         // ações só aparecem para quem pode executá-las, e excluir só quando a área não tem vínculos (senão daria 409)
         if (SecurityUtils.temPapel(Papel.ADMIN)) {
-            model.add(linkTo(methodOn(AreaController.class).atualizar(area.id(), null)).withRel("atualizar"));
+            model.add(linkTo(methodOn(AreaController.class).atualizar(area.id(), null)).withRel("atualizar").withTitle("PUT com a área inteira"));
             if (excluiveis.contains(area.id())) {
-                model.add(linkTo(methodOn(AreaController.class).excluir(area.id())).withRel("excluir"));
+                model.add(linkTo(methodOn(AreaController.class).excluir(area.id())).withRel("excluir").withTitle("DELETE"));
             }
         }
         return model;

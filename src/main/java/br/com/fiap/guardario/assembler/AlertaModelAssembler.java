@@ -32,11 +32,11 @@ public class AlertaModelAssembler implements RepresentationModelAssembler<Alerta
 
         // as ações dependem do estado: alerta encerrado não tem mais o que fazer
         if (alerta.status() == StatusAlerta.ATIVO && SecurityUtils.isAgenteOuAdmin()) {
-            model.add(linkTo(methodOn(AlertaController.class).encerrar(alerta.id())).withRel("encerrar"));
-            model.add(linkTo(methodOn(AlertaController.class).editar(alerta.id(), null)).withRel("editar"));
+            model.add(linkTo(methodOn(AlertaController.class).encerrar(alerta.id())).withRel("encerrar").withTitle("PATCH, sem corpo"));
+            model.add(linkTo(methodOn(AlertaController.class).editar(alerta.id(), null)).withRel("editar").withTitle("PUT com o alerta inteiro"));
         }
         if (SecurityUtils.temPapel(Papel.ADMIN)) {
-            model.add(linkTo(methodOn(AlertaController.class).excluir(alerta.id())).withRel("excluir"));
+            model.add(linkTo(methodOn(AlertaController.class).excluir(alerta.id())).withRel("excluir").withTitle("DELETE"));
         }
         return model;
     }

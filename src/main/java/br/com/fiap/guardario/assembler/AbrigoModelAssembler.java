@@ -26,20 +26,20 @@ public class AbrigoModelAssembler implements RepresentationModelAssembler<Abrigo
         if (SecurityUtils.isAgenteOuAdmin()) {
             // cada ação só aparece quando faz sentido no estado atual do abrigo
             if (abrigo.status() == StatusAbrigo.FECHADO) {
-                model.add(linkTo(methodOn(AbrigoController.class).alterarStatus(abrigo.id(), null)).withRel("reabrir"));
+                model.add(linkTo(methodOn(AbrigoController.class).alterarStatus(abrigo.id(), null)).withRel("reabrir").withTitle("PATCH com {\"status\": \"ABERTO\"}"));
             } else {
                 if (abrigo.vagas() > 0) {
-                    model.add(linkTo(methodOn(AbrigoController.class).registrarEntrada(abrigo.id(), null)).withRel("registrar-entrada"));
+                    model.add(linkTo(methodOn(AbrigoController.class).registrarEntrada(abrigo.id(), null)).withRel("registrar-entrada").withTitle("POST com {\"pessoas\": 1}"));
                 }
-                model.add(linkTo(methodOn(AbrigoController.class).alterarStatus(abrigo.id(), null)).withRel("fechar"));
+                model.add(linkTo(methodOn(AbrigoController.class).alterarStatus(abrigo.id(), null)).withRel("fechar").withTitle("PATCH com {\"status\": \"FECHADO\"}"));
             }
             if (abrigo.ocupacao() > 0) {
-                model.add(linkTo(methodOn(AbrigoController.class).registrarSaida(abrigo.id(), null)).withRel("registrar-saida"));
+                model.add(linkTo(methodOn(AbrigoController.class).registrarSaida(abrigo.id(), null)).withRel("registrar-saida").withTitle("POST com {\"pessoas\": 1}"));
             }
-            model.add(linkTo(methodOn(AbrigoController.class).atualizar(abrigo.id(), null)).withRel("atualizar"));
+            model.add(linkTo(methodOn(AbrigoController.class).atualizar(abrigo.id(), null)).withRel("atualizar").withTitle("PUT com o abrigo inteiro"));
         }
         if (SecurityUtils.temPapel(Papel.ADMIN)) {
-            model.add(linkTo(methodOn(AbrigoController.class).excluir(abrigo.id())).withRel("excluir"));
+            model.add(linkTo(methodOn(AbrigoController.class).excluir(abrigo.id())).withRel("excluir").withTitle("DELETE"));
         }
         return model;
     }

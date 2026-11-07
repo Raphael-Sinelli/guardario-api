@@ -28,7 +28,7 @@ public class UsuarioModelAssembler implements RepresentationModelAssembler<Usuar
                     .map(logado -> logado.getId().equals(usuario.id()))
                     .orElse(false);
             if (!ehOProprioUsuario) {
-                model.add(linkTo(methodOn(UsuarioController.class).alterarPapel(usuario.id(), null)).withRel("alterar-papel"));
+                model.add(linkTo(methodOn(UsuarioController.class).alterarPapel(usuario.id(), null)).withRel("alterar-papel").withTitle("PUT com {\"papel\": \"AGENTE\"}"));
             }
         }
 
