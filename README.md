@@ -50,7 +50,7 @@ Se o wrapper reclamar da versão do Java, confira se `java -version` e a variáv
 Outros comandos:
 
 ```bash
-./mvnw test                                   # roda os 194 testes
+./mvnw test                                   # roda os 197 testes
 ./mvnw clean package                          # gera target/guardario-api-1.0.0.jar
 java -jar target/guardario-api-1.0.0.jar      # roda o jar gerado
 ```
@@ -289,7 +289,7 @@ Quem mantém o cache correto é o `@CacheEvict` nas escritas. O `CacheConfig` en
 |---|---|---|---|
 | `alertasAtivos` | `AlertaServiceImpl.ativos()`, usado por `GET /api/alertas/ativos` | `@CacheEvict(allEntries = true)` ao emitir, editar, encerrar ou excluir alerta. No alerta automático, só quando um alerta nasce de fato (`condition = "#result != null"`). Também ao atualizar uma área, porque cada alerta guardado leva o nome dela | É a consulta que o app faz toda vez que abre, e só muda quando um alerta muda |
 | `abrigosDisponiveis` | `AbrigoServiceImpl.disponiveis()`, usado por `GET /api/abrigos/disponiveis` | Em toda escrita de abrigo: criar, atualizar, abrir ou fechar, entrada, saída e exclusão | Durante a cheia muita gente procura vaga ao mesmo tempo |
-| `areas` (chave: id) | `AreaServiceImpl.buscarPorId`, usado por `GET /api/areas/{id}` | Ao atualizar ou excluir a área (`key = "#id"`) e no registro de leitura, só quando o nível da área muda (`key = "#result.areaId()"`, `condition = "#result.nivelAreaAlterado()"`) | A tela do bairro mostra o nível de risco. As leituras chegam a cada 10 segundos, mas o nível muda raramente; limpar a cada leitura anularia o cache |
+| `areas` (chave: id) | `AreaServiceImpl.buscarPorId`, usado por `GET /api/areas/{id}` | Ao atualizar ou excluir a área (`key = "#id"`), no registro de leitura, só quando o nível da área muda (`key = "#result.areaId()"`, `condition = "#result.nivelAreaAlterado()"`), e inteiro (`allEntries = true`) ao atualizar ou excluir uma estação, que pode mudar o nível de duas áreas (a antiga e a nova) | A tela do bairro mostra o nível de risco. As leituras chegam a cada 10 segundos, mas o nível muda raramente; limpar a cada leitura anularia o cache |
 
 Ficam fora do cache: relatos (têm dado pessoal, são diferentes para cada usuário e mudam o tempo todo), leituras (chegam a cada 10 segundos) e as listas paginadas (combinações demais de página, ordenação e filtro).
 
@@ -455,10 +455,10 @@ As rotas de listagem aceitam também `page`, `size` e `sort`. A descrição de c
 
 ## Testes
 
-`./mvnw test` roda 194 testes:
+`./mvnw test` roda 197 testes:
 
 - 22 testes de unidade, sem Spring e sem banco: 17 das regras que ficam nas entidades e nos enums (régua de risco nas fronteiras de cada cota, nível da área só com estações ativas, leitura atrasada ou antiga, lotação do abrigo, prioridade, máquina de estados, encerramento de alerta), 3 da chave do JWT (`JwtServiceTest`) e 2 da lista vazia no HAL (`RespostaHalTest`).
-- 172 testes de integração que sobem a aplicação inteira e chamam a API por HTTP (com o MockMvc; o `ServidorRealIntegrationTest`, por socket), passando pela segurança, pelo cache e pelo banco de verdade: status e formato de cada erro, 401 x 403, token expirado, posse, alerta automático, substituição de alertas, nível da área quando a estação muda de área ou de status, filtros com Specification, links HATEOAS mudando com o estado e sem template, invalidação e métricas do cache, link excluir sem N+1 (contando os comandos SQL), Actuator, OpenAPI, CORS e o perfil prod subindo sem carga de demonstração. Três classes cobrem o que costuma escapar: `MatrizDeAutorizacaoIntegrationTest` passa por toda rota protegida (401 sem token, 403 para quem não tem o papel) e pelas rotas públicas de consulta (200 sem token); `ConcorrenciaIntegrationTest` e os testes de abrigo e leitura disparam requisições ao mesmo tempo (entradas no abrigo, leituras da mesma área, encerrar o mesmo alerta, atender e descartar o mesmo relato, cadastros com o mesmo email); `CasosExtremosIntegrationTest` cobre corpo ausente, campo obrigatório nulo, lista vazia e paginação nos limites (página depois da última, size zero, negativo e acima do teto). O `ServidorRealIntegrationTest` sobe o Tomcat de verdade numa porta livre e manda requisições cruas por socket, para conferir o JSON dos erros que o Tomcat responde antes do Spring.
+- 175 testes de integração que sobem a aplicação inteira e chamam a API por HTTP (com o MockMvc; o `ServidorRealIntegrationTest`, por socket), passando pela segurança, pelo cache e pelo banco de verdade: status e formato de cada erro, 401 x 403, token expirado, posse, alerta automático, substituição de alertas, nível da área quando a estação muda de área ou de status, filtros com Specification, links HATEOAS mudando com o estado e sem template, invalidação e métricas do cache, link excluir sem N+1 (contando os comandos SQL), Actuator, OpenAPI, CORS e o perfil prod subindo sem carga de demonstração. Três classes cobrem o que costuma escapar: `MatrizDeAutorizacaoIntegrationTest` passa por toda rota protegida (401 sem token, 403 para quem não tem o papel) e pelas rotas públicas de consulta (200 sem token); `ConcorrenciaIntegrationTest` e os testes de abrigo e leitura disparam requisições ao mesmo tempo (entradas no abrigo, leituras da mesma área, encerrar o mesmo alerta, atender e descartar o mesmo relato, cadastros com o mesmo email); `CasosExtremosIntegrationTest` cobre corpo ausente, campo obrigatório nulo, lista vazia e paginação nos limites (página depois da última, size zero, negativo e acima do teto). O `ServidorRealIntegrationTest` sobe o Tomcat de verdade numa porta livre e manda requisições cruas por socket, para conferir o JSON dos erros que o Tomcat responde antes do Spring.
 
 ## Estrutura do projeto
 
@@ -468,7 +468,7 @@ src/main/java/br/com/fiap/guardario
 ├── configurations   SecurityConfig, GlobalExceptionHandler, PaginaDeErroController, OpenApiConfig, PaginacaoConfig e @CamposDeOrdenacao, NegociacaoConfig, IdiomaConfig, JacksonConfig, CacheConfig, TomcatConfig e ErroDoTomcatEmJson, DataInitializer, AdminInitializer
 ├── controller       rotas REST e documentação do Swagger
 ├── dto              records de entrada e saída
-├── exceptions       exceções de negócio (404 e 409)
+├── exceptions       exceções próprias: recurso não encontrado (404), regra de negócio (409) e campo inválido conferido no service (400)
 ├── mapper           entidade para DTO
 ├── model            entidades JPA e enums, com as regras que pertencem a elas
 ├── repository       Spring Data JPA: derived queries e JPQL
