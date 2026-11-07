@@ -324,7 +324,7 @@ Quem não está logado não recebe link de ação. O `excluir` só aparece quand
 
 | Endpoint | Acesso | O que mostra |
 |---|---|---|
-| `/actuator/health` | público; detalhes só para ADMIN | Público: só o status (`UP`). Com o token de ADMIN: banco de dados e disco (`show-details: when-authorized`), que mostram o tipo de banco e o caminho da pasta e não devem ficar abertos |
+| `/actuator/health` | público; detalhes só para ADMIN | Público: só o status (`UP`). Com o token de ADMIN: banco de dados e disco (`show-details: when-authorized`), que mostram o tipo de banco e o caminho da pasta e não devem ficar abertos. Cada componente em separado (`/actuator/health/db`) também é só do ADMIN: sem token, 401 |
 | `/actuator/info` | público | Nome, descrição e versão da aplicação e dados do build. Versão do Java e do sistema operacional ficam de fora, pelo mesmo motivo |
 | `/actuator/metrics` | ADMIN | Métricas da JVM e do HTTP, acertos e erros do cache (`cache.gets`) e a métrica do domínio `guardario.alertas.emitidos`, com as tags `origem` e `nivel` |
 | `/actuator/caches` | ADMIN | Os três caches da aplicação |

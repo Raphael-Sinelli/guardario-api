@@ -189,6 +189,13 @@ class InfraIntegrationTest extends IntegracaoBase {
                 .andExpect(jsonPath("$.components").doesNotExist());
         mockMvc.perform(get("/actuator/health").header(HttpHeaders.AUTHORIZATION, bearer(tokenAdmin())))
                 .andExpect(jsonPath("$.components.db.status").value("UP"));
+        // cada componente também é detalhe: sem token, o 401 padrão; com o ADMIN, o componente
+        mockMvc.perform(get("/actuator/health/db"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401));
+        mockMvc.perform(get("/actuator/health/db").header(HttpHeaders.AUTHORIZATION, bearer(tokenAdmin())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("UP"));
         mockMvc.perform(get("/actuator/info"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.app.name").value("GuardaRio API"))

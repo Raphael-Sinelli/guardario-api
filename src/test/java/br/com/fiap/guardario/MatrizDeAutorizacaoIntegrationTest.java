@@ -54,6 +54,7 @@ class MatrizDeAutorizacaoIntegrationTest extends IntegracaoBase {
             "GET,    /api/usuarios,                   ADMIN",
             "PUT,    /api/usuarios/1/papel,           ADMIN",
             "GET,    /actuator/metrics,               ADMIN",
+            "GET,    /actuator/health/db,             ADMIN",
             "GET,    /actuator/caches,                ADMIN"
     })
     void rotaProtegidaNegaQuemNaoTemOPapelAntesDeValidarOCorpo(String metodo, String rota, String papelMinimo) throws Exception {

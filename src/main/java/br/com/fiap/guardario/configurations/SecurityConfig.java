@@ -60,7 +60,9 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/login").permitAll()
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
-                        .requestMatchers("/actuator/health/**", "/actuator/info").permitAll()
+                        // só o status geral é público; cada componente (/actuator/health/db, disco) é detalhe do ADMIN,
+                        // e o anônimo recebe o 401 padrão em vez do 404 vazio do Actuator
+                        .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                         .requestMatchers("/actuator/**").hasRole("ADMIN")
                         .requestMatchers("/h2-console/**").permitAll()
                         // área de URL de cada papel: quem não tem o papel recebe 403 aqui, antes da validação do corpo
