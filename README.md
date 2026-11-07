@@ -476,7 +476,7 @@ Em que partes o Claude Code foi usado:
 
 - escrever o código da API a partir desses requisitos: entidades e relacionamentos, repositórios e consultas, services com as regras de negócio, controllers, segurança com JWT, cache, HATEOAS, tratamento de erros e documentação do Swagger;
 - escrever os testes de unidade e de integração, este README, a coleção do Postman e as issues com as tarefas dos outros integrantes;
-- conferir o projeto contra a rubrica do enunciado duas vezes, a segunda com um agente separado, sem acesso à primeira conferência, e corrigir as lacunas apontadas;
+- conferir o projeto contra a rubrica do enunciado três vezes, a segunda e a terceira com agentes separados, sem acesso às conferências anteriores, e corrigir as lacunas apontadas;
 - rodar o build, os testes e a coleção do Postman para conferir cada mudança.
 
 Raphael definiu o escopo e as fontes, pediu as conferências contra a rubrica e decide o que entra na entrega.
