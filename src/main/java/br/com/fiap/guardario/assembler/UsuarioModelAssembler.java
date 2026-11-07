@@ -19,7 +19,7 @@ public class UsuarioModelAssembler implements RepresentationModelAssembler<Usuar
         EntityModel<UsuarioResponse> model = EntityModel.of(usuario,
                 linkTo(methodOn(UsuarioController.class).buscarPorId(usuario.id())).withSelfRel(),
                 linkTo(methodOn(UsuarioController.class).alterarPapel(usuario.id(), null)).withRel("alterar-papel"),
-                linkTo(methodOn(UsuarioController.class).listar(null)).withRel("usuarios"));
+                linkTo(methodOn(UsuarioController.class).listar(null)).withRel("usuarios").expand());
 
         if (usuario.areaId() != null) {
             model.add(linkTo(methodOn(AreaController.class).buscarPorId(usuario.areaId())).withRel("area"));

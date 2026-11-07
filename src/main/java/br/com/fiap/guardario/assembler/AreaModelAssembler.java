@@ -25,10 +25,10 @@ public class AreaModelAssembler implements RepresentationModelAssembler<AreaResp
     public EntityModel<AreaResponse> toModel(AreaResponse area) {
         EntityModel<AreaResponse> model = EntityModel.of(area,
                 linkTo(methodOn(AreaController.class).buscarPorId(area.id())).withSelfRel(),
-                linkTo(methodOn(EstacaoController.class).listar(area.id(), null)).withRel("estacoes"),
-                linkTo(methodOn(AbrigoController.class).listar(area.id(), null, null, true, null, null)).withRel("abrigos-com-vaga"),
+                linkTo(methodOn(EstacaoController.class).listar(area.id(), null)).withRel("estacoes").expand(),
+                linkTo(methodOn(AbrigoController.class).listar(area.id(), null, null, true, null, null)).withRel("abrigos-com-vaga").expand(),
                 linkTo(methodOn(AlertaController.class).ativos()).withRel("alertas-ativos"),
-                linkTo(methodOn(AreaController.class).listar(null, null)).withRel("areas"));
+                linkTo(methodOn(AreaController.class).listar(null, null)).withRel("areas").expand());
 
         // ações só aparecem para quem pode executá-las
         if (SecurityUtils.temPapel(Papel.ADMIN)) {
@@ -43,7 +43,7 @@ public class AreaModelAssembler implements RepresentationModelAssembler<AreaResp
         List<EntityModel<RankingAreaResponse>> linhas = ranking.stream()
                 .map(linha -> EntityModel.of(linha,
                         linkTo(methodOn(AreaController.class).buscarPorId(linha.areaId())).withRel("area"),
-                        linkTo(methodOn(AbrigoController.class).listar(linha.areaId(), null, null, true, null, null)).withRel("abrigos-com-vaga")))
+                        linkTo(methodOn(AbrigoController.class).listar(linha.areaId(), null, null, true, null, null)).withRel("abrigos-com-vaga").expand()))
                 .toList();
         return CollectionModel.of(linhas, linkTo(methodOn(AreaController.class).ranking()).withSelfRel());
     }

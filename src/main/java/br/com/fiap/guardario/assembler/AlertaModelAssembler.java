@@ -24,7 +24,7 @@ public class AlertaModelAssembler implements RepresentationModelAssembler<Alerta
                 linkTo(methodOn(AlertaController.class).buscarPorId(alerta.id())).withSelfRel(),
                 linkTo(methodOn(AreaController.class).buscarPorId(alerta.areaId())).withRel("area"),
                 // quem recebe o alerta precisa saber para onde ir
-                linkTo(methodOn(AbrigoController.class).listar(alerta.areaId(), null, null, true, null, null)).withRel("abrigos-com-vaga"));
+                linkTo(methodOn(AbrigoController.class).listar(alerta.areaId(), null, null, true, null, null)).withRel("abrigos-com-vaga").expand());
 
         if (alerta.estacaoId() != null) {
             model.add(linkTo(methodOn(EstacaoController.class).buscarPorId(alerta.estacaoId())).withRel("estacao"));

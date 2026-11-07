@@ -84,6 +84,32 @@ class InfraIntegrationTest extends IntegracaoBase {
                 .andExpect(jsonPath("$.measurements[0].value", greaterThanOrEqualTo(1.0)));
     }
 
+    // o app segue o href como está: link com template ({?page,size} ou {&aceitaPets}) levaria a uma URL inválida
+    @Test
+    void nenhumLinkHateoasSaiComTemplate() throws Exception {
+        String admin = tokenAdmin();
+        List<String> rotas = List.of("/api/areas", "/api/areas/1", "/api/areas/ranking", "/api/estacoes", "/api/estacoes/1",
+                "/api/estacoes/criticas", "/api/estacoes/1/leituras", "/api/alertas", "/api/alertas/ativos", "/api/alertas/1",
+                "/api/abrigos", "/api/abrigos/1", "/api/abrigos/disponiveis", "/api/relatos", "/api/relatos/1",
+                "/api/relatos/meus", "/api/usuarios", "/api/usuarios/1");
+        List<String> comTemplate = new ArrayList<>();
+        for (String rota : rotas) {
+            String corpo = mockMvc.perform(get(rota).header(HttpHeaders.AUTHORIZATION, bearer(admin)))
+                    .andExpect(status().isOk())
+                    .andReturn().getResponse().getContentAsString();
+            if (corpo.contains("\"templated\":true")) {
+                comTemplate.add(rota);
+            }
+        }
+        assertThat(comTemplate).isEmpty();
+
+        // seguir o link como está funciona
+        String area = mockMvc.perform(get("/api/areas/1")).andReturn().getResponse().getContentAsString();
+        String abrigosComVaga = JsonPath.read(area, "$._links['abrigos-com-vaga'].href");
+        assertThat(abrigosComVaga).endsWith("/api/abrigos?areaId=1&comVagas=true");
+        mockMvc.perform(get(abrigosComVaga)).andExpect(status().isOk());
+    }
+
     @Test
     void healthEInfoSaoPublicosEMetricsSoParaAdmin() throws Exception {
         mockMvc.perform(get("/actuator/health"))

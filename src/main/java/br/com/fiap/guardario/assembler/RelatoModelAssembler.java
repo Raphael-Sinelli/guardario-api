@@ -42,7 +42,7 @@ public class RelatoModelAssembler implements RepresentationModelAssembler<Relato
                 .map(id -> id.equals(relato.autorId()))
                 .orElse(false);
         if (ehAutor) {
-            model.add(linkTo(methodOn(RelatoController.class).meus(null)).withRel("meus-relatos"));
+            model.add(linkTo(methodOn(RelatoController.class).meus(null)).withRel("meus-relatos").expand());
             if (relato.status() == StatusRelato.ABERTO) {
                 model.add(linkTo(methodOn(RelatoController.class).atualizar(relato.id(), null)).withRel("editar"));
             }
