@@ -47,9 +47,11 @@ public class AreaRisco {
     @OneToMany(mappedBy = "area", fetch = FetchType.LAZY)
     private List<Estacao> estacoes = new ArrayList<>();
 
-    // RN03: o nível da área é o maior risco entre as últimas leituras das suas estações
+    // RN03: o nível da área é o maior risco entre as últimas leituras das suas estações ATIVAS.
+    // Estação inativa ou em manutenção não mede mais, e o último risco dela prenderia a área num nível velho.
     public NivelRisco recalcularNivel() {
         nivelAtual = estacoes.stream()
+                .filter(Estacao::isAtiva)
                 .map(Estacao::getUltimoRisco)
                 .filter(Objects::nonNull)
                 .max(Comparator.comparingInt(NivelRisco::getPeso))

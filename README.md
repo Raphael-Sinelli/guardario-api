@@ -109,7 +109,7 @@ A coleção conta com os dados de uma API recém-iniciada. Para rodar tudo de no
 |---|---|---|
 | RN01 | O risco da leitura segue a régua da estação (cotas de atenção, alerta e transbordo) e sobe um nível com chuva de 50 mm/h ou mais | `Estacao.classificar`, `NivelRisco.elevar` |
 | RN02 | Leitura em ALERTA ou pior abre alerta automático para a área, se ela ainda não tiver alerta ativo de nível igual ou maior. Alertas ativos de nível menor são substituídos | `AlertaServiceImpl.gerarAutomatico` |
-| RN03 | O nível da área é o maior risco entre as últimas leituras das suas estações | `AreaRisco.recalcularNivel` |
+| RN03 | O nível da área é o maior risco entre as últimas leituras das suas estações ATIVAS. É recalculado a cada leitura e quando uma estação muda de área, muda de status ou é excluída | `AreaRisco.recalcularNivel`, `EstacaoServiceImpl.atualizar` e `excluir` |
 | RN04 | Só AGENTE ou ADMIN encerra alerta, e alerta encerrado não reabre (409) | `@PreAuthorize` no `AlertaController`, `Alerta.encerrar` |
 | RN05 | A ocupação do abrigo nunca passa da capacidade. Cheio vira LOTADO, com vaga volta a ABERTO, FECHADO não recebe ninguém | `Abrigo.registrarEntrada`, `registrarSaida`, `atualizarStatus`; `@OcupacaoDentroDaCapacidade` |
 | RN06 | Prioridade do relato de 1 a 5: base do tipo (pessoa ilhada 5, deslizamento 4, rio subindo e alagamento 3, bueiro 2, outro 1), mais 1 se a área estiver em ALERTA ou EMERGENCIA | `TipoRelato`, `Relato.definirPrioridade` |
@@ -255,7 +255,7 @@ erDiagram
 | Consulta | Rota | O que o JPQL faz |
 |---|---|---|
 | `AreaRiscoRepository.rankingPorRelatosEmAberto` | `GET /api/areas/ranking` | `left join Relato r on ... and r.status in (...)` para a área sem relato também aparecer, `group by`, `count`, `max`, `coalesce` e `select new RankingAreaResponse(...)` |
-| `EstacaoRepository.buscarCriticas` | `GET /api/estacoes/criticas` | `join fetch e.area` (sem N+1) e `order by (e.ultimoNivelCm - e.cotaTransbordoCm) desc`, da estação mais perto do transbordo para a mais longe |
+| `EstacaoRepository.buscarCriticas` | `GET /api/estacoes/criticas` | só estações ATIVAS, `join fetch e.area` (sem N+1) e `order by (e.ultimoNivelCm - e.cotaTransbordoCm) desc`, da estação mais perto do transbordo para a mais longe |
 | `LeituraRepository.estatisticas` | `GET /api/estacoes/{id}/leituras/estatisticas` | `count`, `avg`, `min` e `max` calculados no banco e projetados num record, sem trazer as leituras para a memória |
 
 **Specification** nos filtros de tela, em que todos os parâmetros são opcionais e combináveis. Com derived query, um filtro nulo vira `is null`, e cada combinação pediria um método novo: com os 6 filtros de relato seriam 64 métodos. Cada filtro é um método pequeno em `RelatoSpecification` ou `AbrigoSpecification` e só entra no WHERE se o parâmetro veio preenchido.

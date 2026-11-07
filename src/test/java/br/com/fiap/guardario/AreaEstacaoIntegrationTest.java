@@ -1,5 +1,6 @@
 package br.com.fiap.guardario;
 
+import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -133,6 +134,50 @@ class AreaEstacaoIntegrationTest extends IntegracaoBase {
 
         mockMvc.perform(delete("/api/areas/" + area).header(HttpHeaders.AUTHORIZATION, bearer(tokenAdmin())))
                 .andExpect(status().isConflict());
+    }
+
+    // RN03: mover, desativar ou excluir a estação recalcula o nível das áreas envolvidas
+    @Test
+    void nivelDasAreasAcompanhaAEstacaoQueMudaDeAreaOuDeStatus() throws Exception {
+        long areaA = criarArea("Área Origem " + sufixoUnico());
+        long areaB = criarArea("Área Destino " + sufixoUnico());
+        long estacao = criarEstacao(areaA);
+        registrarLeitura(estacao, 320, 0.0).andExpect(status().isCreated());
+        mockMvc.perform(get("/api/areas/" + areaA)).andExpect(jsonPath("$.nivelAtual").value("EMERGENCIA"));
+        mockMvc.perform(get("/api/areas/" + areaB)).andExpect(jsonPath("$.nivelAtual").value("NORMAL"));
+
+        atualizarEstacao(estacao, areaB, "ATIVA");
+        mockMvc.perform(get("/api/areas/" + areaA)).andExpect(jsonPath("$.nivelAtual").value("NORMAL"));
+        mockMvc.perform(get("/api/areas/" + areaB)).andExpect(jsonPath("$.nivelAtual").value("EMERGENCIA"));
+        mockMvc.perform(get("/api/estacoes/criticas")).andExpect(jsonPath("$._embedded.estacoes[*].id", hasItem((int) estacao)));
+
+        atualizarEstacao(estacao, areaB, "INATIVA");
+        mockMvc.perform(get("/api/areas/" + areaB)).andExpect(jsonPath("$.nivelAtual").value("NORMAL"));
+        mockMvc.perform(get("/api/estacoes/criticas")).andExpect(jsonPath("$._embedded.estacoes[*].id", not(hasItem((int) estacao))));
+    }
+
+    @Test
+    void excluirEstacaoRecalculaONivelDaArea() throws Exception {
+        long area = criarArea("Área Exclusão " + sufixoUnico());
+        long estacao = criarEstacao(area);
+        registrarLeitura(estacao, 150, 0.0).andExpect(jsonPath("$.alertaGeradoId").value(nullValue()));
+        mockMvc.perform(get("/api/areas/" + area)).andExpect(jsonPath("$.nivelAtual").value("ATENCAO"));
+
+        mockMvc.perform(delete("/api/estacoes/" + estacao).header(HttpHeaders.AUTHORIZATION, bearer(tokenAdmin())))
+                .andExpect(status().isNoContent());
+        mockMvc.perform(get("/api/areas/" + area)).andExpect(jsonPath("$.nivelAtual").value("NORMAL"));
+    }
+
+    private void atualizarEstacao(long estacao, long area, String status) throws Exception {
+        String codigo = JsonPath.read(mockMvc.perform(get("/api/estacoes/" + estacao))
+                .andReturn().getResponse().getContentAsString(), "$.codigo");
+        mockMvc.perform(put("/api/estacoes/" + estacao).header(HttpHeaders.AUTHORIZATION, bearer(tokenAdmin()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"codigo": "%s", "nome": "Estação de teste", "rio": "Rio Teste", "cotaAtencaoCm": 100,
+                                 "cotaAlertaCm": 200, "cotaTransbordoCm": 300, "status": "%s", "areaId": %d}"""
+                                .formatted(codigo, status, area)))
+                .andExpect(status().isOk());
     }
 
     @Test

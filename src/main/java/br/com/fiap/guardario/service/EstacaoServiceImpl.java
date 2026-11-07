@@ -13,6 +13,7 @@ import br.com.fiap.guardario.repository.AlertaRepository;
 import br.com.fiap.guardario.repository.AreaRiscoRepository;
 import br.com.fiap.guardario.repository.EstacaoRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -47,7 +48,7 @@ public class EstacaoServiceImpl implements EstacaoService {
     @Override
     @Transactional(readOnly = true)
     public List<EstacaoResponse> criticas() {
-        return estacaoRepository.buscarCriticas(List.of(NivelRisco.ALERTA, NivelRisco.EMERGENCIA)).stream()
+        return estacaoRepository.buscarCriticas(StatusEstacao.ATIVA, List.of(NivelRisco.ALERTA, NivelRisco.EMERGENCIA)).stream()
                 .map(EstacaoMapper::toResponse)
                 .toList();
     }
@@ -65,28 +66,44 @@ public class EstacaoServiceImpl implements EstacaoService {
         return EstacaoMapper.toResponse(estacaoRepository.save(estacao));
     }
 
+    // mudar a área ou o status da estação muda o nível das áreas envolvidas (RN03): as duas são recalculadas.
+    // O cache "areas" é limpo inteiro porque a chave da área antiga não está nos parâmetros do método.
     @Override
     @Transactional
+    @CacheEvict(cacheNames = "areas", allEntries = true)
     public EstacaoResponse atualizar(Long id, EstacaoRequest request) {
         Estacao estacao = buscarEntidade(id);
         String codigo = request.codigo().trim().toUpperCase(Locale.ROOT);
         if (!codigo.equalsIgnoreCase(estacao.getCodigo()) && estacaoRepository.existsByCodigoIgnoreCase(codigo)) {
             throw new RegraNegocioException("Já existe uma estação com o código " + codigo);
         }
+        AreaRisco areaAnterior = estacao.getArea();
         estacao.setCodigo(codigo);
         preencher(estacao, request); // último nível e último risco não mudam aqui: vêm das leituras
+
+        AreaRisco areaNova = estacao.getArea();
+        if (areaNova != areaAnterior) {
+            areaAnterior.getEstacoes().remove(estacao);
+            areaNova.getEstacoes().add(estacao);
+            areaAnterior.recalcularNivel();
+        }
+        areaNova.recalcularNivel();
         return EstacaoMapper.toResponse(estacao);
     }
 
     @Override
     @Transactional
+    @CacheEvict(cacheNames = "areas", allEntries = true)
     public void excluir(Long id) {
         Estacao estacao = buscarEntidade(id);
         // alerta é histórico de decisão da Defesa Civil: com alerta no histórico, a estação é desativada, não apagada
         if (alertaRepository.existsByEstacaoId(id)) {
             throw new RegraNegocioException("A estação tem alertas no histórico. Mude o status para INATIVA em vez de excluir");
         }
+        AreaRisco area = estacao.getArea();
+        area.getEstacoes().remove(estacao);
         estacaoRepository.delete(estacao); // as leituras vão junto pelo cascade
+        area.recalcularNivel(); // RN03: sem esta estação, o nível da área pode cair
     }
 
     private Estacao buscarEntidade(Long id) {

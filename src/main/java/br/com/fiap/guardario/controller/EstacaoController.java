@@ -68,7 +68,7 @@ public class EstacaoController {
 
     @GetMapping("/criticas")
     @SecurityRequirements
-    @Operation(summary = "Estações em ALERTA ou EMERGENCIA",
+    @Operation(summary = "Estações ativas em ALERTA ou EMERGENCIA",
             description = "JPQL com join fetch (sem N+1), da mais perto do transbordo para a mais longe.")
     @ApiResponse(responseCode = "200", description = "Estações críticas")
     public ResponseEntity<CollectionModel<EntityModel<EstacaoResponse>>> criticas() {

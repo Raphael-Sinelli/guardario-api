@@ -2,6 +2,7 @@ package br.com.fiap.guardario.repository;
 
 import br.com.fiap.guardario.model.Estacao;
 import br.com.fiap.guardario.model.NivelRisco;
+import br.com.fiap.guardario.model.StatusEstacao;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -27,15 +28,15 @@ public interface EstacaoRepository extends JpaRepository<Estacao, Long> {
     boolean existsByAreaId(Long areaId);
 
     /*
-     * Estações em ALERTA ou EMERGENCIA, das mais perto do transbordo para as mais longe.
+     * Estações ATIVAS em ALERTA ou EMERGENCIA, das mais perto do transbordo para as mais longe.
      * O join fetch carrega a área junto (sem N+1) e a ordenação usa uma conta entre colunas,
      * coisa que o nome de um derived query não expressa.
      */
     @Query("""
             select e from Estacao e
             join fetch e.area
-            where e.ultimoRisco in :riscos
+            where e.status = :status and e.ultimoRisco in :riscos
             order by (e.ultimoNivelCm - e.cotaTransbordoCm) desc
             """)
-    List<Estacao> buscarCriticas(@Param("riscos") Collection<NivelRisco> riscos);
+    List<Estacao> buscarCriticas(@Param("status") StatusEstacao status, @Param("riscos") Collection<NivelRisco> riscos);
 }

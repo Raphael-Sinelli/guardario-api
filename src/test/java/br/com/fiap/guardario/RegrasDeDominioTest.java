@@ -52,6 +52,21 @@ class RegrasDeDominioTest {
         assertThat(estacao.getLeituras()).hasSize(2);
     }
 
+    // RN03: estação INATIVA ou em MANUTENCAO não mede mais, então o último risco dela não segura o nível da área
+    @Test
+    void nivelDaAreaConsideraSoEstacoesAtivas() {
+        Estacao ativa = estacaoComCotas(100, 200, 300);
+        ativa.setUltimoRisco(NivelRisco.ATENCAO);
+        Estacao inativa = estacaoComCotas(100, 200, 300);
+        inativa.setStatus(StatusEstacao.INATIVA);
+        inativa.setUltimoRisco(NivelRisco.EMERGENCIA);
+        AreaRisco area = new AreaRisco();
+        area.getEstacoes().add(ativa);
+        area.getEstacoes().add(inativa);
+
+        assertThat(area.recalcularNivel()).isEqualTo(NivelRisco.ATENCAO);
+    }
+
     // RN05
     @Test
     void abrigoViraLotadoQuandoEncheEVoltaAAbertoQuandoLiberaVaga() {
