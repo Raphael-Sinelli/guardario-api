@@ -3653,6 +3653,47 @@
           ]
         },
         {
+          "name": "Página fora do intervalo (400)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/alertas?page=2147483647&size=100",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "alertas"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "2147483647"
+                },
+                {
+                  "key": "size",
+                  "value": "100"
+                }
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Corpo enviado como texto (415)",
           "request": {
             "method": "POST",
