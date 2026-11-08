@@ -51,7 +51,7 @@ public class AdminInitializer implements ApplicationRunner {
         if (senha.length() < 8 || senha.getBytes(StandardCharsets.UTF_8).length > 72) {
             throw new IllegalStateException("ADMIN_PASSWORD precisa ter pelo menos 8 caracteres e no máximo 72 bytes");
         }
-        // já existe: não troca a senha a cada subida, quem muda a senha é o próprio usuário
+        // já existe: o ADMIN do ambiente é criado uma vez só, e as subidas seguintes não sobrescrevem o cadastro do banco
         if (usuarioRepository.existsByEmail(email)) {
             return;
         }
