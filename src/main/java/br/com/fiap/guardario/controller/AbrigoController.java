@@ -116,6 +116,7 @@ public class AbrigoController {
     @ApiResponse(responseCode = "400", description = "Status LOTADO enviado pelo cliente")
     @ApiResponse(responseCode = "403", description = "Usuário logado é CIDADAO")
     @ApiResponse(responseCode = "404", description = "Abrigo não existe")
+    @ApiResponse(responseCode = "409", description = "Outra requisição alterou o mesmo registro ao mesmo tempo: busque de novo e repita")
     public ResponseEntity<EntityModel<AbrigoResponse>> alterarStatus(@PathVariable @Positive Long id,
                                                                      @RequestBody @Valid AlterarStatusAbrigoRequest request) {
         return ResponseEntity.ok(assembler.toModel(abrigoService.alterarStatus(id, request.status())));
@@ -153,6 +154,7 @@ public class AbrigoController {
     @ApiResponse(responseCode = "204", description = "Abrigo excluído")
     @ApiResponse(responseCode = "403", description = "Usuário logado não é ADMIN")
     @ApiResponse(responseCode = "404", description = "Abrigo não existe")
+    @ApiResponse(responseCode = "409", description = "Outra requisição alterou o mesmo registro ao mesmo tempo: busque de novo e repita")
     public ResponseEntity<Void> excluir(@PathVariable @Positive Long id) {
         abrigoService.excluir(id);
         return ResponseEntity.noContent().build();

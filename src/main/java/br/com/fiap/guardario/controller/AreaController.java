@@ -91,6 +91,7 @@ public class AreaController {
     @ApiResponse(responseCode = "400", description = "Campos inválidos")
     @ApiResponse(responseCode = "403", description = "Usuário logado não é ADMIN")
     @ApiResponse(responseCode = "404", description = "Área não existe")
+    @ApiResponse(responseCode = "409", description = "Outra requisição alterou o mesmo registro ao mesmo tempo: busque de novo e repita")
     public ResponseEntity<EntityModel<AreaResponse>> atualizar(@PathVariable @Positive Long id,
                                                                @RequestBody @Valid AreaRequest request) {
         return ResponseEntity.ok(assembler.toModel(areaService.atualizar(id, request)));
