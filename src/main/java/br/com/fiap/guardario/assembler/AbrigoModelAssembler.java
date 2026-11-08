@@ -38,7 +38,8 @@ public class AbrigoModelAssembler implements RepresentationModelAssembler<Abrigo
             }
             model.add(linkTo(methodOn(AbrigoController.class).atualizar(abrigo.id(), null)).withRel("atualizar").withTitle("PUT com o abrigo inteiro"));
         }
-        if (SecurityUtils.temPapel(Papel.ADMIN)) {
+        // excluir só aparece quando dá certo: abrigo vazio
+        if (SecurityUtils.temPapel(Papel.ADMIN) && abrigo.ocupacao() == 0) {
             model.add(linkTo(methodOn(AbrigoController.class).excluir(abrigo.id())).withRel("excluir").withTitle("DELETE"));
         }
         return model;

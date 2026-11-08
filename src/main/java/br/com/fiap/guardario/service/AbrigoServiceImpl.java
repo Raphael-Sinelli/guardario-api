@@ -126,7 +126,13 @@ public class AbrigoServiceImpl implements AbrigoService {
     @Transactional
     @CacheEvict(cacheNames = "abrigosDisponiveis", allEntries = true)
     public void excluir(Long id) {
-        abrigoRepository.delete(buscarEntidade(id));
+        Abrigo abrigo = buscarEntidade(id);
+        // com gente dentro, as pessoas sumiriam da contagem de quem está abrigado: primeiro registra a saída delas
+        if (abrigo.getOcupacao() > 0) {
+            throw new RegraNegocioException("O abrigo ainda tem " + abrigo.getOcupacao()
+                    + (abrigo.getOcupacao() == 1 ? " pessoa" : " pessoas") + ": registre a saída delas antes de excluir");
+        }
+        abrigoRepository.delete(abrigo);
     }
 
     // trava a linha do abrigo até o fim da transação (SELECT ... FOR UPDATE): as entradas e saídas simultâneas

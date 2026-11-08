@@ -96,7 +96,7 @@ Sem login dá para consultar áreas, estações, leituras, alertas e abrigos. In
 
 ### Testando com o Postman (ou o Bruno)
 
-A pasta `postman/` tem a coleção `GuardaRio.postman_collection.json`, com 95 requisições em 10 pastas e 148 asserções automáticas (status esperado e regras de negócio); rodada com o Newman contra a API recém-iniciada, dá 0 falhas. O Bruno importa o mesmo arquivo.
+A pasta `postman/` tem a coleção `GuardaRio.postman_collection.json`, com 97 requisições em 10 pastas e 151 asserções automáticas (status esperado e regras de negócio); rodada com o Newman contra a API recém-iniciada, dá 0 falhas. O Bruno importa o mesmo arquivo.
 
 1. Suba a API e importe o arquivo no Postman.
 2. Rode a pasta **01 Autenticação**: os logins guardam os tokens nas variáveis da coleção, e as outras requisições já usam o token certo para cada papel.
@@ -119,7 +119,7 @@ A coleção conta com os dados de uma API recém-iniciada. Para rodar tudo de no
 | RN09 | O cidadão vê e edita só os próprios relatos, e só exclui enquanto estão ABERTO | `RelatoServiceImpl` |
 | RN10 | As cotas da estação precisam ser crescentes: atenção < alerta < transbordo | `@CotasCrescentes` |
 
-Outras regras: estação em MANUTENCAO ou INATIVA não recebe leitura (409); leitura atrasada (mais antiga que a última da estação) ou medida há mais de 1 hora entra no histórico, mas não muda o nível atual nem gera alerta, porque o alerta precisa descrever o rio de agora; `medidaEm` precisa estar entre 30 dias atrás e agora, com 1 minuto de tolerância para o relógio da estação adiantado (`@JanelaDeMedicao`); estação com alerta no histórico não pode ser excluída, só desativada, e o alerta automático também não sai (só o manual emitido por engano, depois de encerrado), para ninguém apagar o histórico apagando primeiro o alerta; área com estações, abrigos, alertas, relatos ou moradores não pode ser excluída; o ADMIN não pode alterar o próprio papel; no PUT, abrigo sem `ocupacao` mantém as pessoas que já estão lá (e a capacidade não pode ficar abaixo delas, 409) e estação sem `status` mantém o status atual; mudar as cotas da estação reclassifica a última leitura com a régua nova na hora, o nível da área acompanha e, se o risco subir para ALERTA ou pior, nasce o alerta automático (RN02); estação reativada depois de mais de 1 hora parada volta sem risco conhecido até a próxima leitura, para não devolver à área um risco velho.
+Outras regras: estação em MANUTENCAO ou INATIVA não recebe leitura (409); leitura atrasada (mais antiga que a última da estação) ou medida há mais de 1 hora entra no histórico, mas não muda o nível atual nem gera alerta, porque o alerta precisa descrever o rio de agora; `medidaEm` precisa estar entre 30 dias atrás e agora, com 1 minuto de tolerância para o relógio da estação adiantado (`@JanelaDeMedicao`); abrigo com gente dentro não pode ser excluído (409: primeiro registra a saída das pessoas); estação com alerta no histórico não pode ser excluída, só desativada, e o alerta automático também não sai (só o manual emitido por engano, depois de encerrado), para ninguém apagar o histórico apagando primeiro o alerta; área com estações, abrigos, alertas, relatos ou moradores não pode ser excluída; o ADMIN não pode alterar o próprio papel; no PUT, abrigo sem `ocupacao` mantém as pessoas que já estão lá (e a capacidade não pode ficar abaixo delas, 409) e estação sem `status` mantém o status atual; mudar as cotas da estação reclassifica a última leitura com a régua nova na hora, o nível da área acompanha e, se o risco subir para ALERTA ou pior, nasce o alerta automático (RN02); estação reativada depois de mais de 1 hora parada volta sem risco conhecido até a próxima leitura, para não devolver à área um risco velho.
 
 ## Diagrama das entidades
 
@@ -311,7 +311,7 @@ As respostas usam o formato HAL. As listas vêm com os itens em `_embedded`, os 
 |---|---|---|
 | Alerta | `area`, `estacao`, `abrigos-com-vaga` | ATIVO e usuário AGENTE ou ADMIN: `encerrar`, `editar`. ADMIN: `excluir`, só em alerta manual já encerrado. Alerta automático encerrado não tem ação |
 | Relato | `area`, `meus-relatos` | Para AGENTE ou ADMIN: ABERTO tem `atender` e `descartar`; EM_ATENDIMENTO tem `resolver`. Para o autor, enquanto ABERTO: `editar`, `excluir` |
-| Abrigo | `area`, `abrigos-disponiveis` | Com vaga: `registrar-entrada`. Com gente: `registrar-saida`. Aberto ou lotado: `fechar`. Fechado: `reabrir` |
+| Abrigo | `area`, `abrigos-disponiveis` | Com vaga: `registrar-entrada`. Com gente: `registrar-saida`. Aberto ou lotado: `fechar`. Fechado: `reabrir`. ADMIN: `excluir`, só com o abrigo vazio |
 | Estação | `area`, `leituras`, `estatisticas-24h` | Estação ATIVA e usuário AGENTE ou ADMIN: `registrar-leitura`. ADMIN: `atualizar` e, se a estação não tem alerta no histórico, `excluir` |
 | Leitura | `estacao`, `estatisticas-24h`. Na resposta do registro: `estacao`, `area` e, quando a leitura abre um alerta automático, `alerta` | nenhuma: leitura não muda depois de gravada |
 | Área | `estacoes`, `abrigos-com-vaga`, `alertas-ativos` | ADMIN: `atualizar` e, se a área não tem estações, abrigos, alertas, relatos nem moradores, `excluir` |
@@ -435,7 +435,7 @@ Requisição que o Tomcat recusa antes de chegar ao Spring (barra codificada `%2
 | PATCH | `/api/abrigos/{id}/status` | AGENTE, ADMIN | 200 |
 | POST | `/api/abrigos/{id}/entradas` | AGENTE, ADMIN | 200 |
 | POST | `/api/abrigos/{id}/saidas` | AGENTE, ADMIN | 200 |
-| DELETE | `/api/abrigos/{id}` | ADMIN | 204 |
+| DELETE | `/api/abrigos/{id}` | ADMIN | 204 (só com o abrigo vazio; com gente dentro, 409) |
 | POST | `/api/relatos` | logado | 201 + Location |
 | GET | `/api/relatos/meus` | logado | 200 |
 | GET | `/api/relatos?tipo=&status=&areaId=&prioridadeMin=&de=&ate=` | AGENTE, ADMIN | 200 |

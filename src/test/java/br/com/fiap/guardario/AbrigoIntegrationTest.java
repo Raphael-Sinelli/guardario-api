@@ -223,4 +223,21 @@ class AbrigoIntegrationTest extends IntegracaoBase {
                  "aceitaPets": true, "acessivelPcd": true, "areaId": %d}""".formatted(area))
                 .andExpect(status().isForbidden());
     }
+    // abrigo com gente dentro não é excluído: as pessoas sumiriam da contagem. O link excluir só aparece vazio
+    @Test
+    void abrigoComGenteDentroNaoEhExcluido() throws Exception {
+        String admin = tokenAdmin();
+        long abrigo = criarAbrigo(criarArea("Área Excluir Abrigo " + sufixoUnico()), 10, 3, true, true);
+        mockMvc.perform(get("/api/abrigos/" + abrigo).header(HttpHeaders.AUTHORIZATION, bearer(admin)))
+                .andExpect(jsonPath("$._links.excluir").doesNotExist());
+        mockMvc.perform(delete("/api/abrigos/" + abrigo).header(HttpHeaders.AUTHORIZATION, bearer(admin)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("O abrigo ainda tem 3 pessoas: registre a saída delas antes de excluir"));
+
+        postJson("/api/abrigos/" + abrigo + "/saidas", tokenAgente(), "{\"pessoas\": 3}").andExpect(status().isOk());
+        mockMvc.perform(get("/api/abrigos/" + abrigo).header(HttpHeaders.AUTHORIZATION, bearer(admin)))
+                .andExpect(jsonPath("$._links.excluir.href").exists());
+        mockMvc.perform(delete("/api/abrigos/" + abrigo).header(HttpHeaders.AUTHORIZATION, bearer(admin)))
+                .andExpect(status().isNoContent());
+    }
 }
