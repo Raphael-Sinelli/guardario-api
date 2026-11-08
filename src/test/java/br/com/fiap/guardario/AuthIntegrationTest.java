@@ -116,7 +116,19 @@ class AuthIntegrationTest extends IntegracaoBase {
         postJson("/api/auth/login", null, """
                 {"email": "admin@guardario.com", "senha": "errada123"}""")
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.message").value("Email ou senha inválidos"));
+                .andExpect(jsonPath("$.message").value("Email ou senha inválidos"))
+                .andExpect(header().string(HttpHeaders.WWW_AUTHENTICATE, "Bearer"));
+    }
+
+    // RFC 6750: todo 401 diz como se autenticar; com um token que não valeu, o desafio diz que ele é inválido
+    @Test
+    void respostaDe401TrazODesafioBearer() throws Exception {
+        mockMvc.perform(get("/api/auth/me"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(header().string(HttpHeaders.WWW_AUTHENTICATE, "Bearer"));
+        mockMvc.perform(get("/api/auth/me").header(HttpHeaders.AUTHORIZATION, bearer(tokenCidadao() + "x")))
+                .andExpect(status().isUnauthorized())
+                .andExpect(header().string(HttpHeaders.WWW_AUTHENTICATE, "Bearer error=\"invalid_token\""));
     }
 
     @Test

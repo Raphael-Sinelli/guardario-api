@@ -10,6 +10,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.request;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -60,7 +61,8 @@ class MatrizDeAutorizacaoIntegrationTest extends IntegracaoBase {
     void rotaProtegidaNegaQuemNaoTemOPapelAntesDeValidarOCorpo(String metodo, String rota, String papelMinimo) throws Exception {
         mockMvc.perform(requisicao(metodo, rota, null))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.status").value(401));
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(header().string(HttpHeaders.WWW_AUTHENTICATE, "Bearer"));
 
         if (!papelMinimo.equals("LOGADO")) {
             mockMvc.perform(requisicao(metodo, rota, tokenCidadao()))

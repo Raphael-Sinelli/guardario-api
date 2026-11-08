@@ -6,6 +6,7 @@ import br.com.fiap.guardario.dto.ValidationErrorResponse;
 import br.com.fiap.guardario.exceptions.CampoInvalidoException;
 import br.com.fiap.guardario.exceptions.RegraNegocioException;
 import br.com.fiap.guardario.exceptions.ResourceNotFoundException;
+import br.com.fiap.guardario.security.JsonErrorWriter;
 import br.com.fiap.guardario.security.RestAccessDeniedHandler;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.servlet.http.HttpServletRequest;
@@ -15,6 +16,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.data.core.PropertyReferenceException;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -320,7 +322,11 @@ public class GlobalExceptionHandler {
         HttpStatus httpStatus = HttpStatus.valueOf(status.value());
         ErrorCustomResponse corpo = new ErrorCustomResponse(
                 Instant.now(), httpStatus.value(), httpStatus.getReasonPhrase(), mensagem, request.getRequestURI());
-        return ResponseEntity.status(httpStatus).contentType(MediaType.APPLICATION_JSON).body(corpo);
+        ResponseEntity.BodyBuilder resposta = ResponseEntity.status(httpStatus).contentType(MediaType.APPLICATION_JSON);
+        if (httpStatus == HttpStatus.UNAUTHORIZED) {
+            resposta.header(HttpHeaders.WWW_AUTHENTICATE, JsonErrorWriter.desafioBearer(request));
+        }
+        return resposta.body(corpo);
     }
 
     private ResponseEntity<ValidationErrorResponse> erroValidacao(List<ErrorFieldCustom> erros, HttpServletRequest request) {

@@ -5,6 +5,8 @@ import io.swagger.v3.oas.annotations.Hidden;
 import jakarta.servlet.RequestDispatcher;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.boot.webmvc.error.ErrorController;
+import br.com.fiap.guardario.security.JsonErrorWriter;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -34,6 +36,10 @@ public class PaginaDeErroController implements ErrorController {
         String caminho = uri != null ? uri.toString() : request.getRequestURI();
         ErrorCustomResponse corpo = new ErrorCustomResponse(Instant.now(), status.value(), status.getReasonPhrase(),
                 GlobalExceptionHandler.mensagemPadrao(status), caminho);
-        return ResponseEntity.status(status).contentType(MediaType.APPLICATION_JSON).body(corpo);
+        ResponseEntity.BodyBuilder resposta = ResponseEntity.status(status).contentType(MediaType.APPLICATION_JSON);
+        if (status == HttpStatus.UNAUTHORIZED) {
+            resposta.header(HttpHeaders.WWW_AUTHENTICATE, JsonErrorWriter.desafioBearer(request));
+        }
+        return resposta.body(corpo);
     }
 }
