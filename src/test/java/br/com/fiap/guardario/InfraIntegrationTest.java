@@ -21,6 +21,7 @@ import static org.hamcrest.Matchers.hasKey;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -292,6 +293,28 @@ class InfraIntegrationTest extends IntegracaoBase {
         mockMvc.perform(get("/api/areas").header(HttpHeaders.ORIGIN, "http://site-malicioso.com"))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.status").value(403));
+    }
+
+    // a recusa do CORS diz o motivo certo: origem, método ou header que a API não aceita
+    @Test
+    void recusaDoCorsDizOMotivoCerto() throws Exception {
+        mockMvc.perform(options("/api/relatos")
+                        .header(HttpHeaders.ORIGIN, "http://site-malicioso.com")
+                        .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "POST"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("Origem não permitida pelo CORS: http://site-malicioso.com"));
+        mockMvc.perform(options("/api/relatos")
+                        .header(HttpHeaders.ORIGIN, "http://localhost:5173")
+                        .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "POST")
+                        .header(HttpHeaders.ACCESS_CONTROL_REQUEST_HEADERS, "x-custom"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.status").value(403))
+                .andExpect(jsonPath("$.message", startsWith("Header não permitido pelo CORS: x-custom")));
+        mockMvc.perform(options("/api/relatos")
+                        .header(HttpHeaders.ORIGIN, "http://localhost:5173")
+                        .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "TRACE"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message", startsWith("Método não permitido pelo CORS: TRACE")));
     }
 
     @Test
