@@ -68,7 +68,7 @@ public class Alerta {
     @PrePersist
     void aoEmitir() {
         if (emitidoEm == null) {
-            emitidoEm = Instant.now();
+            emitidoEm = Horario.agora();
         }
     }
 
@@ -82,7 +82,7 @@ public class Alerta {
             throw new RegraNegocioException("Este alerta já foi encerrado e não pode ser alterado");
         }
         status = StatusAlerta.ENCERRADO;
-        encerradoEm = Instant.now();
+        encerradoEm = Horario.agora();
         encerradoPor = responsavel;
     }
 }

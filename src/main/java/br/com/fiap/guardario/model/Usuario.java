@@ -49,7 +49,7 @@ public class Usuario implements UserDetails {
 
     @PrePersist
     void aoCriar() {
-        criadoEm = Instant.now();
+        criadoEm = Horario.agora();
     }
 
     // hasRole('ADMIN') procura a authority ROLE_ADMIN

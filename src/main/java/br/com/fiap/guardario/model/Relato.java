@@ -65,7 +65,7 @@ public class Relato {
 
     @PrePersist
     void aoCriar() {
-        criadoEm = Instant.now();
+        criadoEm = Horario.agora();
         atualizadoEm = criadoEm;
     }
 
@@ -87,11 +87,11 @@ public class Relato {
         if (observacao != null && !observacao.isBlank()) {
             observacaoAgente = observacao.trim();
         }
-        atualizadoEm = Instant.now();
+        atualizadoEm = Horario.agora();
     }
 
     public void marcarAtualizado() {
-        atualizadoEm = Instant.now();
+        atualizadoEm = Horario.agora();
     }
 
     public boolean isAberto() {
