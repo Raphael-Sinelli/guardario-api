@@ -142,8 +142,8 @@ public class OpenApiConfig {
                     continue;
                 }
                 switch (parametro.getName()) {
-                    case "page" -> parametro.setDescription("Número da página, começando em 0");
-                    case "size" -> parametro.setDescription("Itens por página, no máximo 100");
+                    case "page" -> parametro.setDescription("Número da página, começando em 0. Valor negativo ou que não é número volta para 0, como no Spring Data");
+                    case "size" -> parametro.setDescription("Itens por página, no máximo 100. Acima de 100 vira 100; zero, negativo ou valor que não é número volta ao padrão da rota");
                     case "sort" -> parametro.setDescription(campos == null
                             ? "Esta rota não aceita ordenação"
                             : "Ordenação no formato campo,asc ou campo,desc (pode repetir o parâmetro). Campos aceitos: "
