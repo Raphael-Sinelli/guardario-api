@@ -43,6 +43,8 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 import tools.jackson.core.JacksonException;
+import tools.jackson.core.JsonParser;
+import tools.jackson.core.JsonToken;
 import tools.jackson.core.exc.InputCoercionException;
 import tools.jackson.databind.exc.MismatchedInputException;
 
@@ -158,6 +160,13 @@ public class GlobalExceptionHandler {
                     : erro instanceof InputCoercionException ? "número fora do intervalo aceito pelo campo"
                     : "valor em formato inválido";
             return erroValidacao(List.of(new ErrorFieldCustom(caminhoDoCampo(erro), motivo)), request);
+        }
+        // JSON válido, mas sem ser um objeto: chegou uma lista ou um valor solto onde a API esperava { ... }
+        if (ex.getCause() instanceof MismatchedInputException desencontro && desencontro.getPath().isEmpty()) {
+            JsonToken chegou = desencontro.getCurrentToken() != null ? desencontro.getCurrentToken()
+                    : desencontro.processor() instanceof JsonParser leitor ? leitor.currentToken() : null;
+            return erro(HttpStatus.BAD_REQUEST, "O corpo precisa ser um objeto JSON, entre chaves, e chegou "
+                    + (chegou == JsonToken.START_ARRAY ? "uma lista" : "um valor solto"), request);
         }
         return erro(HttpStatus.BAD_REQUEST, "JSON mal formado: confira aspas, vírgulas e chaves", request);
     }

@@ -220,6 +220,21 @@ class ErrosPadronizadosIntegrationTest extends IntegracaoBase {
                 .andExpect(header().string(HttpHeaders.ALLOW, containsString("POST")));
     }
 
+    // JSON válido, mas no formato errado: a API esperava um objeto e chegou uma lista ou um valor solto
+    @Test
+    void corpoQueNaoEhObjetoDizOQueChegou() throws Exception {
+        postJson("/api/relatos", tokenCidadao(), "[]")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("O corpo precisa ser um objeto JSON, entre chaves, e chegou uma lista"));
+        postJson("/api/relatos", tokenCidadao(), "\"texto\"")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("O corpo precisa ser um objeto JSON, entre chaves, e chegou um valor solto"));
+        // JSON quebrado continua com a mensagem dele
+        postJson("/api/relatos", tokenCidadao(), "{\"tipo\": ")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", containsString("JSON mal formado")));
+    }
+
     // sem isto o Jackson arredondava 1.7 cm para 1 em silêncio
     @Test
     void numeroDecimalEmCampoInteiroDevolve400() throws Exception {
