@@ -2,6 +2,9 @@ package br.com.fiap.guardario;
 
 import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 
@@ -21,6 +24,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
  * Dois agentes mexendo no mesmo registro ao mesmo tempo: só um consegue, o outro recebe 409 e vê o estado novo.
  * Sem o @Version, os dois recebiam 200 e o segundo gravava por cima do primeiro.
  */
+@ExtendWith(OutputCaptureExtension.class)
 class ConcorrenciaIntegrationTest extends IntegracaoBase {
 
     @Test
@@ -71,6 +75,18 @@ class ConcorrenciaIntegrationTest extends IntegracaoBase {
         assertThat(codigos).filteredOn(codigo -> codigo == 409).hasSize(9);
         assertThat(respostas).filteredOn(corpo -> corpo.contains("\"status\":409"))
                 .allMatch(corpo -> corpo.contains("Já existe um cadastro com o email"));
+    }
+
+    // a violação de unicidade da corrida vira 409 na API; o log do servidor não pode ganhar um WARN por isso
+    @Test
+    void cadastrosSimultaneosNaoDeixamWarnNoLog(CapturedOutput saida) throws Exception {
+        String email = "semaviso" + sufixoUnico().toLowerCase() + "@email.com";
+        List<Integer> codigos = emParalelo(8, () -> postJson("/api/auth/register", null, """
+                {"nome": "Pessoa", "email": "%s", "senha": "Senha@123"}""".formatted(email)).andReturn().getResponse().getStatus());
+
+        assertThat(codigos).filteredOn(codigo -> codigo == 201).hasSize(1);
+        assertThat(saida.getOut().lines().filter(linha -> linha.contains(" WARN ") || linha.contains(" ERROR ")))
+                .noneMatch(linha -> linha.contains("org.hibernate.orm.jdbc.error"));
     }
 
     private int mudarStatus(long relato, String status, String token) throws Exception {
