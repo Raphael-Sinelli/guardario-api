@@ -3,6 +3,7 @@ package br.com.fiap.guardario.assembler;
 import br.com.fiap.guardario.controller.AlertaController;
 import br.com.fiap.guardario.controller.AreaController;
 import br.com.fiap.guardario.controller.EstacaoController;
+import br.com.fiap.guardario.dto.EstatisticaLeiturasResponse;
 import br.com.fiap.guardario.dto.LeituraRegistradaResponse;
 import br.com.fiap.guardario.dto.LeituraResponse;
 import org.springframework.hateoas.EntityModel;
@@ -25,6 +26,14 @@ public class LeituraModelAssembler implements RepresentationModelAssembler<Leitu
     }
 
     // resposta do POST de leitura: aponta para a leitura criada, a estação, a área e, se nasceu, o alerta automático
+    // a estatística aponta para a própria janela (self), para a estação e para o histórico de onde ela sai
+    public EntityModel<EstatisticaLeiturasResponse> toModel(Long estacaoId, int horas, EstatisticaLeiturasResponse estatistica) {
+        return EntityModel.of(estatistica,
+                linkTo(methodOn(EstacaoController.class).estatisticas(estacaoId, horas)).withSelfRel(),
+                linkTo(methodOn(EstacaoController.class).buscarPorId(estacaoId)).withRel("estacao"),
+                linkTo(methodOn(EstacaoController.class).listarLeituras(estacaoId, null)).withRel("leituras").expand());
+    }
+
     public EntityModel<LeituraRegistradaResponse> toModel(LeituraRegistradaResponse registrada) {
         LeituraResponse leitura = registrada.leitura();
         EntityModel<LeituraRegistradaResponse> model = EntityModel.of(registrada,

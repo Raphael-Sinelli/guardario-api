@@ -316,7 +316,8 @@ As respostas usam o formato HAL. As listas vêm com os itens em `_embedded`, os 
 | Leitura | `estacao`, `estatisticas-24h`. Na resposta do registro: `estacao`, `area` e, quando a leitura abre um alerta automático, `alerta` | nenhuma: leitura não muda depois de gravada |
 | Área | `estacoes`, `abrigos-com-vaga`, `alertas-ativos` | ADMIN: `atualizar` e, se a área não tem estações, abrigos, alertas, relatos nem moradores, `excluir` |
 | Linha do ranking | `area`, `abrigos-com-vaga` | nenhuma: é um relatório |
-| Usuário | `area`; para o ADMIN, também `usuarios` | ADMIN: `alterar-papel`, menos no registro dele mesmo, que não pode mudar o próprio papel |
+| Usuário (também no `/api/auth/me`) | `area`; no próprio cadastro, `meus-relatos`; para o ADMIN, também `usuarios` | ADMIN: `alterar-papel`, menos no registro dele mesmo, que não pode mudar o próprio papel |
+| Estatística das leituras | `estacao`, `leituras`; o `self` guarda a janela pedida (`?horas=24`) | nenhuma: é um relatório |
 
 Quem não está logado não recebe link de ação. O `excluir` só aparece quando a exclusão vai dar certo: numa lista, uma consulta agregada por página (`AreaRiscoRepository.buscarIdsComVinculos`, `AlertaRepository.buscarEstacaoIdsComAlertas`) diz quais itens têm vínculo, sem uma consulta por item. O link orienta o cliente, mas não substitui a checagem: o servidor confere a permissão em toda requisição.
 

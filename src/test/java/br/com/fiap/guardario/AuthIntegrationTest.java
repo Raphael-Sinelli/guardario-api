@@ -102,6 +102,18 @@ class AuthIntegrationTest extends IntegracaoBase {
                 .andExpect(jsonPath("$.papel").value("CIDADAO"));
     }
 
+    // o /me também é HATEOAS: os campos de sempre, mais o self do cadastro e os recursos ligados ao usuário
+    @Test
+    void meTrazOsLinksDoUsuario() throws Exception {
+        mockMvc.perform(get("/api/auth/me").header(HttpHeaders.AUTHORIZATION, bearer(tokenCidadao())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.email").value(CIDADAO))
+                .andExpect(jsonPath("$._links.self.href", containsString("/api/usuarios/")))
+                .andExpect(jsonPath("$._links.meus-relatos.href", containsString("/api/relatos/meus")))
+                .andExpect(jsonPath("$._links.area.href", containsString("/api/areas/")))
+                .andExpect(jsonPath("$._links.usuarios").doesNotExist());
+    }
+
     // o app pode mandar o email com o espaço que o teclado do celular coloca depois do autocompletar
     @Test
     void loginAceitaEmailComEspacoEmVolta() throws Exception {

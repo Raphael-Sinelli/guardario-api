@@ -1,6 +1,7 @@
 package br.com.fiap.guardario.assembler;
 
 import br.com.fiap.guardario.controller.AreaController;
+import br.com.fiap.guardario.controller.RelatoController;
 import br.com.fiap.guardario.controller.UsuarioController;
 import br.com.fiap.guardario.dto.UsuarioResponse;
 import br.com.fiap.guardario.model.Papel;
@@ -12,7 +13,7 @@ import org.springframework.stereotype.Component;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 
-// usado só nas rotas /api/usuarios, que já são exclusivas do ADMIN
+// usado nas rotas /api/usuarios (o ADMIN vê todos; o usuário, o próprio cadastro) e no /api/auth/me
 @Component
 public class UsuarioModelAssembler implements RepresentationModelAssembler<UsuarioResponse, EntityModel<UsuarioResponse>> {
 
@@ -34,6 +35,11 @@ public class UsuarioModelAssembler implements RepresentationModelAssembler<Usuar
 
         if (usuario.areaId() != null) {
             model.add(linkTo(methodOn(AreaController.class).buscarPorId(usuario.areaId())).withRel("area"));
+        }
+        // quem vê o próprio cadastro (no /me ou no /api/usuarios/{id}) também chega aos próprios relatos
+        boolean ehOLogado = SecurityUtils.usuarioOpcional().map(logado -> logado.getId().equals(usuario.id())).orElse(false);
+        if (ehOLogado) {
+            model.add(linkTo(methodOn(RelatoController.class).meus(null)).withRel("meus-relatos").expand());
         }
         return model;
     }

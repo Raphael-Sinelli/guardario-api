@@ -1,5 +1,6 @@
 package br.com.fiap.guardario.controller;
 
+import br.com.fiap.guardario.assembler.UsuarioModelAssembler;
 import br.com.fiap.guardario.dto.AuthResponse;
 import br.com.fiap.guardario.dto.LoginRequest;
 import br.com.fiap.guardario.dto.RegisterRequest;
@@ -11,6 +12,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.hateoas.EntityModel;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
@@ -24,6 +26,7 @@ import java.net.URI;
 public class AuthController {
 
     private final AuthService authService;
+    private final UsuarioModelAssembler assembler;
 
     @PostMapping("/register")
     @SecurityRequirements
@@ -52,10 +55,11 @@ public class AuthController {
     }
 
     @GetMapping("/me")
-    @Operation(summary = "Dados do usuário dono do token", description = "Qualquer usuário logado. O app usa para saber o nome e o papel de quem entrou; a senha nunca aparece.")
+    @Operation(summary = "Dados do usuário dono do token", description = "Qualquer usuário logado. O app usa para saber o nome e o papel de quem entrou; a senha nunca aparece. "
+            + "Os links levam ao cadastro (self), à área onde a pessoa mora e aos relatos dela.")
     @ApiResponse(responseCode = "200", description = "Usuário logado")
     @ApiResponse(responseCode = "401", description = "Sem token, ou token inválido ou expirado")
-    public ResponseEntity<UsuarioResponse> me() {
-        return ResponseEntity.ok(authService.usuarioAtual());
+    public ResponseEntity<EntityModel<UsuarioResponse>> me() {
+        return ResponseEntity.ok(assembler.toModel(authService.usuarioAtual()));
     }
 }

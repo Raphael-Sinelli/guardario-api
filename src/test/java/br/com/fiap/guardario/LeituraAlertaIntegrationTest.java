@@ -351,6 +351,17 @@ class LeituraAlertaIntegrationTest extends IntegracaoBase {
                 .andExpect(status().isNoContent());
     }
 
+    // a estatística também é HATEOAS: self com a janela pedida, a estação e o histórico de leituras
+    @Test
+    void estatisticaTrazOsLinksDaEstacao() throws Exception {
+        mockMvc.perform(get("/api/estacoes/1/leituras/estatisticas").param("horas", "24"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.quantidadeLeituras").isNumber())
+                .andExpect(jsonPath("$._links.self.href", endsWith("/api/estacoes/1/leituras/estatisticas?horas=24")))
+                .andExpect(jsonPath("$._links.estacao.href", endsWith("/api/estacoes/1")))
+                .andExpect(jsonPath("$._links.leituras.href", endsWith("/api/estacoes/1/leituras")));
+    }
+
     @Test
     void leituraComDataNoFuturoDevolve400() throws Exception {
         long estacao = criarEstacao(criarArea("Área Futuro " + sufixoUnico()));

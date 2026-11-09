@@ -168,14 +168,14 @@ public class EstacaoController {
     @GetMapping("/{id}/leituras/estatisticas")
     @SecurityRequirements
     @Operation(summary = "Estatística das leituras numa janela de horas",
-            description = "JPQL com count, avg, min e max calculados no banco.")
+            description = "JPQL com count, avg, min e max calculados no banco. Os links levam à estação e ao histórico de leituras.")
     @ApiResponse(responseCode = "200", description = "Estatística da janela pedida")
     @ApiResponse(responseCode = "400", description = "Janela fora de 1 a 720 horas")
     @ApiResponse(responseCode = "404", description = "Estação não existe")
-    public ResponseEntity<EstatisticaLeiturasResponse> estatisticas(
+    public ResponseEntity<EntityModel<EstatisticaLeiturasResponse>> estatisticas(
             @PathVariable @Positive Long id,
             @Parameter(description = "Janela em horas (1 a 720)", example = "24")
             @RequestParam(defaultValue = "24") @Positive @Max(720) Integer horas) {
-        return ResponseEntity.ok(leituraService.estatisticas(id, horas));
+        return ResponseEntity.ok(leituraAssembler.toModel(id, horas, leituraService.estatisticas(id, horas)));
     }
 }

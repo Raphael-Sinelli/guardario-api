@@ -358,7 +358,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
-                  "pm.test(\"Email do token\", () => pm.expect(pm.response.json().email).to.eql(\"cidadao@guardario.com\"));"
+                  "pm.test(\"Email do token\", () => pm.expect(pm.response.json().email).to.eql(\"cidadao@guardario.com\"));",
+                  "pm.test(\"Links do usuário\", () => pm.expect(pm.response.json()._links).to.have.property(\"meus-relatos\"));"
                 ]
               }
             }
@@ -1520,7 +1521,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
-                  "pm.test(\"Tem leituras\", () => pm.expect(pm.response.json().quantidadeLeituras).to.be.above(0));"
+                  "pm.test(\"Tem leituras\", () => pm.expect(pm.response.json().quantidadeLeituras).to.be.above(0));",
+                  "pm.test(\"Links da estatística\", () => pm.expect(pm.response.json()._links).to.have.property(\"estacao\"));"
                 ]
               }
             }
