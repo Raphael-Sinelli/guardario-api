@@ -11,6 +11,7 @@ import br.com.fiap.guardario.security.RestAccessDeniedHandler;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
@@ -37,6 +38,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingPathVariableException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
@@ -58,7 +60,10 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @RestControllerAdvice
+@RequiredArgsConstructor
 public class GlobalExceptionHandler {
+
+    private final RotasDaApi rotas;
 
     // ---------- 404 ----------
 
@@ -220,7 +225,12 @@ public class GlobalExceptionHandler {
 
     // ?status=XYZ ou /api/areas/abc: erro de um parâmetro, no mesmo formato do /api/areas/0 (@Positive), com o campo em errors
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
-    public ResponseEntity<ValidationErrorResponse> tipoInvalido(MethodArgumentTypeMismatchException ex, HttpServletRequest request) {
+    public ResponseEntity<?> tipoInvalido(MethodArgumentTypeMismatchException ex, HttpServletRequest request) {
+        // PUT /api/alertas/ativos cai no PUT /api/alertas/{id}, e "ativos" não vira número. Mas o caminho é uma rota
+        // fixa, que só não aceita o método: é 405 com o Allow dela, e não 400
+        if (ex.getParameter().hasParameterAnnotation(PathVariable.class) && rotas.rotaFixaNaoAceita(request)) {
+            return metodoNaoAceito(request.getMethod(), rotas.metodosAceitos(request), request);
+        }
         return erroValidacao(List.of(new ErrorFieldCustom(ex.getName(), motivo(ex.getRequiredType()))), request);
     }
 
@@ -268,11 +278,15 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public ResponseEntity<ErrorCustomResponse> metodoNaoSuportado(HttpRequestMethodNotSupportedException ex, HttpServletRequest request) {
-        ResponseEntity<ErrorCustomResponse> resposta =
-                erro(HttpStatus.METHOD_NOT_ALLOWED, "Método " + ex.getMethod() + " não é aceito nesta rota", request);
-        // o 405 diz no header Allow quais métodos a rota aceita (RFC 9110)
         Set<HttpMethod> aceitos = ex.getSupportedHttpMethods();
-        if (aceitos == null || aceitos.isEmpty()) {
+        return metodoNaoAceito(ex.getMethod(), aceitos == null ? Set.of() : aceitos, request);
+    }
+
+    // o 405 diz no header Allow quais métodos a rota aceita (RFC 9110)
+    private ResponseEntity<ErrorCustomResponse> metodoNaoAceito(String metodo, Set<HttpMethod> aceitos, HttpServletRequest request) {
+        ResponseEntity<ErrorCustomResponse> resposta =
+                erro(HttpStatus.METHOD_NOT_ALLOWED, "Método " + metodo + " não é aceito nesta rota", request);
+        if (aceitos.isEmpty()) {
             return resposta;
         }
         return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).allow(aceitos.toArray(HttpMethod[]::new))

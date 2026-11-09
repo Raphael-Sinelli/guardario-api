@@ -1,6 +1,9 @@
 package br.com.fiap.guardario;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 
@@ -9,6 +12,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.request;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -208,6 +212,33 @@ class ErrosPadronizadosIntegrationTest extends IntegracaoBase {
                         .contentType(MediaType.APPLICATION_JSON).accept(MediaType.APPLICATION_JSON)
                         .content("{\"nivelCm\": 78, \"chuvaMmH\": 1}"))
                 .andExpect(status().isCreated());
+    }
+
+    // rota fixa (/ativos, /criticas, /ranking, /disponiveis, /meus) com um método que ela não aceita: 405 com o Allow
+    // dela. Antes, o PUT /api/alertas/ativos caía no PUT /api/alertas/{id} e dava 400 por "ativos" não ser número
+    @ParameterizedTest(name = "{0} {1}")
+    @CsvSource({
+            "PUT, /api/alertas/ativos", "DELETE, /api/alertas/ativos",
+            "PUT, /api/estacoes/criticas", "DELETE, /api/estacoes/criticas",
+            "PUT, /api/areas/ranking", "DELETE, /api/areas/ranking",
+            "PUT, /api/abrigos/disponiveis", "DELETE, /api/abrigos/disponiveis",
+            "PUT, /api/relatos/meus", "DELETE, /api/relatos/meus"
+    })
+    void rotaFixaComMetodoQueElaNaoAceitaDevolve405(String metodo, String rota) throws Exception {
+        mockMvc.perform(request(HttpMethod.valueOf(metodo), rota).header(HttpHeaders.AUTHORIZATION, bearer(tokenAdmin()))
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isMethodNotAllowed())
+                .andExpect(jsonPath("$.status").value(405))
+                .andExpect(header().string(HttpHeaders.ALLOW, "GET,HEAD,OPTIONS"));
+    }
+
+    // fora das rotas fixas, id que não é número continua sendo erro do parâmetro
+    @Test
+    void idQueNaoEhNumeroContinuaDevolvendo400() throws Exception {
+        mockMvc.perform(request(HttpMethod.PUT, "/api/alertas/abc").header(HttpHeaders.AUTHORIZATION, bearer(tokenAdmin()))
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0].field").value("id"));
     }
 
     // método que a rota não aceita: 405 no JSON padrão e o header Allow com os métodos que ela aceita

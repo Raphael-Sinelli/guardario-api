@@ -4054,6 +4054,60 @@
               }
             }
           ]
+        },
+        {
+          "name": "Método que a rota fixa não aceita (405, e não 400)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/alertas/ativos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "alertas",
+                "ativos"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAgente}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 405\", () => pm.response.to.have.status(405));",
+                  "pm.test(\"Allow da rota fixa\", () => pm.expect(pm.response.headers.get(\"Allow\")).to.eql(\"GET,HEAD,OPTIONS\"));"
+                ]
+              }
+            }
+          ]
         }
       ]
     },
