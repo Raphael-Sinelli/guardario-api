@@ -4,6 +4,7 @@ import br.com.fiap.guardario.dto.ErrorCustomResponse;
 import io.swagger.v3.oas.annotations.Hidden;
 import jakarta.servlet.RequestDispatcher;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.boot.webmvc.error.ErrorController;
 import br.com.fiap.guardario.security.JsonErrorWriter;
 import org.springframework.http.HttpHeaders;
@@ -25,8 +26,14 @@ import java.time.Instant;
 @RestController
 public class PaginaDeErroController implements ErrorController {
 
+    private final RotasDaApi rotas;
+
+    public PaginaDeErroController(RotasDaApi rotas) {
+        this.rotas = rotas;
+    }
+
     @RequestMapping("/error")
-    public ResponseEntity<ErrorCustomResponse> erro(HttpServletRequest request) {
+    public ResponseEntity<ErrorCustomResponse> erro(HttpServletRequest request, HttpServletResponse response) {
         Object codigo = request.getAttribute(RequestDispatcher.ERROR_STATUS_CODE);
         HttpStatus status = codigo instanceof Integer numero ? HttpStatus.resolve(numero) : null;
         if (status == null) {
@@ -39,6 +46,12 @@ public class PaginaDeErroController implements ErrorController {
         ResponseEntity.BodyBuilder resposta = ResponseEntity.status(status).contentType(MediaType.APPLICATION_JSON);
         if (status == HttpStatus.UNAUTHORIZED) {
             resposta.header(HttpHeaders.WWW_AUTHENTICATE, JsonErrorWriter.desafioBearer(request));
+        }
+        // o TRACE chega aqui recusado pelo Tomcat, que pôs no Allow os métodos do servlet inteiro; vale o Allow da rota
+        if (status == HttpStatus.METHOD_NOT_ALLOWED) {
+            HttpHeaders allow = new HttpHeaders();
+            allow.setAllow(rotas.metodosAceitos(caminho.substring(request.getContextPath().length())));
+            response.setHeader(HttpHeaders.ALLOW, allow.getFirst(HttpHeaders.ALLOW) == null ? "" : allow.getFirst(HttpHeaders.ALLOW));
         }
         return resposta.body(corpo);
     }

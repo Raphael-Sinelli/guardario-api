@@ -278,8 +278,12 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public ResponseEntity<ErrorCustomResponse> metodoNaoSuportado(HttpRequestMethodNotSupportedException ex, HttpServletRequest request) {
-        Set<HttpMethod> aceitos = ex.getSupportedHttpMethods();
-        return metodoNaoAceito(ex.getMethod(), aceitos == null ? Set.of() : aceitos, request);
+        // o Spring junta no 405 os métodos de toda rota que casa com o caminho; o Allow lista só os da rota de verdade
+        Set<HttpMethod> aceitos = rotas.metodosAceitos(request);
+        if (aceitos.isEmpty() && ex.getSupportedHttpMethods() != null) {
+            aceitos = ex.getSupportedHttpMethods();
+        }
+        return metodoNaoAceito(ex.getMethod(), aceitos, request);
     }
 
     // o 405 diz no header Allow quais métodos a rota aceita (RFC 9110)

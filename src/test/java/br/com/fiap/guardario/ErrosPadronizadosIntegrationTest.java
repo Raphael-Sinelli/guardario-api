@@ -247,8 +247,12 @@ class ErrosPadronizadosIntegrationTest extends IntegracaoBase {
         mockMvc.perform(delete("/api/areas").header(HttpHeaders.AUTHORIZATION, bearer(tokenAdmin())))
                 .andExpect(status().isMethodNotAllowed())
                 .andExpect(jsonPath("$.status").value(405))
-                .andExpect(header().string(HttpHeaders.ALLOW, containsString("GET")))
-                .andExpect(header().string(HttpHeaders.ALLOW, containsString("POST")));
+                .andExpect(header().string(HttpHeaders.ALLOW, "GET,HEAD,POST,OPTIONS"));
+        // o Allow lista só o que a rota aceita: /api/alertas/ativos é só GET, mesmo com PUT e DELETE em /api/alertas/{id}
+        mockMvc.perform(post("/api/alertas/ativos").header(HttpHeaders.AUTHORIZATION, bearer(tokenAdmin()))
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isMethodNotAllowed())
+                .andExpect(header().string(HttpHeaders.ALLOW, "GET,HEAD,OPTIONS"));
     }
 
     // JSON válido, mas no formato errado: a API esperava um objeto e chegou uma lista ou um valor solto

@@ -386,7 +386,7 @@ Os demais erros seguem o formato `ErrorCustomResponse`:
 | 401 | Sem token, token inválido ou expirado, login com senha errada. Todo 401 traz o header `WWW-Authenticate: Bearer`, com `error="invalid_token"` quando o token enviado não valeu (RFC 6750) |
 | 403 | Papel sem permissão (mesma mensagem no `SecurityConfig` e no `@PreAuthorize`) ou recurso de outra pessoa (a mensagem diz o motivo) |
 | 404 | Id inexistente, ou rota que não existe quando a requisição tem token. Sem token, a rota desconhecida dá 401: toda rota fora da lista pública exige login, e a segurança responde antes de o Spring procurar a rota |
-| 405 | Método HTTP que a rota não aceita, com o header `Allow`. Vale também para as rotas fixas (`/ativos`, `/criticas`, `/ranking`, `/disponiveis`, `/meus`): `PUT /api/alertas/ativos` dá 405, e não o 400 de "id deve ser um número", que continua valendo para id que não é número fora delas |
+| 405 | Método HTTP que a rota não aceita, com o header `Allow`, que lista só os métodos que a rota aceita de verdade (o `RotasDaApi` lê os mapeamentos do Spring; o GET também atende o HEAD, e toda rota atende o OPTIONS), inclusive no TRACE, que o Tomcat recusa. Vale também para as rotas fixas (`/ativos`, `/criticas`, `/ranking`, `/disponiveis`, `/meus`): `PUT /api/alertas/ativos` dá 405, e não o 400 de "id deve ser um número", que continua valendo para id que não é número fora delas |
 | 406 | `Accept` com um formato que a API não produz, como `text/plain` ou `application/xml`. Nas escritas (POST, PUT e PATCH), o `NegociacaoConfig` confere o `Accept` antes de o método rodar, então o 406 sai sem gravar nada. O corpo vem no mesmo JSON de erro: o HTTP permite que a resposta de erro ignore o `Accept`, e todo erro da API sai em JSON, peça o cliente o formato que pedir |
 | 409 | Regra de negócio: email repetido, transição de status inválida, abrigo lotado ou fechado, alerta já encerrado, exclusão de registro com vínculos, ou duas requisições alterando o mesmo registro ao mesmo tempo |
 | 415 | Corpo enviado sem `Content-Type: application/json` (no Postman, body raw como "Text") |
@@ -465,7 +465,7 @@ As rotas de listagem aceitam também `page`, `size` e `sort`. A descrição de c
 ```
 src/main/java/br/com/fiap/guardario
 ├── assembler        links HATEOAS de cada recurso e o RespostaHal (lista vazia com _embedded, links da página fora do intervalo)
-├── configurations   SecurityConfig, GlobalExceptionHandler, PaginaDeErroController, OpenApiConfig, PaginacaoConfig e @CamposDeOrdenacao, NegociacaoConfig, IdiomaConfig, JacksonConfig, CacheConfig, TomcatConfig e ErroDoTomcatEmJson, DataInitializer, AdminInitializer
+├── configurations   SecurityConfig, GlobalExceptionHandler, PaginaDeErroController, OpenApiConfig, PaginacaoConfig e @CamposDeOrdenacao, NegociacaoConfig, RotasDaApi, IdiomaConfig, JacksonConfig, CacheConfig, TomcatConfig e ErroDoTomcatEmJson, DataInitializer, AdminInitializer
 ├── controller       rotas REST e documentação do Swagger
 ├── dto              records de entrada e saída
 ├── exceptions       exceções próprias: recurso não encontrado (404), regra de negócio (409) e campo inválido conferido no service (400)

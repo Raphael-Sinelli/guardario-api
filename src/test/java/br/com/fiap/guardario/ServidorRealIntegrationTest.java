@@ -45,6 +45,16 @@ class ServidorRealIntegrationTest {
         assertThat(resposta).contains("\"status\":400").doesNotContain("<html");
     }
 
+    // o TRACE é recusado pelo Tomcat, que punha no Allow os métodos do servlet inteiro; o Allow lista os da rota
+    @Test
+    void traceDevolve405ComOAllowDaRota() throws IOException {
+        String resposta = enviar("TRACE /api/areas HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n");
+
+        assertThat(resposta).startsWith("HTTP/1.1 405");
+        assertThat(resposta).containsIgnoringCase("Allow: GET,HEAD,POST,OPTIONS");
+        assertThat(resposta).contains("\"status\":405");
+    }
+
     // o caminho normal continua igual: o erro tratado pelo Spring não passa pela válvula
     @Test
     void erroTratadoPeloSpringContinuaComAMensagemDele() throws IOException {
