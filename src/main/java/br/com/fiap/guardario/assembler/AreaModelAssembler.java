@@ -1,5 +1,7 @@
 package br.com.fiap.guardario.assembler;
 
+import br.com.fiap.guardario.dto.AreaRequest;
+import org.springframework.http.HttpMethod;
 import br.com.fiap.guardario.controller.AbrigoController;
 import br.com.fiap.guardario.controller.AlertaController;
 import br.com.fiap.guardario.controller.AreaController;
@@ -54,9 +56,9 @@ public class AreaModelAssembler implements RepresentationModelAssembler<AreaResp
 
         // ações só aparecem para quem pode executá-las, e excluir só quando a área não tem vínculos (senão daria 409)
         if (SecurityUtils.temPapel(Papel.ADMIN)) {
-            model.add(linkTo(methodOn(AreaController.class).atualizar(area.id(), null)).withRel("atualizar").withTitle("PUT com a área inteira"));
+            Acoes.adicionar(model, linkTo(methodOn(AreaController.class).atualizar(area.id(), null)).withRel("atualizar").withTitle("PUT com a área inteira"), HttpMethod.PUT, AreaRequest.class);
             if (excluiveis.contains(area.id())) {
-                model.add(linkTo(methodOn(AreaController.class).excluir(area.id())).withRel("excluir").withTitle("DELETE"));
+                Acoes.adicionar(model, linkTo(methodOn(AreaController.class).excluir(area.id())).withRel("excluir").withTitle("DELETE"), HttpMethod.DELETE, null);
             }
         }
         return model;

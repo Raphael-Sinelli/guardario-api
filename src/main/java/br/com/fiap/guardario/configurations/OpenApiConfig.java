@@ -158,6 +158,7 @@ public class OpenApiConfig {
 
     // Sem produces nos mapeamentos, o springdoc documenta o sucesso com o tipo genérico (asterisco/asterisco). A API manda
     // application/hal+json nos recursos com links (EntityModel, PagedModel, CollectionModel) e application/json no resto.
+    // Os recursos com links também saem em application/prs.hal-forms+json para quem pedir, com os templates das ações.
     private void trocarTipoGenerico(Content conteudo) {
         if (conteudo == null || !conteudo.containsKey("*/*")) {
             return;
@@ -167,6 +168,9 @@ public class OpenApiConfig {
         String nome = referencia.substring(referencia.lastIndexOf('/') + 1);
         boolean temLinks = nome.startsWith("EntityModel") || nome.startsWith("PagedModel") || nome.startsWith("CollectionModel");
         conteudo.addMediaType(temLinks ? "application/hal+json" : "application/json", corpo);
+        if (temLinks) {
+            conteudo.addMediaType("application/prs.hal-forms+json", new MediaType().schema(corpo.getSchema()));
+        }
     }
 
     private void registrarSchema(Components components, Class<?> tipo) {

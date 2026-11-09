@@ -1,5 +1,8 @@
 package br.com.fiap.guardario.assembler;
 
+import br.com.fiap.guardario.dto.LeituraRequest;
+import br.com.fiap.guardario.dto.EstacaoRequest;
+import org.springframework.http.HttpMethod;
 import br.com.fiap.guardario.controller.AreaController;
 import br.com.fiap.guardario.controller.EstacaoController;
 import br.com.fiap.guardario.dto.EstacaoResponse;
@@ -61,13 +64,13 @@ public class EstacaoModelAssembler implements RepresentationModelAssembler<Estac
 
         // só estação ATIVA recebe leitura
         if (estacao.status() == StatusEstacao.ATIVA && SecurityUtils.isAgenteOuAdmin()) {
-            model.add(linkTo(methodOn(EstacaoController.class).registrarLeitura(estacao.id(), null)).withRel("registrar-leitura").withTitle("POST com {\"nivelCm\": 120, \"chuvaMmH\": 0}"));
+            Acoes.adicionar(model, linkTo(methodOn(EstacaoController.class).registrarLeitura(estacao.id(), null)).withRel("registrar-leitura").withTitle("POST com {\"nivelCm\": 120, \"chuvaMmH\": 0}"), HttpMethod.POST, LeituraRequest.class);
         }
         // excluir só aparece quando a estação não tem alerta no histórico (senão daria 409)
         if (SecurityUtils.temPapel(Papel.ADMIN)) {
-            model.add(linkTo(methodOn(EstacaoController.class).atualizar(estacao.id(), null)).withRel("atualizar").withTitle("PUT com a estação inteira"));
+            Acoes.adicionar(model, linkTo(methodOn(EstacaoController.class).atualizar(estacao.id(), null)).withRel("atualizar").withTitle("PUT com a estação inteira"), HttpMethod.PUT, EstacaoRequest.class);
             if (excluiveis.contains(estacao.id())) {
-                model.add(linkTo(methodOn(EstacaoController.class).excluir(estacao.id())).withRel("excluir").withTitle("DELETE"));
+                Acoes.adicionar(model, linkTo(methodOn(EstacaoController.class).excluir(estacao.id())).withRel("excluir").withTitle("DELETE"), HttpMethod.DELETE, null);
             }
         }
         return model;

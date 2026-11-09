@@ -1,5 +1,7 @@
 package br.com.fiap.guardario.assembler;
 
+import br.com.fiap.guardario.dto.AlterarPapelRequest;
+import org.springframework.http.HttpMethod;
 import br.com.fiap.guardario.controller.AreaController;
 import br.com.fiap.guardario.controller.RelatoController;
 import br.com.fiap.guardario.controller.UsuarioController;
@@ -29,7 +31,7 @@ public class UsuarioModelAssembler implements RepresentationModelAssembler<Usuar
                     .map(logado -> logado.getId().equals(usuario.id()))
                     .orElse(false);
             if (!ehOProprioUsuario) {
-                model.add(linkTo(methodOn(UsuarioController.class).alterarPapel(usuario.id(), null)).withRel("alterar-papel").withTitle("PUT com {\"papel\": \"AGENTE\"}"));
+                Acoes.adicionar(model, linkTo(methodOn(UsuarioController.class).alterarPapel(usuario.id(), null)).withRel("alterar-papel").withTitle("PUT com {\"papel\": \"AGENTE\"}"), HttpMethod.PUT, AlterarPapelRequest.class);
             }
         }
 

@@ -134,6 +134,8 @@ class InfraIntegrationTest extends IntegracaoBase {
         mockMvc.perform(get("/v3/api-docs"))
                 .andExpect(jsonPath("$.paths['/api/areas/{id}'].get.responses['200'].content['application/hal+json']").exists())
                 .andExpect(jsonPath("$.paths['/api/areas'].get.responses['200'].content['application/hal+json']").exists())
+                .andExpect(jsonPath("$.paths['/api/areas/{id}'].get.responses['200'].content['application/prs.hal-forms+json']").exists())
+                .andExpect(jsonPath("$.paths['/api/auth/login'].post.responses['200'].content['application/prs.hal-forms+json']").doesNotExist())
                 .andExpect(jsonPath("$.paths['/api/auth/login'].post.responses['200'].content['application/json']").exists());
         mockMvc.perform(get("/api/areas/1"))
                 .andExpect(content().contentTypeCompatibleWith("application/hal+json"));

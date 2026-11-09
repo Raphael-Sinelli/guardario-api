@@ -1,5 +1,8 @@
 package br.com.fiap.guardario.assembler;
 
+import br.com.fiap.guardario.dto.RelatoRequest;
+import br.com.fiap.guardario.dto.AlterarStatusRelatoRequest;
+import org.springframework.http.HttpMethod;
 import br.com.fiap.guardario.controller.AreaController;
 import br.com.fiap.guardario.controller.RelatoController;
 import br.com.fiap.guardario.dto.RelatoResponse;
@@ -30,10 +33,10 @@ public class RelatoModelAssembler implements RepresentationModelAssembler<Relato
         if (SecurityUtils.isAgenteOuAdmin()) {
             var alterarStatus = linkTo(methodOn(RelatoController.class).alterarStatus(relato.id(), null));
             if (relato.status() == StatusRelato.ABERTO) {
-                model.add(alterarStatus.withRel("atender").withTitle("PATCH com {\"status\": \"EM_ATENDIMENTO\"}"));
-                model.add(alterarStatus.withRel("descartar").withTitle("PATCH com {\"status\": \"DESCARTADO\"}"));
+                Acoes.adicionar(model, alterarStatus.withRel("atender").withTitle("PATCH com {\"status\": \"EM_ATENDIMENTO\"}"), HttpMethod.PATCH, AlterarStatusRelatoRequest.class);
+                Acoes.adicionar(model, alterarStatus.withRel("descartar").withTitle("PATCH com {\"status\": \"DESCARTADO\"}"), HttpMethod.PATCH, AlterarStatusRelatoRequest.class);
             } else if (relato.status() == StatusRelato.EM_ATENDIMENTO) {
-                model.add(alterarStatus.withRel("resolver").withTitle("PATCH com {\"status\": \"RESOLVIDO\"}"));
+                Acoes.adicionar(model, alterarStatus.withRel("resolver").withTitle("PATCH com {\"status\": \"RESOLVIDO\"}"), HttpMethod.PATCH, AlterarStatusRelatoRequest.class);
             }
         }
 
@@ -44,11 +47,11 @@ public class RelatoModelAssembler implements RepresentationModelAssembler<Relato
         if (ehAutor) {
             model.add(linkTo(methodOn(RelatoController.class).meus(null)).withRel("meus-relatos").expand());
             if (relato.status() == StatusRelato.ABERTO) {
-                model.add(linkTo(methodOn(RelatoController.class).atualizar(relato.id(), null)).withRel("editar").withTitle("PUT com o relato inteiro"));
+                Acoes.adicionar(model, linkTo(methodOn(RelatoController.class).atualizar(relato.id(), null)).withRel("editar").withTitle("PUT com o relato inteiro"), HttpMethod.PUT, RelatoRequest.class);
             }
         }
         if ((ehAutor && relato.status() == StatusRelato.ABERTO) || SecurityUtils.temPapel(Papel.ADMIN)) {
-            model.add(linkTo(methodOn(RelatoController.class).excluir(relato.id())).withRel("excluir").withTitle("DELETE"));
+            Acoes.adicionar(model, linkTo(methodOn(RelatoController.class).excluir(relato.id())).withRel("excluir").withTitle("DELETE"), HttpMethod.DELETE, null);
         }
         return model;
     }

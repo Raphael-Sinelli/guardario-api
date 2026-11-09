@@ -2061,6 +2061,52 @@
           ]
         },
         {
+          "name": "Alerta em HAL-FORMS: templates das ações (AGENTE)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/prs.hal-forms+json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/alertas/{{alertaManualId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "alertas",
+                "{{alertaManualId}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAgente}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Template do encerrar\", () => pm.expect(pm.response.json()._templates.encerrar.method).to.eql(\"PATCH\"));",
+                  "pm.test(\"Campos do editar\", () => pm.expect(pm.response.json()._templates.editar.properties.map(p => p.name)).to.include.members([\"titulo\", \"mensagem\"]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Alerta de mesmo nível na mesma área",
           "request": {
             "method": "POST",

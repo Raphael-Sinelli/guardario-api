@@ -1,5 +1,7 @@
 package br.com.fiap.guardario.assembler;
 
+import br.com.fiap.guardario.dto.AlertaEdicaoRequest;
+import org.springframework.http.HttpMethod;
 import br.com.fiap.guardario.controller.AbrigoController;
 import br.com.fiap.guardario.controller.AlertaController;
 import br.com.fiap.guardario.controller.AreaController;
@@ -33,12 +35,12 @@ public class AlertaModelAssembler implements RepresentationModelAssembler<Alerta
 
         // as ações dependem do estado: alerta encerrado não tem mais o que fazer
         if (alerta.status() == StatusAlerta.ATIVO && SecurityUtils.isAgenteOuAdmin()) {
-            model.add(linkTo(methodOn(AlertaController.class).encerrar(alerta.id())).withRel("encerrar").withTitle("PATCH, sem corpo"));
-            model.add(linkTo(methodOn(AlertaController.class).editar(alerta.id(), null)).withRel("editar").withTitle("PUT com {\"titulo\": \"...\", \"mensagem\": \"...\"}"));
+            Acoes.adicionar(model, linkTo(methodOn(AlertaController.class).encerrar(alerta.id())).withRel("encerrar").withTitle("PATCH, sem corpo"), HttpMethod.PATCH, null);
+            Acoes.adicionar(model, linkTo(methodOn(AlertaController.class).editar(alerta.id(), null)).withRel("editar").withTitle("PUT com {\"titulo\": \"...\", \"mensagem\": \"...\"}"), HttpMethod.PUT, AlertaEdicaoRequest.class);
         }
         // excluir só aparece quando dá certo: alerta manual já encerrado (o automático é histórico da estação)
         if (SecurityUtils.temPapel(Papel.ADMIN) && alerta.origem() == OrigemAlerta.MANUAL && alerta.status() == StatusAlerta.ENCERRADO) {
-            model.add(linkTo(methodOn(AlertaController.class).excluir(alerta.id())).withRel("excluir").withTitle("DELETE"));
+            Acoes.adicionar(model, linkTo(methodOn(AlertaController.class).excluir(alerta.id())).withRel("excluir").withTitle("DELETE"), HttpMethod.DELETE, null);
         }
         return model;
     }

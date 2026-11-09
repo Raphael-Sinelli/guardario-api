@@ -25,7 +25,7 @@ import java.util.Set;
 @Configuration
 public class NegociacaoConfig implements WebMvcConfigurer {
 
-    private static final List<MediaType> PRODUZIDOS = List.of(MediaType.APPLICATION_JSON, MediaTypes.HAL_JSON);
+    private static final List<MediaType> PRODUZIDOS = List.of(MediaType.APPLICATION_JSON, MediaTypes.HAL_JSON, MediaTypes.HAL_FORMS_JSON);
     private static final Set<String> ESCRITAS = Set.of(HttpMethod.POST.name(), HttpMethod.PUT.name(), HttpMethod.PATCH.name());
 
     @Override

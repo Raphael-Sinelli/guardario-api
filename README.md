@@ -305,7 +305,7 @@ Limitação conhecida: o Caffeine guarda o cache na memória de cada instância.
 
 ## HATEOAS
 
-As respostas usam o formato HAL. As listas vêm com os itens em `_embedded`, os dados de paginação em `page` e os links de navegação (`first`, `prev`, `self`, `next`, `last`) em `_links`. Lista vazia também traz o `_embedded`, com a lista vazia (`{"_embedded": {"abrigos": []}}`): o HAL padrão omite o `_embedded` nesse caso, e o `RespostaHal` o mantém para o cliente ler sempre o mesmo formato. Na página pedida depois da última, o link `prev` sai (apontaria para outra página vazia) e ficam `first` e `last`. Cada recurso traz o link `self`, os recursos relacionados e as ações possíveis no estado atual para quem fez a requisição. Cada link de ação tem um `title` com o método e o corpo esperado (por exemplo `atender`: `PATCH com {"status": "EM_ATENDIMENTO"}`), porque `atender`, `descartar` e `resolver` levam à mesma URL:
+As respostas usam o formato HAL. As listas vêm com os itens em `_embedded`, os dados de paginação em `page` e os links de navegação (`first`, `prev`, `self`, `next`, `last`) em `_links`. Lista vazia também traz o `_embedded`, com a lista vazia (`{"_embedded": {"abrigos": []}}`): o HAL padrão omite o `_embedded` nesse caso, e o `RespostaHal` o mantém para o cliente ler sempre o mesmo formato. Na página pedida depois da última, o link `prev` sai (apontaria para outra página vazia) e ficam `first` e `last`. Cada recurso traz o link `self`, os recursos relacionados e as ações possíveis no estado atual para quem fez a requisição. Cada link de ação tem um `title` com o método e o corpo esperado (por exemplo `atender`: `PATCH com {"status": "EM_ATENDIMENTO"}`), porque `atender`, `descartar` e `resolver` levam à mesma URL. Quem pedir `Accept: application/prs.hal-forms+json` recebe a mesma resposta em HAL-FORMS, com `_templates`: um template por ação, com o nome do link, o método, o alvo e os campos do corpo, já com as regras da Bean Validation (obrigatório, tamanho, regex) e, nos campos de enum, os valores aceitos. Os templates vêm do `Acoes`, que pendura cada um no link `self`; o HAL continua o formato padrão, sem `_templates`:
 
 | Recurso | Relacionados | Ações (dependem do estado e do papel) |
 |---|---|---|
@@ -465,8 +465,8 @@ As rotas de listagem aceitam também `page`, `size` e `sort`. A descrição de c
 
 ```
 src/main/java/br/com/fiap/guardario
-├── assembler        links HATEOAS de cada recurso e o RespostaHal (lista vazia com _embedded, links da página fora do intervalo)
-├── configurations   SecurityConfig, GlobalExceptionHandler, PaginaDeErroController, OpenApiConfig, PaginacaoConfig e @CamposDeOrdenacao, NegociacaoConfig, RotasDaApi, IdiomaConfig, JacksonConfig, CacheConfig, TomcatConfig e ErroDoTomcatEmJson, DataInitializer, AdminInitializer
+├── assembler        links HATEOAS de cada recurso, o Acoes (templates HAL-FORMS) e o RespostaHal (lista vazia com _embedded, links da página fora do intervalo)
+├── configurations   SecurityConfig, GlobalExceptionHandler, PaginaDeErroController, OpenApiConfig, PaginacaoConfig e @CamposDeOrdenacao, NegociacaoConfig, RotasDaApi, HateoasConfig, IdiomaConfig, JacksonConfig, CacheConfig, TomcatConfig e ErroDoTomcatEmJson, DataInitializer, AdminInitializer
 ├── controller       rotas REST e documentação do Swagger
 ├── dto              records de entrada e saída
 ├── exceptions       exceções próprias: recurso não encontrado (404), regra de negócio (409) e campo inválido conferido no service (400)
