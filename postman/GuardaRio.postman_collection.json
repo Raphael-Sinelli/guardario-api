@@ -497,6 +497,55 @@
           ]
         },
         {
+          "name": "Relato aberto do bairro sobe de prioridade com a EMERGENCIA (AGENTE)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/relatos?areaId=1&tipo=RIO_SUBINDO",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "relatos"
+              ],
+              "query": [
+                {
+                  "key": "areaId",
+                  "value": "1"
+                },
+                {
+                  "key": "tipo",
+                  "value": "RIO_SUBINDO"
+                }
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAgente}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"RIO_SUBINDO passa de 3 para 4\", () => pm.expect(pm.response.json()._embedded.relatos[0].prioridade).to.eql(4));"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Alertas ativos (em cache)",
           "request": {
             "method": "GET",

@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.List;
 
 /*
  * Relatos não entram em cache: têm dado pessoal, são por usuário e mudam o tempo todo.
@@ -29,6 +30,8 @@ import java.time.Instant;
 @Service
 @RequiredArgsConstructor
 public class RelatoServiceImpl implements RelatoService {
+
+    private static final List<StatusRelato> EM_ABERTO = List.of(StatusRelato.ABERTO, StatusRelato.EM_ATENDIMENTO);
 
     private final RelatoRepository relatoRepository;
     private final AreaRiscoRepository areaRepository;
@@ -118,6 +121,18 @@ public class RelatoServiceImpl implements RelatoService {
             }
         }
         relatoRepository.delete(relato);
+    }
+
+    // RN06 acompanha o nível da área: roda na transação de quem mudou o nível (leitura ou estação). Só o relato cuja
+    // prioridade muda é gravado, e a trava pode ter esperado um agente encerrar o relato: o encerrado fica como está
+    @Override
+    @Transactional
+    public void reavaliarPrioridades(AreaRisco area) {
+        for (Relato relato : relatoRepository.buscarEmAbertoComTrava(area.getId(), EM_ABERTO)) {
+            if (EM_ABERTO.contains(relato.getStatus())) {
+                relato.definirPrioridade(area.getNivelAtual());
+            }
+        }
     }
 
     private Relato buscarEntidade(Long id) {

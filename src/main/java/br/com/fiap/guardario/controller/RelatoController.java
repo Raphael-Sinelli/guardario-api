@@ -49,7 +49,8 @@ public class RelatoController {
     @PostMapping
     @Operation(summary = "Envia um relato",
             description = "Qualquer usuário logado. O autor vem do token e a prioridade (1 a 5) é calculada pelo servidor: "
-                    + "base do tipo, +1 se a área estiver em ALERTA ou EMERGENCIA.")
+                    + "base do tipo, +1 se a área estiver em ALERTA ou EMERGENCIA. Enquanto o relato está aberto ou em "
+                    + "atendimento, ela acompanha o nível da área: sobe ou desce quando ele muda.")
     @ApiResponse(responseCode = "201", description = "Relato criado")
     @ApiResponse(responseCode = "400", description = "Campos inválidos (descrição com menos de 10 caracteres, tipo inexistente...)")
     @ApiResponse(responseCode = "401", description = "Sem token")

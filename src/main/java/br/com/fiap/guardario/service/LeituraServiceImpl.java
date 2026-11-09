@@ -32,6 +32,7 @@ public class LeituraServiceImpl implements LeituraService {
     private final AreaRiscoRepository areaRepository;
     private final LeituraRepository leituraRepository;
     private final AlertaService alertaService;
+    private final RelatoService relatoService;
 
     /*
      * Fluxo da leitura que chega da estação (pela ponte MQTT ou por um agente):
@@ -69,6 +70,9 @@ public class LeituraServiceImpl implements LeituraService {
         AreaRisco area = estacao.getArea();
         NivelRisco nivelAnterior = area.getNivelAtual();
         NivelRisco nivelArea = area.recalcularNivel();
+        if (nivelArea != nivelAnterior) {
+            relatoService.reavaliarPrioridades(area); // RN06: os relatos em aberto acompanham o nível novo
+        }
 
         // leitura atrasada não gera alerta: o alerta olha para a situação de agora
         Long alertaGeradoId = null;

@@ -34,6 +34,7 @@ public class EstacaoServiceImpl implements EstacaoService {
     private final AlertaRepository alertaRepository;
     private final LeituraRepository leituraRepository;
     private final AlertaService alertaService;
+    private final RelatoService relatoService;
 
     @Override
     @Transactional(readOnly = true)
@@ -109,9 +110,9 @@ public class EstacaoServiceImpl implements EstacaoService {
         if (areaNova != areaAnterior) {
             areaAnterior.getEstacoes().remove(estacao);
             areaNova.getEstacoes().add(estacao);
-            areaAnterior.recalcularNivel();
+            recalcularNivel(areaAnterior);
         }
-        areaNova.recalcularNivel();
+        recalcularNivel(areaNova);
 
         // RN02 também quando a régua muda: se a leitura atual, ainda recente, SUBIU para ALERTA ou pior por causa das
         // cotas novas, nasce o alerta automático. Só quando sobe: renomear a estação não reabre um alerta que a Defesa
@@ -137,7 +138,15 @@ public class EstacaoServiceImpl implements EstacaoService {
         AreaRisco area = estacao.getArea();
         area.getEstacoes().remove(estacao);
         estacaoRepository.delete(estacao); // as leituras vão junto pelo cascade
-        area.recalcularNivel(); // RN03: sem esta estação, o nível da área pode cair
+        recalcularNivel(area); // RN03: sem esta estação, o nível da área pode cair
+    }
+
+    // RN03 e, se o nível mudou, RN06: os relatos em aberto da área acompanham o nível novo
+    private void recalcularNivel(AreaRisco area) {
+        NivelRisco antes = area.getNivelAtual();
+        if (area.recalcularNivel() != antes) {
+            relatoService.reavaliarPrioridades(area);
+        }
     }
 
     private Estacao buscarEntidade(Long id) {

@@ -158,4 +158,51 @@ class RelatoIntegrationTest extends IntegracaoBase {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"status\": \"" + status + "\"}"));
     }
+    // RN06 acompanha o nível da área: o relato em aberto ganha o +1 quando a área sobe para ALERTA ou pior e perde quando
+    // ela volta; o relato resolvido não muda. O painel do agente passa a mostrar a ordem nova
+    @Test
+    void prioridadeDoRelatoAcompanhaONivelDaArea() throws Exception {
+        long area = criarArea("Área Prioridade " + sufixoUnico());
+        long estacao = criarEstacao(area);
+        String cidadao = tokenCidadao();
+        String agente = tokenAgente();
+        long rioSubindo = criarRelato(cidadao, area, "RIO_SUBINDO");
+        long resolvido = criarRelato(cidadao, area, "OUTRO");
+        levarAoStatus(resolvido, "EM_ATENDIMENTO", agente);
+        levarAoStatus(resolvido, "RESOLVIDO", agente);
+        assertPrioridade(rioSubindo, agente, 3);
+
+        registrarLeitura(estacao, 320, 0.0).andExpect(jsonPath("$.nivelArea").value("EMERGENCIA"));
+        assertPrioridade(rioSubindo, agente, 4);
+        assertPrioridade(resolvido, agente, 1);
+        mockMvc.perform(get("/api/relatos").param("areaId", String.valueOf(area)).header(HttpHeaders.AUTHORIZATION, bearer(agente)))
+                .andExpect(jsonPath("$._embedded.relatos[0].id").value((int) rioSubindo))
+                .andExpect(jsonPath("$._embedded.relatos[0].prioridade").value(4));
+
+        registrarLeitura(estacao, 10, 0.0).andExpect(jsonPath("$.nivelArea").value("NORMAL"));
+        assertPrioridade(rioSubindo, agente, 3);
+
+        // o nível também muda quando a estação é desativada: a prioridade acompanha
+        registrarLeitura(estacao, 320, 0.0);
+        assertPrioridade(rioSubindo, agente, 4);
+        String atual = mockMvc.perform(get("/api/estacoes/" + estacao)).andReturn().getResponse().getContentAsString();
+        mockMvc.perform(put("/api/estacoes/" + estacao).header(HttpHeaders.AUTHORIZATION, bearer(tokenAdmin()))
+                        .contentType(MediaType.APPLICATION_JSON).content("""
+                                {"codigo": "%s", "nome": "Estação de teste", "rio": "Rio Teste", "cotaAtencaoCm": 100,
+                                 "cotaAlertaCm": 200, "cotaTransbordoCm": 300, "areaId": %d, "status": "INATIVA"}"""
+                                .formatted(com.jayway.jsonpath.JsonPath.read(atual, "$.codigo"), area)))
+                .andExpect(status().isOk());
+        assertPrioridade(rioSubindo, agente, 3);
+    }
+
+    private void levarAoStatus(long relato, String status, String token) throws Exception {
+        mockMvc.perform(patch("/api/relatos/" + relato + "/status").header(HttpHeaders.AUTHORIZATION, bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"status\": \"" + status + "\"}"))
+                .andExpect(status().isOk());
+    }
+
+    private void assertPrioridade(long relato, String token, int prioridade) throws Exception {
+        mockMvc.perform(get("/api/relatos/" + relato).header(HttpHeaders.AUTHORIZATION, bearer(token)))
+                .andExpect(jsonPath("$.prioridade").value(prioridade));
+    }
 }

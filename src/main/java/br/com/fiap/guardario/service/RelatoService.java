@@ -3,6 +3,7 @@ package br.com.fiap.guardario.service;
 import br.com.fiap.guardario.dto.AlterarStatusRelatoRequest;
 import br.com.fiap.guardario.dto.RelatoRequest;
 import br.com.fiap.guardario.dto.RelatoResponse;
+import br.com.fiap.guardario.model.AreaRisco;
 import br.com.fiap.guardario.model.StatusRelato;
 import br.com.fiap.guardario.model.TipoRelato;
 import org.springframework.data.domain.Page;
@@ -26,4 +27,7 @@ public interface RelatoService {
     RelatoResponse alterarStatus(Long id, AlterarStatusRelatoRequest request);
 
     void excluir(Long id);
+
+    // RN06: o nível da área mudou, e os relatos em aberto dela ganham ou perdem o +1 da prioridade
+    void reavaliarPrioridades(AreaRisco area);
 }
