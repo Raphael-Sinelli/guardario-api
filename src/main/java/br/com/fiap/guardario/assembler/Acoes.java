@@ -11,6 +11,7 @@ import org.springframework.hateoas.mediatype.ConfigurableAffordance;
 import org.springframework.hateoas.mediatype.PropertyUtils;
 import org.springframework.http.HttpMethod;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -25,13 +26,23 @@ final class Acoes {
     }
 
     static void adicionar(RepresentationModel<?> model, Link acao, HttpMethod metodo, Class<?> corpo) {
-        model.add(acao);
-        ConfigurableAffordance template = Affordances.of(acao).afford(metodo).withName(acao.getRel().value());
+        // o linkTo(methodOn(...)) já cria um template com o nome do método Java e os campos como só leitura: ele sai,
+        // e fica só o template montado aqui, com o nome do link
+        Link semTemplateAutomatico = acao.withoutAffordances();
+        ConfigurableAffordance template = Affordances.of(semTemplateAutomatico).afford(metodo)
+                .withName(semTemplateAutomatico.getRel().value());
         if (corpo != null) {
             template = template.withInput(new CamposDoCorpo(corpo));
         }
         var templates = template.build().stream().toList();
-        model.mapLink(IanaLinkRelations.SELF, self -> self.andAffordances(templates));
+
+        // o self ganha o template e continua na mesma posição em _links (o mapLink o mandaria para o fim)
+        List<Link> links = model.getLinks().stream()
+                .map(link -> link.hasRel(IanaLinkRelations.SELF) ? link.andAffordances(templates) : link)
+                .toList();
+        model.removeLinks();
+        model.add(links);
+        model.add(semTemplateAutomatico);
     }
 
     // os campos do record de entrada, como o Spring HATEOAS lê, com dois acertos: record não tem setter, e ele marcaria

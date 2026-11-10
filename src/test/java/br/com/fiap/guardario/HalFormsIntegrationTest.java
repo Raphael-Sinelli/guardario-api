@@ -4,7 +4,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.everyItem;
+import static org.hamcrest.Matchers.matchesPattern;
 import static org.hamcrest.Matchers.endsWith;
 import static org.hamcrest.Matchers.hasItem;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -48,7 +51,28 @@ class HalFormsIntegrationTest extends IntegracaoBase {
                 .andExpect(jsonPath("$._templates.descartar.method").value("PATCH"))
                 .andExpect(jsonPath("$._templates.descartar.properties[?(@.name == 'status')].options.inline[*]").value(hasItem("DESCARTADO")))
                 .andExpect(jsonPath("$._templates.descartar.target", endsWith("/api/relatos/" + relato + "/status")))
-                .andExpect(jsonPath("$._templates.descartar.properties[*].name", hasItem("status")));
+                .andExpect(jsonPath("$._templates.descartar.properties[*].name", hasItem("status")))
+                // só os templates das ações, com o nome do link: nenhum template automático com o nome do método Java
+                .andExpect(jsonPath("$._templates.keys()", containsInAnyOrder("atender", "descartar")));
+    }
+
+    // em todo recurso com ações, os templates são só os das ações, e nenhum campo de entrada sai como só leitura ou
+    // como intervalo de números quando é texto. O self continua o primeiro link
+    @Test
+    void templatesSaoSoOsDasAcoesECamposEditaveis() throws Exception {
+        String admin = tokenAdmin();
+        for (String rota : new String[]{"/api/abrigos/1", "/api/estacoes/1", "/api/usuarios/3", "/api/areas/1"}) {
+            mockMvc.perform(get(rota).header(HttpHeaders.AUTHORIZATION, bearer(admin)).accept(HAL_FORMS))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$._templates").isNotEmpty())
+                    .andExpect(jsonPath("$._templates.keys()", everyItem(matchesPattern("[a-z-]+"))))
+                    .andExpect(jsonPath("$..properties[?(@.readOnly == true)]").isEmpty())
+                    .andExpect(jsonPath("$..properties[?(@.type == 'range')]").isEmpty())
+                    .andExpect(jsonPath("$._links.keys()", hasItem("self")));
+        }
+        String abrigo = mockMvc.perform(get("/api/abrigos/1").header(HttpHeaders.AUTHORIZATION, bearer(admin)).accept(HAL_FORMS))
+                .andReturn().getResponse().getContentAsString();
+        assertThat(abrigo.indexOf("\"self\"")).isLessThan(abrigo.indexOf("\"atualizar\""));
     }
 
     // o formato padrão não muda: HAL, sem _templates, com ou sem Accept de JSON
