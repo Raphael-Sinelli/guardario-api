@@ -140,8 +140,11 @@ public class RelatoServiceImpl implements RelatoService {
                 .orElseThrow(() -> new ResourceNotFoundException("relato", id));
     }
 
+    // a prioridade depende do nível da área: a área fica travada (a mesma trava do registro de leitura) até o relato
+    // ser gravado. Sem isso, um relato enviado enquanto uma leitura muda o nível lia o nível antigo e ficava com a
+    // prioridade errada, porque a leitura já tinha recalculado os relatos em aberto sem ver o novo
     private AreaRisco buscarArea(Long areaId) {
-        return areaRepository.findById(areaId)
+        return areaRepository.buscarComTrava(areaId)
                 .orElseThrow(() -> new ResourceNotFoundException("área", areaId));
     }
 

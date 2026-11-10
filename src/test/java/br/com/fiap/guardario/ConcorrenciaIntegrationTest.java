@@ -89,6 +89,32 @@ class ConcorrenciaIntegrationTest extends IntegracaoBase {
                 .noneMatch(linha -> linha.contains("org.hibernate.orm.jdbc.error"));
     }
 
+    // relatos enviados enquanto uma leitura muda o nível da área: no fim, todo relato em aberto tem a prioridade do
+    // nível final. Sem a trava da área na criação, o relato lia o nível antigo e ficava com a prioridade errada
+    @Test
+    void relatoCriadoDuranteMudancaDeNivelFicaComAPrioridadeCerta() throws Exception {
+        long area = criarArea("Área Corrida Relato " + sufixoUnico());
+        long estacao = criarEstacao(area);
+        String cidadao = tokenCidadao();
+        String agente = tokenAgente();
+        for (int rodada = 0; rodada < 6; rodada++) {
+            int nivelCm = rodada % 2 == 0 ? 320 : 10;
+            List<Integer> codigos = emParalelo(8,
+                    () -> postJson("/api/estacoes/" + estacao + "/leituras", agente,
+                            "{\"nivelCm\": " + nivelCm + ", \"chuvaMmH\": 0}").andReturn().getResponse().getStatus(),
+                    () -> postJson("/api/relatos", cidadao, """
+                            {"tipo": "RIO_SUBINDO", "descricao": "Relato enviado durante a cheia", "areaId": %d}"""
+                            .formatted(area)).andReturn().getResponse().getStatus());
+            assertThat(codigos).containsOnly(201);
+        }
+
+        // a última rodada levou a área para NORMAL: RIO_SUBINDO volta à base 3 em todos os relatos
+        String painel = mockMvc.perform(get("/api/relatos").param("areaId", String.valueOf(area)).param("size", "100")
+                .header(HttpHeaders.AUTHORIZATION, bearer(agente))).andReturn().getResponse().getContentAsString();
+        List<Integer> prioridades = JsonPath.read(painel, "$._embedded.relatos[*].prioridade");
+        assertThat(prioridades).hasSize(42).containsOnly(3);
+    }
+
     private int mudarStatus(long relato, String status, String token) throws Exception {
         return mockMvc.perform(patch("/api/relatos/" + relato + "/status").header(HttpHeaders.AUTHORIZATION, bearer(token))
                         .contentType(MediaType.APPLICATION_JSON).content("{\"status\": \"" + status + "\"}"))
