@@ -19,6 +19,8 @@ import java.util.concurrent.TimeUnit;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
  * Dois agentes mexendo no mesmo registro ao mesmo tempo: só um consegue, o outro recebe 409 e vê o estado novo.
@@ -113,6 +115,39 @@ class ConcorrenciaIntegrationTest extends IntegracaoBase {
                 .header(HttpHeaders.AUTHORIZATION, bearer(agente))).andReturn().getResponse().getContentAsString();
         List<Integer> prioridades = JsonPath.read(painel, "$._embedded.relatos[*].prioridade");
         assertThat(prioridades).hasSize(42).containsOnly(3);
+    }
+
+    // o mesmo com a mudança de nível vindo do PUT da estação (desativar e reativar): a conferência é feita a cada
+    // rodada, porque um relato que escapasse seria corrigido pela mudança de nível da rodada seguinte
+    @Test
+    void relatoCriadoDuranteMudancaDaEstacaoFicaComAPrioridadeCerta() throws Exception {
+        long area = criarArea("Área Corrida Estação " + sufixoUnico());
+        long estacao = criarEstacao(area);
+        registrarLeitura(estacao, 320, 0.0).andExpect(status().isCreated());
+        String cidadao = tokenCidadao();
+        String agente = tokenAgente();
+        String admin = tokenAdmin();
+        for (int rodada = 0; rodada < 6; rodada++) {
+            String novoStatus = rodada % 2 == 0 ? "INATIVA" : "ATIVA";
+            String corpo = """
+                    {"codigo": "C-%d", "nome": "Estação da corrida", "rio": "Rio Teste", "cotaAtencaoCm": 100,
+                     "cotaAlertaCm": 200, "cotaTransbordoCm": 300, "areaId": %d, "status": "%s"}"""
+                    .formatted(estacao, area, novoStatus);
+            List<Integer> codigos = emParalelo(8,
+                    () -> mockMvc.perform(put("/api/estacoes/" + estacao).header(HttpHeaders.AUTHORIZATION, bearer(admin))
+                            .contentType(MediaType.APPLICATION_JSON).content(corpo)).andReturn().getResponse().getStatus(),
+                    () -> postJson("/api/relatos", cidadao, """
+                            {"tipo": "RIO_SUBINDO", "descricao": "Relato enviado durante a troca da estação", "areaId": %d}"""
+                            .formatted(area)).andReturn().getResponse().getStatus());
+            assertThat(codigos).containsOnly(200, 201);
+
+            // INATIVA: a área fica NORMAL e o RIO_SUBINDO tem a base 3; ATIVA de novo: EMERGENCIA, base 3 + 1
+            int esperada = novoStatus.equals("INATIVA") ? 3 : 4;
+            String painel = mockMvc.perform(get("/api/relatos").param("areaId", String.valueOf(area)).param("size", "100")
+                    .header(HttpHeaders.AUTHORIZATION, bearer(agente))).andReturn().getResponse().getContentAsString();
+            List<Integer> prioridades = JsonPath.read(painel, "$._embedded.relatos[*].prioridade");
+            assertThat(prioridades).as("rodada %d (%s)", rodada, novoStatus).hasSize(7 * (rodada + 1)).containsOnly(esperada);
+        }
     }
 
     private int mudarStatus(long relato, String status, String token) throws Exception {
