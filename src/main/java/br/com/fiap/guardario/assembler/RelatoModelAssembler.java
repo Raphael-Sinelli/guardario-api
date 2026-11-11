@@ -14,6 +14,8 @@ import org.springframework.hateoas.EntityModel;
 import org.springframework.hateoas.server.RepresentationModelAssembler;
 import org.springframework.stereotype.Component;
 
+import java.util.Map;
+
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 
@@ -33,10 +35,10 @@ public class RelatoModelAssembler implements RepresentationModelAssembler<Relato
         if (SecurityUtils.isAgenteOuAdmin()) {
             var alterarStatus = linkTo(methodOn(RelatoController.class).alterarStatus(relato.id(), null));
             if (relato.status() == StatusRelato.ABERTO) {
-                Acoes.adicionar(model, alterarStatus.withRel("atender").withTitle("PATCH com {\"status\": \"EM_ATENDIMENTO\"}"), HttpMethod.PATCH, AlterarStatusRelatoRequest.class);
-                Acoes.adicionar(model, alterarStatus.withRel("descartar").withTitle("PATCH com {\"status\": \"DESCARTADO\"}"), HttpMethod.PATCH, AlterarStatusRelatoRequest.class);
+                Acoes.adicionar(model, alterarStatus.withRel("atender").withTitle("PATCH com {\"status\": \"EM_ATENDIMENTO\"}"), HttpMethod.PATCH, AlterarStatusRelatoRequest.class, Map.of("status", StatusRelato.EM_ATENDIMENTO));
+                Acoes.adicionar(model, alterarStatus.withRel("descartar").withTitle("PATCH com {\"status\": \"DESCARTADO\"}"), HttpMethod.PATCH, AlterarStatusRelatoRequest.class, Map.of("status", StatusRelato.DESCARTADO));
             } else if (relato.status() == StatusRelato.EM_ATENDIMENTO) {
-                Acoes.adicionar(model, alterarStatus.withRel("resolver").withTitle("PATCH com {\"status\": \"RESOLVIDO\"}"), HttpMethod.PATCH, AlterarStatusRelatoRequest.class);
+                Acoes.adicionar(model, alterarStatus.withRel("resolver").withTitle("PATCH com {\"status\": \"RESOLVIDO\"}"), HttpMethod.PATCH, AlterarStatusRelatoRequest.class, Map.of("status", StatusRelato.RESOLVIDO));
             }
         }
 

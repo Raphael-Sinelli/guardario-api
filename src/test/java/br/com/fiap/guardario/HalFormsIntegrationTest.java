@@ -5,6 +5,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.matchesPattern;
@@ -54,6 +55,20 @@ class HalFormsIntegrationTest extends IntegracaoBase {
                 .andExpect(jsonPath("$._templates.descartar.properties[*].name", hasItem("status")))
                 // só os templates das ações, com o nome do link: nenhum template automático com o nome do método Java
                 .andExpect(jsonPath("$._templates.keys()", containsInAnyOrder("atender", "descartar")));
+    }
+
+    // a ação que manda um valor fixo oferece só esse valor, já preenchido (value) e obrigatório (minItems 1): o atender não
+    // oferece RESOLVIDO, e o fechar do abrigo não oferece ABERTO
+    @Test
+    void acaoComValorFixoOfereceSoOValorDela() throws Exception {
+        long relato = criarRelato(tokenCidadao(), criarArea("Área HAL-FORMS Valor " + sufixoUnico()), "OUTRO");
+        mockMvc.perform(get("/api/relatos/" + relato).header(HttpHeaders.AUTHORIZATION, bearer(tokenAgente())).accept(HAL_FORMS))
+                .andExpect(jsonPath("$._templates.atender.properties[?(@.name == 'status')].options.inline[*]").value(contains("EM_ATENDIMENTO")))
+                .andExpect(jsonPath("$._templates.atender.properties[?(@.name == 'status')].value").value(contains("EM_ATENDIMENTO")))
+                .andExpect(jsonPath("$._templates.atender.properties[?(@.name == 'status')].options.minItems").value(hasItem(1)))
+                .andExpect(jsonPath("$._templates.descartar.properties[?(@.name == 'status')].options.inline[*]").value(contains("DESCARTADO")));
+        mockMvc.perform(get("/api/abrigos/1").header(HttpHeaders.AUTHORIZATION, bearer(tokenAgente())).accept(HAL_FORMS))
+                .andExpect(jsonPath("$._templates.fechar.properties[?(@.name == 'status')].options.inline[*]").value(contains("FECHADO")));
     }
 
     // em todo recurso com ações, os templates são só os das ações, e nenhum campo de entrada sai como só leitura ou

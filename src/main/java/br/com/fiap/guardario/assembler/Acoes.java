@@ -9,9 +9,11 @@ import org.springframework.hateoas.RepresentationModel;
 import org.springframework.hateoas.mediatype.Affordances;
 import org.springframework.hateoas.mediatype.ConfigurableAffordance;
 import org.springframework.hateoas.mediatype.PropertyUtils;
+import org.springframework.hateoas.mediatype.hal.forms.HalFormsOptions;
 import org.springframework.http.HttpMethod;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -19,20 +21,27 @@ import java.util.stream.Stream;
  * Link de ação com o template HAL-FORMS dele. O link vai para _links, como sempre; o template (método, alvo e campos
  * do corpo, com as regras da Bean Validation) fica pendurado no self e só aparece quando o cliente pede
  * application/prs.hal-forms+json. Cada template tem o nome do link: atender, encerrar, registrar-entrada.
+ * Na ação que manda um valor fixo (o atender só manda status EM_ATENDIMENTO), o template oferece só esse valor.
  */
-final class Acoes {
+public final class Acoes {
 
     private Acoes() {
     }
 
     static void adicionar(RepresentationModel<?> model, Link acao, HttpMethod metodo, Class<?> corpo) {
+        adicionar(model, acao, metodo, corpo, Map.of());
+    }
+
+    // valoresDaAcao: campo do corpo que nesta ação tem um valor só (atender: status EM_ATENDIMENTO)
+    static void adicionar(RepresentationModel<?> model, Link acao, HttpMethod metodo, Class<?> corpo,
+                          Map<String, Object> valoresDaAcao) {
         // o linkTo(methodOn(...)) já cria um template com o nome do método Java e os campos como só leitura: ele sai,
         // e fica só o template montado aqui, com o nome do link
         Link semTemplateAutomatico = acao.withoutAffordances();
         ConfigurableAffordance template = Affordances.of(semTemplateAutomatico).afford(metodo)
                 .withName(semTemplateAutomatico.getRel().value());
         if (corpo != null) {
-            template = template.withInput(new CamposDoCorpo(corpo));
+            template = template.withInput(new CamposDoCorpo(corpo, valoresDaAcao));
         }
         var templates = template.build().stream().toList();
 
@@ -45,13 +54,28 @@ final class Acoes {
         model.add(semTemplateAutomatico);
     }
 
+    /**
+     * Opções do campo de enum no template, usadas pelo HateoasConfig: na ação com valor fixo, só esse valor, já
+     * preenchido (o Spring o põe no value do campo) e obrigatório (minItems 1). O Spring HATEOAS marca todo campo de
+     * PATCH como não obrigatório, porque trata o PATCH como atualização parcial; aqui o status é o próprio pedido, e a
+     * obrigação fica nas opções.
+     */
+    public static HalFormsOptions opcoes(PropertyMetadata campo, Object... todos) {
+        if (campo instanceof Campo deAcao && deAcao.valorDaAcao() != null) {
+            return HalFormsOptions.inline(deAcao.valorDaAcao()).withSelectedValue(deAcao.valorDaAcao())
+                    .withMinItems(1L).withMaxItems(1L);
+        }
+        return HalFormsOptions.inline(todos);
+    }
+
     // os campos do record de entrada, como o Spring HATEOAS lê, com dois acertos: record não tem setter, e ele marcaria
     // todo campo como só leitura; e o @Size de um texto viraria min e max de um número, quando é o tamanho do texto
-    private record CamposDoCorpo(Class<?> corpo) implements PayloadMetadata {
+    private record CamposDoCorpo(Class<?> corpo, Map<String, Object> valoresDaAcao) implements PayloadMetadata {
 
         @Override
         public Stream<PropertyMetadata> stream() {
-            return PropertyUtils.getExposedProperties(corpo).stream().map(Campo::new);
+            return PropertyUtils.getExposedProperties(corpo).stream()
+                    .map(original -> new Campo(original, valoresDaAcao.get(original.getName())));
         }
 
         @Override
@@ -60,7 +84,7 @@ final class Acoes {
         }
     }
 
-    private record Campo(PropertyMetadata original) implements PropertyMetadata {
+    private record Campo(PropertyMetadata original, Object valorDaAcao) implements PropertyMetadata {
 
         private boolean texto() {
             return CharSequence.class.isAssignableFrom(original.getType().toClass());

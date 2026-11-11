@@ -14,6 +14,8 @@ import org.springframework.hateoas.EntityModel;
 import org.springframework.hateoas.server.RepresentationModelAssembler;
 import org.springframework.stereotype.Component;
 
+import java.util.Map;
+
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 
@@ -30,12 +32,12 @@ public class AbrigoModelAssembler implements RepresentationModelAssembler<Abrigo
         if (SecurityUtils.isAgenteOuAdmin()) {
             // cada ação só aparece quando faz sentido no estado atual do abrigo
             if (abrigo.status() == StatusAbrigo.FECHADO) {
-                Acoes.adicionar(model, linkTo(methodOn(AbrigoController.class).alterarStatus(abrigo.id(), null)).withRel("reabrir").withTitle("PATCH com {\"status\": \"ABERTO\"}"), HttpMethod.PATCH, AlterarStatusAbrigoRequest.class);
+                Acoes.adicionar(model, linkTo(methodOn(AbrigoController.class).alterarStatus(abrigo.id(), null)).withRel("reabrir").withTitle("PATCH com {\"status\": \"ABERTO\"}"), HttpMethod.PATCH, AlterarStatusAbrigoRequest.class, Map.of("status", StatusAbrigo.ABERTO));
             } else {
                 if (abrigo.vagas() > 0) {
                     Acoes.adicionar(model, linkTo(methodOn(AbrigoController.class).registrarEntrada(abrigo.id(), null)).withRel("registrar-entrada").withTitle("POST com {\"pessoas\": 1}"), HttpMethod.POST, MovimentacaoAbrigoRequest.class);
                 }
-                Acoes.adicionar(model, linkTo(methodOn(AbrigoController.class).alterarStatus(abrigo.id(), null)).withRel("fechar").withTitle("PATCH com {\"status\": \"FECHADO\"}"), HttpMethod.PATCH, AlterarStatusAbrigoRequest.class);
+                Acoes.adicionar(model, linkTo(methodOn(AbrigoController.class).alterarStatus(abrigo.id(), null)).withRel("fechar").withTitle("PATCH com {\"status\": \"FECHADO\"}"), HttpMethod.PATCH, AlterarStatusAbrigoRequest.class, Map.of("status", StatusAbrigo.FECHADO));
             }
             if (abrigo.ocupacao() > 0) {
                 Acoes.adicionar(model, linkTo(methodOn(AbrigoController.class).registrarSaida(abrigo.id(), null)).withRel("registrar-saida").withTitle("POST com {\"pessoas\": 1}"), HttpMethod.POST, MovimentacaoAbrigoRequest.class);
