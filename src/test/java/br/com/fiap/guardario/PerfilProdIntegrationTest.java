@@ -40,6 +40,7 @@ class PerfilProdIntegrationTest extends IntegracaoBase {
     @Test
     void swaggerFicaDesligadoEmProducao() throws Exception {
         mockMvc.perform(get("/v3/api-docs")).andExpect(status().isNotFound());
+        mockMvc.perform(get("/v3/api-docs.yaml")).andExpect(status().isNotFound());
         mockMvc.perform(get("/swagger-ui.html")).andExpect(status().isNotFound());
     }
 }

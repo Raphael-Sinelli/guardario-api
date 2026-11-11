@@ -84,7 +84,7 @@ class MatrizDeAutorizacaoIntegrationTest extends IntegracaoBase {
             "/api/estacoes/1/leituras", "/api/estacoes/1/leituras/estatisticas",
             "/api/alertas", "/api/alertas/ativos",
             "/api/abrigos", "/api/abrigos/1", "/api/abrigos/disponiveis",
-            "/actuator/health", "/actuator/info", "/v3/api-docs"
+            "/actuator/health", "/actuator/info", "/v3/api-docs", "/v3/api-docs.yaml"
     })
     void rotaPublicaRespondeSemToken(String rota) throws Exception {
         mockMvc.perform(get(rota)).andExpect(status().isOk());

@@ -42,6 +42,7 @@ A API sobe em `http://localhost:8080` já com dados de demonstração (4 áreas,
 |---|---|
 | Swagger UI | http://localhost:8080/swagger-ui.html |
 | OpenAPI (JSON) | http://localhost:8080/v3/api-docs |
+| OpenAPI (YAML) | http://localhost:8080/v3/api-docs.yaml |
 | Health | http://localhost:8080/actuator/health |
 | Console do H2 | http://localhost:8080/h2-console (JDBC URL `jdbc:h2:mem:guardario`, usuário `sa`, senha em branco) |
 
