@@ -248,6 +248,21 @@ class ErrosPadronizadosIntegrationTest extends IntegracaoBase {
                 .andExpect(header().string(HttpHeaders.ALLOW, "GET,HEAD,POST,OPTIONS"));
     }
 
+    // onde nada responde, o OPTIONS é 404, como o GET, e não anuncia método nenhum: nem no /error, que é a página de
+    // erro, nem num caminho do Actuator que não existe
+    @Test
+    void optionsOndeNadaRespondeDa404SemAllow() throws Exception {
+        mockMvc.perform(options("/error"))
+                .andExpect(status().isNotFound())
+                .andExpect(header().doesNotExist(HttpHeaders.ALLOW));
+        mockMvc.perform(options("/actuator/naoexiste").header(HttpHeaders.AUTHORIZATION, bearer(tokenAdmin())))
+                .andExpect(status().isNotFound())
+                .andExpect(header().doesNotExist(HttpHeaders.ALLOW));
+        mockMvc.perform(options("/actuator/health"))
+                .andExpect(status().isOk())
+                .andExpect(header().string(HttpHeaders.ALLOW, "GET,HEAD,OPTIONS"));
+    }
+
     // fora das rotas fixas, id que não é número continua sendo erro do parâmetro
     @Test
     void idQueNaoEhNumeroContinuaDevolvendo400() throws Exception {

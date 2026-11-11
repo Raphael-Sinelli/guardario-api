@@ -70,6 +70,13 @@ class ServidorRealIntegrationTest {
         assertThat(erro).startsWith("HTTP/1.1 404");
     }
 
+    // no servidor de verdade, o 404 do OPTIONS onde nada responde sai no JSON padrão, sem Allow
+    @Test
+    void optionsOndeNadaRespondeDa404NoJsonPadrao() throws IOException {
+        String erro = enviar("OPTIONS /error HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n");
+        assertThat(erro).startsWith("HTTP/1.1 404").contains("Rota não encontrada: /error").doesNotContainIgnoringCase("Allow:");
+    }
+
     // o caminho normal continua igual: o erro tratado pelo Spring não passa pela válvula
     @Test
     void erroTratadoPeloSpringContinuaComAMensagemDele() throws IOException {
