@@ -4206,6 +4206,36 @@
               }
             }
           ]
+        },
+        {
+          "name": "OPTIONS anuncia o mesmo Allow do 405 (sem login)",
+          "request": {
+            "method": "OPTIONS",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/alertas/ativos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "alertas",
+                "ativos"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Allow só com os métodos da rota fixa\", () => pm.expect(pm.response.headers.get(\"Allow\")).to.eql(\"GET,HEAD,OPTIONS\"));"
+                ]
+              }
+            }
+          ]
         }
       ]
     },

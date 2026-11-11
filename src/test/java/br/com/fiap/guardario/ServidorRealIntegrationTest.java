@@ -55,6 +55,21 @@ class ServidorRealIntegrationTest {
         assertThat(resposta).contains("\"status\":405");
     }
 
+    // TRACE fora das rotas da API: arquivo estático que existe tem o Allow dele; caminho em que nada responde é 404,
+    // como num GET com token; o /error, que é a página de erro e não uma rota, também
+    @Test
+    void traceForaDasRotasDaApi() throws IOException {
+        String swagger = enviar("TRACE /swagger-ui/index.html HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n");
+        assertThat(swagger).startsWith("HTTP/1.1 405").containsIgnoringCase("Allow: GET,HEAD,OPTIONS");
+
+        String inexistente = enviar("TRACE /api/rota-que-nao-existe HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n");
+        assertThat(inexistente).startsWith("HTTP/1.1 404").contains("\"status\":404")
+                .contains("Rota não encontrada: /api/rota-que-nao-existe").doesNotContainIgnoringCase("Allow:");
+
+        String erro = enviar("TRACE /error HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n");
+        assertThat(erro).startsWith("HTTP/1.1 404");
+    }
+
     // o caminho normal continua igual: o erro tratado pelo Spring não passa pela válvula
     @Test
     void erroTratadoPeloSpringContinuaComAMensagemDele() throws IOException {

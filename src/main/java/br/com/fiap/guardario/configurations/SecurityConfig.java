@@ -81,6 +81,9 @@ public class SecurityConfig {
                         // O HEAD é o GET sem corpo (o Spring MVC atende pelo mesmo método), então segue a mesma regra
                         .requestMatchers(HttpMethod.GET, LEITURA_PUBLICA).permitAll()
                         .requestMatchers(HttpMethod.HEAD, LEITURA_PUBLICA).permitAll()
+                        // o OPTIONS só lista os métodos da rota (o mesmo Allow do 405): é público onde a rota tem método público
+                        .requestMatchers(HttpMethod.OPTIONS, LEITURA_PUBLICA).permitAll()
+                        .requestMatchers(HttpMethod.OPTIONS, "/api/auth/register", "/api/auth/login").permitAll()
                         // ver um cadastro pelo id: qualquer logado, com a posse conferida no service; o resto da área é do ADMIN
                         .requestMatchers(HttpMethod.GET, "/api/usuarios/*").authenticated()
                         .requestMatchers("/api/usuarios/**").hasRole("ADMIN")

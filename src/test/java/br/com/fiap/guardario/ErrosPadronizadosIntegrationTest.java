@@ -10,6 +10,7 @@ import org.springframework.http.MediaType;
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.request;
@@ -232,6 +233,21 @@ class ErrosPadronizadosIntegrationTest extends IntegracaoBase {
                 .andExpect(header().string(HttpHeaders.ALLOW, "GET,HEAD,OPTIONS"));
     }
 
+    // o OPTIONS anuncia o mesmo Allow do 405: a rota fixa /api/alertas/ativos é só GET, mesmo com PUT e DELETE em
+    // /api/alertas/{id}; e o OPTIONS é público onde o GET é público, como o HEAD
+    @Test
+    void optionsAnunciaOMesmoAllowDo405() throws Exception {
+        mockMvc.perform(options("/api/alertas/ativos").header(HttpHeaders.AUTHORIZATION, bearer(tokenAgente())))
+                .andExpect(status().isOk())
+                .andExpect(header().string(HttpHeaders.ALLOW, "GET,HEAD,OPTIONS"));
+        mockMvc.perform(options("/api/relatos/meus").header(HttpHeaders.AUTHORIZATION, bearer(tokenCidadao())))
+                .andExpect(status().isOk())
+                .andExpect(header().string(HttpHeaders.ALLOW, "GET,HEAD,OPTIONS"));
+        mockMvc.perform(options("/api/areas"))
+                .andExpect(status().isOk())
+                .andExpect(header().string(HttpHeaders.ALLOW, "GET,HEAD,POST,OPTIONS"));
+    }
+
     // fora das rotas fixas, id que não é número continua sendo erro do parâmetro
     @Test
     void idQueNaoEhNumeroContinuaDevolvendo400() throws Exception {
@@ -374,7 +390,7 @@ class ErrosPadronizadosIntegrationTest extends IntegracaoBase {
         mockMvc.perform(get("/error"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.status").value(404))
-                .andExpect(jsonPath("$.message").value("Rota não encontrada"));
+                .andExpect(jsonPath("$.message").value("Rota não encontrada: /error"));
     }
 
     // o 403 do SecurityConfig (área de URL) e o do @PreAuthorize têm a mesma mensagem
