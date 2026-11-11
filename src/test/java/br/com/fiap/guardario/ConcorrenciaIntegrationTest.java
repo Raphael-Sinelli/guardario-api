@@ -15,6 +15,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -89,6 +90,37 @@ class ConcorrenciaIntegrationTest extends IntegracaoBase {
         assertThat(codigos).filteredOn(codigo -> codigo == 201).hasSize(1);
         assertThat(saida.getOut().lines().filter(linha -> linha.contains(" WARN ") || linha.contains(" ERROR ")))
                 .noneMatch(linha -> linha.contains("org.hibernate.orm.jdbc.error"));
+    }
+
+    // o mesmo com o código da estação, o outro campo único: criar ou renomear várias estações ao mesmo tempo com o
+    // mesmo código dá um sucesso e 409 com a mensagem da regra nos outros, sem WARN no log
+    @Test
+    void estacoesSimultaneasComOMesmoCodigoNaoDeixamWarnNoLog(CapturedOutput saida) throws Exception {
+        long area = criarArea("Área Código Repetido " + sufixoUnico());
+        String admin = tokenAdmin();
+        String novo = "N-" + sufixoUnico();
+        List<Integer> criacoes = emParalelo(8, () -> postJson("/api/estacoes", admin, """
+                {"codigo": "%s", "nome": "Estação nova", "rio": "Rio Teste",
+                 "cotaAtencaoCm": 100, "cotaAlertaCm": 200, "cotaTransbordoCm": 300, "areaId": %d}"""
+                .formatted(novo, area)).andReturn().getResponse().getStatus());
+        assertThat(criacoes).containsOnly(201, 409).filteredOn(codigo -> codigo == 201).hasSize(1);
+
+        List<Long> estacoes = new ArrayList<>();
+        for (int i = 0; i < 8; i++) {
+            estacoes.add(criarEstacao(area));
+        }
+        String renomeado = "R-" + sufixoUnico();
+        AtomicInteger proxima = new AtomicInteger();
+        List<Integer> renomeacoes = emParalelo(8, () -> mockMvc.perform(put("/api/estacoes/" + estacoes.get(proxima.getAndIncrement()))
+                        .header(HttpHeaders.AUTHORIZATION, bearer(admin)).contentType(MediaType.APPLICATION_JSON).content("""
+                                {"codigo": "%s", "nome": "Estação renomeada", "rio": "Rio Teste",
+                                 "cotaAtencaoCm": 100, "cotaAlertaCm": 200, "cotaTransbordoCm": 300, "areaId": %d}"""
+                                .formatted(renomeado, area)))
+                .andReturn().getResponse().getStatus());
+        assertThat(renomeacoes).containsOnly(200, 409).filteredOn(codigo -> codigo == 200).hasSize(1);
+
+        assertThat(saida.getOut().lines().filter(linha -> linha.contains(" WARN ") || linha.contains(" ERROR ")))
+                .noneMatch(linha -> linha.contains("Violação de integridade") || linha.contains("org.hibernate.orm.jdbc.error"));
     }
 
     // relatos enviados enquanto uma leitura muda o nível da área: no fim, todo relato em aberto tem a prioridade do

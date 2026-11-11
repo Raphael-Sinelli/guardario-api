@@ -15,6 +15,7 @@ import br.com.fiap.guardario.repository.EstacaoRepository;
 import br.com.fiap.guardario.repository.LeituraRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -73,14 +74,18 @@ public class EstacaoServiceImpl implements EstacaoService {
     public EstacaoResponse criar(EstacaoRequest request) {
         String codigo = request.codigo().trim().toUpperCase(Locale.ROOT);
         if (estacaoRepository.existsByCodigoIgnoreCase(codigo)) {
-            throw new RegraNegocioException("Já existe uma estação com o código " + codigo);
+            throw codigoRepetido(codigo);
         }
         AreaRisco area = areaRepository.findById(request.areaId())
                 .orElseThrow(() -> new ResourceNotFoundException("área", request.areaId()));
         Estacao estacao = new Estacao();
         estacao.setCodigo(codigo);
         preencher(estacao, request, area); // estação nova ainda não tem leitura: não muda o nível da área
-        return EstacaoMapper.toResponse(estacaoRepository.save(estacao));
+        try {
+            return EstacaoMapper.toResponse(estacaoRepository.saveAndFlush(estacao));
+        } catch (DataIntegrityViolationException e) {
+            throw codigoRepetido(codigo);
+        }
     }
 
     // mudar a área ou o status da estação muda o nível das áreas envolvidas (RN03): as duas são recalculadas.
@@ -95,13 +100,18 @@ public class EstacaoServiceImpl implements EstacaoService {
         Estacao estacao = buscarComTrava(id);
         String codigo = request.codigo().trim().toUpperCase(Locale.ROOT);
         if (!codigo.equalsIgnoreCase(estacao.getCodigo()) && estacaoRepository.existsByCodigoIgnoreCase(codigo)) {
-            throw new RegraNegocioException("Já existe uma estação com o código " + codigo);
+            throw codigoRepetido(codigo);
         }
         Map<Long, AreaRisco> areas = travarAreas(estacao.getArea().getId(), request.areaId());
         AreaRisco areaAnterior = areas.get(estacao.getArea().getId());
         boolean estavaAtiva = estacao.isAtiva();
         estacao.setCodigo(codigo);
         preencher(estacao, request, areas.get(request.areaId())); // último nível e último risco vêm das leituras
+        try {
+            estacaoRepository.flush(); // o código novo vai para o banco aqui, e não no commit, para virar o 409 da regra
+        } catch (DataIntegrityViolationException e) {
+            throw codigoRepetido(codigo);
+        }
 
         // reativada depois de mais de 1 hora parada: o último risco é velho e não volta para a área
         if (!estavaAtiva && estacao.isAtiva() && !estacao.leituraAtualEhRecente()) {
@@ -156,6 +166,12 @@ public class EstacaoServiceImpl implements EstacaoService {
         if (area.recalcularNivel() != antes) {
             relatoService.reavaliarPrioridades(area);
         }
+    }
+
+    // duas requisições com o mesmo código passam pelo existsByCodigo juntas; o índice único do banco barra a segunda,
+    // e o flush dentro do método transforma isso no mesmo 409 da regra, como no cadastro com email repetido
+    private static RegraNegocioException codigoRepetido(String codigo) {
+        return new RegraNegocioException("Já existe uma estação com o código " + codigo);
     }
 
     private Estacao buscarEntidade(Long id) {
