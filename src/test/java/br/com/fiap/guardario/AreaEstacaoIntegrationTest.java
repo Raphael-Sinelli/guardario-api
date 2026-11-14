@@ -15,6 +15,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -376,5 +377,53 @@ class AreaEstacaoIntegrationTest extends IntegracaoBase {
                 .andExpect(jsonPath("$._embedded.ranking[*].nome", hasItem("Sarandi")))
                 .andExpect(jsonPath("$._embedded.ranking[0]._links.area.href", containsString("/api/areas/")))
                 .andExpect(jsonPath("$._links.self.href", endsWith("/api/areas/ranking")));
+    }
+
+    // GET /api/estacoes/silenciosas: estação ATIVA sem leitura há mais de 'minutos' ou que nunca mandou leitura aparece,
+    // a que nunca mandou vem antes; a que acabou de mandar e a INATIVA não aparecem
+    @Test
+    void estacoesSilenciosasMostraAsAtivasSemLeituraRecente() throws Exception {
+        long area = criarArea("Área Silenciosa " + sufixoUnico());
+        long comLeituraAntiga = criarEstacao(area);
+        String haQuarentaECincoMinutos = Instant.now().minus(45, ChronoUnit.MINUTES).toString();
+        postJson("/api/estacoes/" + comLeituraAntiga + "/leituras", tokenAgente(),
+                "{\"nivelCm\": 50, \"chuvaMmH\": 0, \"medidaEm\": \"" + haQuarentaECincoMinutos + "\"}")
+                .andExpect(status().isCreated());
+        long comLeituraAgora = criarEstacao(area);
+        registrarLeitura(comLeituraAgora, 50, 0.0).andExpect(status().isCreated());
+        long semLeitura = criarEstacao(area);
+        long inativa = criarEstacao(area);
+        atualizarEstacao(inativa, area, "INATIVA");
+
+        String corpo = mockMvc.perform(get("/api/estacoes/silenciosas").param("minutos", "30")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(tokenAgente())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$._embedded.estacoes[*].id", hasItem((int) comLeituraAntiga)))
+                .andExpect(jsonPath("$._embedded.estacoes[*].id", hasItem((int) semLeitura)))
+                .andExpect(jsonPath("$._embedded.estacoes[*].id", not(hasItem((int) comLeituraAgora))))
+                .andExpect(jsonPath("$._embedded.estacoes[*].id", not(hasItem((int) inativa))))
+                .andExpect(jsonPath("$._links.self.href", containsString("/api/estacoes/silenciosas")))
+                .andReturn().getResponse().getContentAsString();
+
+        // as que nunca mandaram leitura vêm primeiro, depois da leitura mais antiga para a mais recente
+        List<Integer> ids = JsonPath.read(corpo, "$._embedded.estacoes[*].id");
+        assertThat(ids.indexOf((int) semLeitura)).isLessThan(ids.indexOf((int) comLeituraAntiga));
+    }
+
+    @Test
+    void estacoesSilenciosasValidaOsMinutosEExigeAgenteOuAdmin() throws Exception {
+        String agente = tokenAgente();
+        mockMvc.perform(get("/api/estacoes/silenciosas").param("minutos", "0").header(HttpHeaders.AUTHORIZATION, bearer(agente)))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(get("/api/estacoes/silenciosas").param("minutos", "1441").header(HttpHeaders.AUTHORIZATION, bearer(agente)))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(get("/api/estacoes/silenciosas").header(HttpHeaders.AUTHORIZATION, bearer(tokenCidadao())))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/estacoes/silenciosas"))
+                .andExpect(status().isUnauthorized());
+        // sem o parâmetro, vale o padrão de 30 minutos; o ADMIN também pode
+        mockMvc.perform(get("/api/estacoes/silenciosas").header(HttpHeaders.AUTHORIZATION, bearer(tokenAdmin())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$._embedded.estacoes").isArray());
     }
 }
