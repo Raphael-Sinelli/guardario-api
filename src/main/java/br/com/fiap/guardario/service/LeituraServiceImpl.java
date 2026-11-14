@@ -49,6 +49,13 @@ public class LeituraServiceImpl implements LeituraService {
         if (!estacao.isAtiva()) {
             throw new RegraNegocioException("A estação " + estacao.getCodigo() + " está " + estacao.getStatus() + " e não recebe leituras");
         }
+        if (request.medidaEm() != null) {
+            Instant medidaEm = request.medidaEm().truncatedTo(ChronoUnit.MICROS);
+            if (leituraRepository.existsByEstacaoIdAndMedidaEmAndNivelCmAndChuvaMmH(
+                    estacaoId, medidaEm, request.nivelCm(), request.chuvaMmH())) {
+                throw new RegraNegocioException("Leitura já registrada para esta estação em " + medidaEm);
+            }
+        }
         areaRepository.buscarComTrava(estacao.getArea().getId());
 
         NivelRisco risco = estacao.classificar(request.nivelCm(), request.chuvaMmH());
