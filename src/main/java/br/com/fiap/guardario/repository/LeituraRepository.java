@@ -18,6 +18,8 @@ public interface LeituraRepository extends JpaRepository<Leitura, Long> {
     // a leitura que deu o estado atual da estação (a de medidaEm igual a ultimaLeituraEm), para reclassificar com a régua nova
     Optional<Leitura> findFirstByEstacaoIdAndMedidaEm(Long estacaoId, Instant medidaEm);
 
+    boolean existsByEstacaoIdAndMedidaEmAndNivelCmAndChuvaMmH(Long estacaoId, Instant medidaEm, Integer nivelCm, Double chuvaMmH);
+
     // a leitura só é encontrada pela URL da estação dona dela
     Optional<Leitura> findByIdAndEstacaoId(Long id, Long estacaoId);
 
