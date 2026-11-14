@@ -223,6 +223,22 @@ class AuthIntegrationTest extends IntegracaoBase {
     }
 
     @Test
+    void edicaoDePerfilComCamposInvalidosDevolve400ComOsCampos() throws Exception {
+        String email = cadastrarUsuarioParaEdicaoDePerfil();
+        String token = token(email, "Senha@123");
+
+        atualizarPerfil(token, """
+                {"nome": "", "telefone": "abc123", "areaId": 0}""")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[*].field", hasItems("nome", "telefone", "areaId")));
+
+        // nada mudou: o nome continua o do cadastro
+        mockMvc.perform(get("/api/auth/me").header(HttpHeaders.AUTHORIZATION, bearer(token)))
+                .andExpect(jsonPath("$.nome").value("Pessoa do Perfil"))
+                .andExpect(jsonPath("$.telefone").value("11911112222"));
+    }
+
+    @Test
     void edicaoDePerfilComAreaQueNaoExisteDevolve404() throws Exception {
         String email = cadastrarUsuarioParaEdicaoDePerfil();
         String token = token(email, "Senha@123");
