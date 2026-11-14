@@ -2,10 +2,14 @@ package br.com.fiap.guardario;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.ResultActions;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasItems;
+import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 class AuthIntegrationTest extends IntegracaoBase {
@@ -151,6 +155,87 @@ class AuthIntegrationTest extends IntegracaoBase {
 
         String adulterado = tokenCidadao() + "x";
         mockMvc.perform(get("/api/auth/me").header(HttpHeaders.AUTHORIZATION, bearer(adulterado)))
+                .andExpect(status().isUnauthorized());
+    }
+
+    // ---------- edição do próprio perfil (PUT /api/auth/me) ----------
+    // cada teste cadastra o próprio usuário: os dados dos usuários de demonstração não podem mudar
+
+    private String cadastrarUsuarioParaEdicaoDePerfil() throws Exception {
+        String email = "perfil" + sufixoUnico().toLowerCase() + "@email.com";
+        postJson("/api/auth/register", null, """
+                {"nome": "Pessoa do Perfil", "email": "%s", "senha": "Senha@123", "telefone": "11911112222"}"""
+                .formatted(email))
+                .andExpect(status().isCreated());
+        return email;
+    }
+
+    private ResultActions atualizarPerfil(String token, String json) throws Exception {
+        var requisicao = put("/api/auth/me").contentType(MediaType.APPLICATION_JSON).content(json);
+        if (token != null) {
+            requisicao.header(HttpHeaders.AUTHORIZATION, bearer(token));
+        }
+        return mockMvc.perform(requisicao);
+    }
+
+    @Test
+    void edicaoDePerfilMudaNomeEAreaEOMeMostraOsDadosNovos() throws Exception {
+        long area = criarArea("Área Perfil " + sufixoUnico());
+        String email = cadastrarUsuarioParaEdicaoDePerfil();
+        String token = token(email, "Senha@123");
+
+        atualizarPerfil(token, """
+                {"nome": "  Nome Novo  ", "telefone": "11933334444", "areaId": %d}""".formatted(area))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.nome").value("Nome Novo"))
+                .andExpect(jsonPath("$.telefone").value("11933334444"))
+                .andExpect(jsonPath("$.areaId").value(area))
+                .andExpect(jsonPath("$.email").value(email))
+                .andExpect(jsonPath("$._links.self.href", containsString("/api/usuarios/")))
+                .andExpect(jsonPath("$._links.meus-relatos.href", containsString("/api/relatos/meus")));
+
+        mockMvc.perform(get("/api/auth/me").header(HttpHeaders.AUTHORIZATION, bearer(token)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.nome").value("Nome Novo"))
+                .andExpect(jsonPath("$.telefone").value("11933334444"))
+                .andExpect(jsonPath("$.areaId").value(area));
+
+        // areaId nulo: a pessoa fica sem área
+        atualizarPerfil(token, """
+                {"nome": "Nome Novo", "telefone": "11933334444", "areaId": null}""")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.areaId").value(nullValue()));
+    }
+
+    @Test
+    void edicaoDePerfilIgnoraPapelEEmailNoCorpo() throws Exception {
+        String email = cadastrarUsuarioParaEdicaoDePerfil();
+        String token = token(email, "Senha@123");
+
+        atualizarPerfil(token, """
+                {"nome": "Quer Ser Admin", "telefone": "11911112222", "papel": "ADMIN", "email": "outro@email.com"}""")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.papel").value("CIDADAO"))
+                .andExpect(jsonPath("$.email").value(email));
+
+        mockMvc.perform(get("/api/auth/me").header(HttpHeaders.AUTHORIZATION, bearer(token)))
+                .andExpect(jsonPath("$.papel").value("CIDADAO"));
+    }
+
+    @Test
+    void edicaoDePerfilComAreaQueNaoExisteDevolve404() throws Exception {
+        String email = cadastrarUsuarioParaEdicaoDePerfil();
+        String token = token(email, "Senha@123");
+
+        atualizarPerfil(token, """
+                {"nome": "Pessoa do Perfil", "telefone": "11911112222", "areaId": 999999}""")
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void edicaoDePerfilSemTokenDevolve401() throws Exception {
+        atualizarPerfil(null, """
+                {"nome": "Sem Token", "telefone": "11911112222"}""")
                 .andExpect(status().isUnauthorized());
     }
 }
