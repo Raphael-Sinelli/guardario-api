@@ -1,6 +1,7 @@
 package br.com.fiap.guardario.controller;
 
 import br.com.fiap.guardario.assembler.UsuarioModelAssembler;
+import br.com.fiap.guardario.dto.AtualizarPerfilRequest;
 import br.com.fiap.guardario.dto.AuthResponse;
 import br.com.fiap.guardario.dto.LoginRequest;
 import br.com.fiap.guardario.dto.RegisterRequest;
@@ -52,6 +53,19 @@ public class AuthController {
     @ApiResponse(responseCode = "401", description = "Email ou senha inválidos")
     public ResponseEntity<AuthResponse> login(@RequestBody @Valid LoginRequest request) {
         return ResponseEntity.ok(authService.login(request));
+    }
+
+    @PutMapping("/me")
+    @Operation(summary = "Edita o perfil do usuário dono do token",
+            description = "Qualquer usuário logado. O usuário vem do token. Muda só o nome, o telefone e a área onde a pessoa mora "
+                    + "(areaId nulo deixa a pessoa sem área). Email, senha e papel não mudam por esta rota: o corpo nem tem esses "
+                    + "campos, e mandar \"papel\" não tem efeito. A resposta tem o mesmo formato e os mesmos links do GET /api/auth/me.")
+    @ApiResponse(responseCode = "200", description = "Perfil atualizado")
+    @ApiResponse(responseCode = "400", description = "Campos inválidos (nome em branco, telefone fora do formato, areaId menor ou igual a zero)")
+    @ApiResponse(responseCode = "401", description = "Sem token, ou token inválido ou expirado")
+    @ApiResponse(responseCode = "404", description = "A área informada não existe")
+    public ResponseEntity<EntityModel<UsuarioResponse>> atualizarPerfil(@RequestBody @Valid AtualizarPerfilRequest request) {
+        return ResponseEntity.ok(assembler.toModel(authService.atualizarPerfil(request)));
     }
 
     @GetMapping("/me")
