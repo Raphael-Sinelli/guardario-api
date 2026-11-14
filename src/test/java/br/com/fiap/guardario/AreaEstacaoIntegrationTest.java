@@ -3,6 +3,7 @@ package br.com.fiap.guardario;
 import com.jayway.jsonpath.JsonPath;
 import br.com.fiap.guardario.model.Estacao;
 import br.com.fiap.guardario.repository.EstacaoRepository;
+import br.com.fiap.guardario.service.AreaService;
 import jakarta.persistence.EntityManagerFactory;
 import org.hibernate.SessionFactory;
 import org.hibernate.stat.Statistics;
@@ -33,6 +34,9 @@ class AreaEstacaoIntegrationTest extends IntegracaoBase {
 
     @Autowired
     private PlatformTransactionManager transactionManager;
+
+    @Autowired
+    private AreaService areaService;
 
     @Test
     void listaDeAreasEhPublicaPaginadaEComLinks() throws Exception {
@@ -425,5 +429,59 @@ class AreaEstacaoIntegrationTest extends IntegracaoBase {
         mockMvc.perform(get("/api/estacoes/silenciosas").header(HttpHeaders.AUTHORIZATION, bearer(tokenAdmin())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$._embedded.estacoes").isArray());
+    }
+
+    // Parte 2: a estação que para de mandar leitura não segura o risco antigo. Na reavaliação, a área volta ao nível
+    // das estações com leitura da última hora, a estação sai de /criticas e o relato em aberto perde o +1 (RN06)
+    @Test
+    void estacaoSilenciosaDeixaDeSegurarONivelDaAreaESaiDasCriticas() throws Exception {
+        long area = criarArea("Área Silêncio " + sufixoUnico());
+        long estacao = criarEstacao(area);
+        String agente = tokenAgente();
+        long relato = criarRelato(tokenCidadao(), area, "RIO_SUBINDO");
+        registrarLeitura(estacao, 320, 0.0).andExpect(jsonPath("$.nivelArea").value("EMERGENCIA"));
+        mockMvc.perform(get("/api/areas/" + area)).andExpect(jsonPath("$.nivelAtual").value("EMERGENCIA"));
+        mockMvc.perform(get("/api/estacoes/criticas")).andExpect(jsonPath("$._embedded.estacoes[*].id", hasItem((int) estacao)));
+        assertPrioridade(relato, agente, 4);
+
+        envelhecerUltimaLeitura(estacao, Duration.ofHours(2));
+        assertThat(areaService.reavaliarNiveis()).isTrue();
+
+        mockMvc.perform(get("/api/areas/" + area)).andExpect(jsonPath("$.nivelAtual").value("NORMAL"));
+        mockMvc.perform(get("/api/estacoes/criticas")).andExpect(jsonPath("$._embedded.estacoes[*].id", not(hasItem((int) estacao))));
+        assertPrioridade(relato, agente, 3);
+    }
+
+    // controle: na mesma área, a estação com leitura recente continua segurando o nível depois da reavaliação
+    @Test
+    void estacaoComLeituraRecenteContinuaSegurandoONivelDepoisDaReavaliacao() throws Exception {
+        long area = criarArea("Área Duas Estações " + sufixoUnico());
+        long silenciosa = criarEstacao(area);
+        long comLeitura = criarEstacao(area);
+        registrarLeitura(silenciosa, 320, 0.0).andExpect(status().isCreated());
+        registrarLeitura(comLeitura, 250, 0.0).andExpect(status().isCreated());
+        mockMvc.perform(get("/api/areas/" + area)).andExpect(jsonPath("$.nivelAtual").value("EMERGENCIA"));
+
+        envelhecerUltimaLeitura(silenciosa, Duration.ofHours(2));
+        areaService.reavaliarNiveis();
+
+        mockMvc.perform(get("/api/areas/" + area)).andExpect(jsonPath("$.nivelAtual").value("ALERTA"));
+        mockMvc.perform(get("/api/estacoes/criticas"))
+                .andExpect(jsonPath("$._embedded.estacoes[*].id", hasItem((int) comLeitura)))
+                .andExpect(jsonPath("$._embedded.estacoes[*].id", not(hasItem((int) silenciosa))));
+    }
+
+    // simula a estação parada: a última leitura passa a ser de 'quanto' tempo atrás
+    private void envelhecerUltimaLeitura(long estacao, Duration quanto) {
+        new TransactionTemplate(transactionManager).executeWithoutResult(transacao -> {
+            Estacao parada = estacaoRepository.findById(estacao).orElseThrow();
+            parada.setUltimaLeituraEm(Instant.now().minus(quanto));
+        });
+    }
+
+    private void assertPrioridade(long relato, String token, int prioridade) throws Exception {
+        mockMvc.perform(get("/api/relatos/" + relato).header(HttpHeaders.AUTHORIZATION, bearer(token)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.prioridade").value(prioridade));
     }
 }
