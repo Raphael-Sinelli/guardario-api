@@ -1,9 +1,11 @@
 package br.com.fiap.guardario.service;
 
+import br.com.fiap.guardario.dto.AlterarSenhaRequest;
 import br.com.fiap.guardario.dto.AuthResponse;
 import br.com.fiap.guardario.dto.LoginRequest;
 import br.com.fiap.guardario.dto.RegisterRequest;
 import br.com.fiap.guardario.dto.UsuarioResponse;
+import br.com.fiap.guardario.exceptions.CampoInvalidoException;
 import br.com.fiap.guardario.exceptions.EmailJaCadastradoException;
 import br.com.fiap.guardario.exceptions.ResourceNotFoundException;
 import br.com.fiap.guardario.mapper.UsuarioMapper;
@@ -84,6 +86,22 @@ public class AuthServiceImpl implements AuthService {
         Usuario usuario = usuarioRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("usuário", id));
         return UsuarioMapper.toResponse(usuario);
+    }
+
+    @Override
+    @Transactional
+    public void alterarSenha(AlterarSenhaRequest request) {
+        // o usuário do SecurityUtils foi carregado pelo filtro JWT, fora desta transação; o recarregado é o que
+        // o Hibernate grava no fim
+        Long id = SecurityUtils.usuarioLogado().getId();
+        Usuario usuario = usuarioRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("usuário", id));
+
+        // o banco guarda o hash: a comparação é pelo BCrypt, nunca com equals
+        if (!passwordEncoder.matches(request.senhaAtual(), usuario.getSenha())) {
+            throw new CampoInvalidoException("senhaAtual", "Senha atual incorreta");
+        }
+        usuario.setSenha(passwordEncoder.encode(request.novaSenha()));
     }
 
     private String normalizarEmail(String email) {
