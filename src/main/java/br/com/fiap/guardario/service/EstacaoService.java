@@ -17,6 +17,9 @@ public interface EstacaoService {
 
     List<EstacaoResponse> criticas();
 
+    // estações ATIVAS sem leitura há mais de 'minutos' minutos, ou que nunca mandaram leitura
+    List<EstacaoResponse> silenciosas(int minutos);
+
     EstacaoResponse criar(EstacaoRequest request);
 
     EstacaoResponse atualizar(Long id, EstacaoRequest request);

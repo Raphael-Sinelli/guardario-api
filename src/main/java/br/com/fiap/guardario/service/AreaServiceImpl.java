@@ -7,6 +7,7 @@ import br.com.fiap.guardario.exceptions.RegraNegocioException;
 import br.com.fiap.guardario.exceptions.ResourceNotFoundException;
 import br.com.fiap.guardario.mapper.AreaMapper;
 import br.com.fiap.guardario.model.AreaRisco;
+import br.com.fiap.guardario.model.NivelRisco;
 import br.com.fiap.guardario.model.StatusRelato;
 import br.com.fiap.guardario.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -37,6 +38,7 @@ public class AreaServiceImpl implements AreaService {
     private final AlertaRepository alertaRepository;
     private final RelatoRepository relatoRepository;
     private final UsuarioRepository usuarioRepository;
+    private final RelatoService relatoService;
 
     @Override
     @Transactional(readOnly = true)
@@ -118,5 +120,29 @@ public class AreaServiceImpl implements AreaService {
         area.setPopulacaoEstimada(request.populacaoEstimada());
         area.setLatitude(request.latitude());
         area.setLongitude(request.longitude());
+    }
+
+    /*
+     * O nível gravado em nivelAtual só é recalculado quando chega leitura ou a estação muda: a estação que
+     * simplesmente para não dispara nada. Chamado a cada minuto pelo ReavaliacaoDasAreas. O cache "areas"
+     * só é limpo se alguma área mudou de nível.
+     */
+    @Override
+    @Transactional
+    @CacheEvict(cacheNames = "areas", allEntries = true, condition = "#result")
+    public boolean reavaliarNiveis() {
+        boolean algumaMudou = false;
+        for (Long id : areaRepository.buscarIdsComNivelDiferenteDe(NivelRisco.NORMAL)) {
+            AreaRisco area = areaRepository.buscarComTrava(id).orElse(null);
+            if (area == null) {
+                continue; // excluída entre a busca dos ids e a trava
+            }
+            NivelRisco anterior = area.getNivelAtual();
+            if (area.recalcularNivel() != anterior) {
+                relatoService.reavaliarPrioridades(area); // RN06: a prioridade dos relatos em aberto acompanha o nível
+                algumaMudou = true;
+            }
+        }
+        return algumaMudou;
     }
 }

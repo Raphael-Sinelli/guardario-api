@@ -12,6 +12,7 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -36,7 +37,7 @@ public interface EstacaoRepository extends JpaRepository<Estacao, Long> {
     Optional<Estacao> buscarComTrava(@Param("id") Long id);
 
     /*
-     * Estações ATIVAS em ALERTA ou EMERGENCIA, das mais perto do transbordo para as mais longe.
+     * Estações ATIVAS em ALERTA ou EMERGENCIA, com leitura desde o limite (a última hora), das mais perto do transbordo para as mais longe.
      * O join fetch carrega a área junto (sem N+1) e a ordenação usa uma conta entre colunas,
      * coisa que o nome de um derived query não expressa.
      */
@@ -44,7 +45,23 @@ public interface EstacaoRepository extends JpaRepository<Estacao, Long> {
             select e from Estacao e
             join fetch e.area
             where e.status = :status and e.ultimoRisco in :riscos
+              and e.ultimaLeituraEm >= :limite
             order by (e.ultimoNivelCm - e.cotaTransbordoCm) desc
             """)
-    List<Estacao> buscarCriticas(@Param("status") StatusEstacao status, @Param("riscos") Collection<NivelRisco> riscos);
+    List<Estacao> buscarCriticas(@Param("status") StatusEstacao status, @Param("riscos") Collection<NivelRisco> riscos,
+                                 @Param("limite") Instant limite);
+
+    /*
+     * Estações ATIVAS que nunca mandaram leitura ou estão sem leitura desde antes do limite.
+     * Derived query não expressa bem "is null OU antes do limite" com os nulos primeiro,
+     * e a resposta mostra o nome da área: o join fetch traz a área no mesmo SELECT (sem N+1).
+     */
+    @Query("""
+            select e from Estacao e
+            join fetch e.area
+            where e.status = :status
+              and (e.ultimaLeituraEm is null or e.ultimaLeituraEm < :limite)
+            order by e.ultimaLeituraEm asc nulls first
+            """)
+    List<Estacao> buscarSilenciosas(@Param("status") StatusEstacao status, @Param("limite") Instant limite);
 }
