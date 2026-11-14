@@ -68,6 +68,19 @@ public class AlertaController {
         return ResponseEntity.ok(RespostaHal.colecao(model, AlertaResponse.class));
     }
 
+    @GetMapping("/minha-area")
+    @Operation(summary = "Alertas ativos da área onde o usuário mora",
+            description = "Qualquer usuário logado. Devolve só os alertas ativos da área do cadastro de quem está logado "
+                    + "(o areaId informado no cadastro), mais grave primeiro, no mesmo formato de /api/alertas/ativos. "
+                    + "Quem não tem área recebe a lista vazia. Sem cache: a resposta muda de usuário para usuário.")
+    @ApiResponse(responseCode = "200", description = "Alertas ativos da área do usuário (lista vazia se ele não tem área)")
+    @ApiResponse(responseCode = "401", description = "Sem token, ou token inválido ou expirado")
+    public ResponseEntity<CollectionModel<EntityModel<AlertaResponse>>> ativosDaMinhaArea() {
+        CollectionModel<EntityModel<AlertaResponse>> model = assembler.toCollectionModel(alertaService.ativosDaMinhaArea())
+                .add(linkTo(methodOn(AlertaController.class).ativosDaMinhaArea()).withSelfRel());
+        return ResponseEntity.ok(RespostaHal.colecao(model, AlertaResponse.class));
+    }
+
     @GetMapping("/{id}")
     @SecurityRequirements
     @Operation(summary = "Busca um alerta pelo id", description = "Os links mudam com o estado: alerta ATIVO tem a ação encerrar.")
