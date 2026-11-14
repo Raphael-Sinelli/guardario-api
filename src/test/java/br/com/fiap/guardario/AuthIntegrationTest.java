@@ -217,6 +217,24 @@ class AuthIntegrationTest extends IntegracaoBase {
                 .andExpect(jsonPath("$.errors[0].field").value("novaSenha"));
     }
 
+    // 40 letras "á" passam no @Size (40 caracteres), mas são 80 bytes: só o limite de 72 bytes do BCrypt barra
+    @Test
+    void trocaDeSenhaComNovaSenhaDeMaisDe72BytesDevolve400() throws Exception {
+        String email = cadastrarUsuarioParaTrocaDeSenha();
+        String token = token(email, "Senha@123");
+
+        mockMvc.perform(put("/api/auth/senha").header(HttpHeaders.AUTHORIZATION, bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"senhaAtual": "Senha@123", "novaSenha": "%s"}""".formatted("á".repeat(40))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0].field").value("novaSenha"))
+                .andExpect(jsonPath("$.errors[0].message", containsString("72 bytes")));
+
+        // a senha continua a mesma
+        token(email, "Senha@123");
+    }
+
     @Test
     void trocaDeSenhaSemTokenDevolve401() throws Exception {
         mockMvc.perform(put("/api/auth/senha")
