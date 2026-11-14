@@ -4,6 +4,9 @@ import br.com.fiap.guardario.dto.EstatisticaLeiturasResponse;
 import br.com.fiap.guardario.dto.LeituraRegistradaResponse;
 import br.com.fiap.guardario.dto.LeituraRequest;
 import br.com.fiap.guardario.dto.LeituraResponse;
+import br.com.fiap.guardario.dto.LoteLeiturasRequest;
+import br.com.fiap.guardario.dto.LoteLeiturasResponse;
+import br.com.fiap.guardario.exceptions.CampoInvalidoException;
 import br.com.fiap.guardario.exceptions.RegraNegocioException;
 import br.com.fiap.guardario.exceptions.ResourceNotFoundException;
 import br.com.fiap.guardario.mapper.LeituraMapper;
@@ -23,6 +26,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -51,6 +57,36 @@ public class LeituraServiceImpl implements LeituraService {
         }
         areaRepository.buscarComTrava(estacao.getArea().getId());
         return registrarNaEstacao(estacao, request);
+    }
+
+    @Override
+    @Transactional
+    @CacheEvict(cacheNames = "areas", key = "#result.areaId()")
+    public LoteLeiturasResponse registrarLote(Long estacaoId, LoteLeiturasRequest request) {
+        Estacao estacao = estacaoRepository.buscarComTrava(estacaoId)
+                .orElseThrow(() -> new ResourceNotFoundException("estação", estacaoId));
+        if (!estacao.isAtiva()) {
+            throw new RegraNegocioException("A estação " + estacao.getCodigo() + " está " + estacao.getStatus() + " e não recebe leituras");
+        }
+        areaRepository.buscarComTrava(estacao.getArea().getId());
+
+        List<LeituraRequest> leituras = request.leituras();
+        for (int i = 0; i < leituras.size(); i++) {
+            if (leituras.get(i).medidaEm() == null) {
+                throw new CampoInvalidoException("leituras[" + i + "].medidaEm",
+                        "é obrigatório no lote: sem ele não há como pôr as leituras em ordem");
+            }
+        }
+
+        List<Long> alertasGerados = new ArrayList<>();
+        LeituraRegistradaResponse ultima = null;
+        for (LeituraRequest leitura : leituras.stream().sorted(Comparator.comparing(LeituraRequest::medidaEm)).toList()) {
+            ultima = registrarNaEstacao(estacao, leitura);
+            if (ultima.alertaGeradoId() != null) {
+                alertasGerados.add(ultima.alertaGeradoId());
+            }
+        }
+        return new LoteLeiturasResponse(leituras.size(), ultima.areaId(), ultima.nivelArea(), alertasGerados);
     }
 
     private LeituraRegistradaResponse registrarNaEstacao(Estacao estacao, LeituraRequest request) {
