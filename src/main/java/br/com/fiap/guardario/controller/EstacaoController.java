@@ -147,7 +147,7 @@ public class EstacaoController {
     @ApiResponse(responseCode = "400", description = "Valores fora da faixa ou data no futuro")
     @ApiResponse(responseCode = "403", description = "Usuário logado é CIDADAO")
     @ApiResponse(responseCode = "404", description = "Estação não existe")
-    @ApiResponse(responseCode = "409", description = "Estação em MANUTENCAO ou INATIVA")
+    @ApiResponse(responseCode = "409", description = "Estação em MANUTENCAO ou INATIVA, ou leitura repetida: a estação já tem a mesma leitura (mesmo medidaEm e mesmas medidas), reenviada pela ponte MQTT")
     public ResponseEntity<EntityModel<LeituraRegistradaResponse>> registrarLeitura(@PathVariable @Positive Long id,
                                                                                    @RequestBody @Valid LeituraRequest request) {
         EntityModel<LeituraRegistradaResponse> model = leituraAssembler.toModel(leituraService.registrar(id, request));
