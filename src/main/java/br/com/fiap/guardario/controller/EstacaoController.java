@@ -24,6 +24,7 @@ import org.springframework.data.web.PagedResourcesAssembler;
 import org.springframework.hateoas.CollectionModel;
 import org.springframework.hateoas.EntityModel;
 import org.springframework.hateoas.IanaLinkRelations;
+import org.springframework.hateoas.Link;
 import org.springframework.hateoas.PagedModel;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -152,6 +153,30 @@ public class EstacaoController {
                                                                                    @RequestBody @Valid LeituraRequest request) {
         EntityModel<LeituraRegistradaResponse> model = leituraAssembler.toModel(leituraService.registrar(id, request));
         return ResponseEntity.created(model.getRequiredLink(IanaLinkRelations.SELF).toUri()).body(model);
+    }
+
+    @PostMapping("/{id}/leituras/lote")
+    @PreAuthorize("hasAnyRole('AGENTE', 'ADMIN')")
+    @Operation(summary = "Registra em lote as leituras guardadas durante a queda de internet",
+            description = """
+                    AGENTE ou ADMIN. De 1 a 100 leituras, todas com medidaEm, processadas em ordem cronológica com as mesmas
+                    regras de uma leitura só: classificação, nível da área e alerta automático. Tudo ou nada: se uma leitura
+                    falhar, nenhuma é gravada. O Location aponta para o histórico de leituras da estação.""")
+    @ApiResponse(responseCode = "201", description = "Lote registrado, com a quantidade, o nível final da área e os alertas gerados")
+    @ApiResponse(responseCode = "400", description = "Lista vazia, mais de 100 leituras, leitura sem medidaEm ou com valores fora da faixa")
+    @ApiResponse(responseCode = "401", description = "Sem token ou token inválido")
+    @ApiResponse(responseCode = "403", description = "Usuário logado é CIDADAO")
+    @ApiResponse(responseCode = "404", description = "Estação não existe")
+    @ApiResponse(responseCode = "409", description = "Estação em MANUTENCAO ou INATIVA, ou leitura repetida")
+    public ResponseEntity<EntityModel<LoteLeiturasResponse>> registrarLote(@PathVariable @Positive Long id,
+                                                                           @RequestBody @Valid LoteLeiturasRequest request) {
+        LoteLeiturasResponse resposta = leituraService.registrarLote(id, request);
+        Link historico = linkTo(methodOn(EstacaoController.class).listarLeituras(id, null)).withRel("leituras").expand();
+        EntityModel<LoteLeiturasResponse> model = EntityModel.of(resposta,
+                historico,
+                linkTo(methodOn(EstacaoController.class).buscarPorId(id)).withRel("estacao"),
+                linkTo(methodOn(AreaController.class).buscarPorId(resposta.areaId())).withRel("area"));
+        return ResponseEntity.created(historico.toUri()).body(model);
     }
 
     @GetMapping("/{id}/leituras/{leituraId}")
