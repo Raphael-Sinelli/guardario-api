@@ -62,6 +62,24 @@ public class AlertaServiceImpl implements AlertaService {
                 .toList();
     }
 
+    /*
+     * Alertas ativos da área onde o usuário logado mora. Sem cache: a resposta muda de usuário para usuário.
+     * Transação de leitura porque o mapper lê o nome da área, e o open-in-view está desligado.
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public List<AlertaResponse> ativosDaMinhaArea() {
+        Usuario usuario = SecurityUtils.usuarioLogado();
+        if (usuario.getArea() == null) {
+            return List.of();
+        }
+        // ler o id da área não dispara SELECT: o proxy LAZY já guarda o id
+        return alertaRepository.findByAreaIdAndStatus(usuario.getArea().getId(), StatusAlerta.ATIVO).stream()
+                .sorted(Comparator.comparingInt((Alerta a) -> a.getNivel().getPeso()).reversed())
+                .map(AlertaMapper::toResponse)
+                .toList();
+    }
+
     @Override
     @Transactional(readOnly = true)
     public AlertaResponse buscarPorId(Long id) {

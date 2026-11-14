@@ -17,6 +17,8 @@ public interface AlertaService {
 
     List<AlertaResponse> ativos();
 
+    List<AlertaResponse> ativosDaMinhaArea();
+
     AlertaResponse buscarPorId(Long id);
 
     AlertaResponse criarManual(AlertaRequest request);
