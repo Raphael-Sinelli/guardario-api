@@ -57,6 +57,8 @@ public class AreaRisco {
     public NivelRisco recalcularNivel() {
         nivelAtual = estacoes.stream()
                 .filter(Estacao::isAtiva)
+                // estação silenciosa (sem leitura há mais de 1 hora) conta como sem leitura: não segura o risco velho
+                .filter(Estacao::leituraAtualEhRecente)
                 .map(Estacao::getUltimoRisco)
                 .filter(Objects::nonNull)
                 .max(Comparator.comparingInt(NivelRisco::getPeso))
