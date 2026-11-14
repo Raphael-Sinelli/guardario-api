@@ -1828,6 +1828,71 @@
           ]
         },
         {
+          "name": "Leituras guardadas na queda de internet (lote)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/estacoes/{{estacaoId}}/leituras/lote",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "estacoes",
+                "{{estacaoId}}",
+                "leituras",
+                "lote"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAgente}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"leituras\": [\n    { \"nivelCm\": 70, \"chuvaMmH\": 0, \"medidaEm\": \"{{loteMedida1}}\" },\n    { \"nivelCm\": 80, \"chuvaMmH\": 0, \"medidaEm\": \"{{loteMedida2}}\" }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set(\"loteMedida1\", new Date(Date.now() - 4 * 60 * 1000).toISOString());",
+                  "pm.collectionVariables.set(\"loteMedida2\", new Date(Date.now() - 3 * 60 * 1000).toISOString());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Desativar estação (ADMIN)",
           "request": {
             "method": "PUT",

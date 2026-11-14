@@ -408,4 +408,69 @@ class LeituraAlertaIntegrationTest extends IntegracaoBase {
         registrarLeitura(estacao, 50, 0.0).andExpect(status().isCreated());
         registrarLeitura(estacao, 50, 0.0).andExpect(status().isCreated());
     }
+
+    @Test
+    void loteForaDeOrdemEhProcessadoEmOrdemCronologica() throws Exception {
+        long area = criarArea("Área Lote " + sufixoUnico());
+        long estacao = criarEstacao(area);
+        java.time.Instant agora = java.time.Instant.now();
+        String corpo = """
+                {"leituras": [
+                  {"nivelCm": 120, "chuvaMmH": 0, "medidaEm": "%s"},
+                  {"nivelCm": 250, "chuvaMmH": 0, "medidaEm": "%s"},
+                  {"nivelCm": 150, "chuvaMmH": 0, "medidaEm": "%s"}
+                ]}""".formatted(agora.minusSeconds(30 * 60), agora.minusSeconds(10 * 60), agora.minusSeconds(20 * 60));
+
+        postJson("/api/estacoes/" + estacao + "/leituras/lote", tokenAgente(), corpo)
+                .andExpect(status().isCreated())
+                .andExpect(header().string(HttpHeaders.LOCATION, endsWith("/api/estacoes/" + estacao + "/leituras")))
+                .andExpect(jsonPath("$.quantidade").value(3))
+                .andExpect(jsonPath("$.areaId").value((int) area))
+                .andExpect(jsonPath("$.nivelArea").value("ALERTA"))
+                .andExpect(jsonPath("$.alertasGerados.length()").value(1))
+                .andExpect(jsonPath("$._links.leituras.href", endsWith("/api/estacoes/" + estacao + "/leituras")));
+
+        mockMvc.perform(get("/api/estacoes/" + estacao + "/leituras"))
+                .andExpect(jsonPath("$.page.totalElements").value(3));
+        mockMvc.perform(get("/api/areas/" + area))
+                .andExpect(jsonPath("$.nivelAtual").value("ALERTA"));
+    }
+
+    @Test
+    void loteComLeituraInvalidaNaoGravaNenhuma() throws Exception {
+        long estacao = criarEstacao(criarArea("Área Lote Inválido " + sufixoUnico()));
+        String corpo = """
+                {"leituras": [
+                  {"nivelCm": 120, "chuvaMmH": 0, "medidaEm": "%s"},
+                  {"nivelCm": -5, "chuvaMmH": 0, "medidaEm": "%s"}
+                ]}""".formatted(java.time.Instant.now().minusSeconds(600), java.time.Instant.now().minusSeconds(300));
+
+        postJson("/api/estacoes/" + estacao + "/leituras/lote", tokenAgente(), corpo)
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(get("/api/estacoes/" + estacao + "/leituras"))
+                .andExpect(jsonPath("$.page.totalElements").value(0));
+    }
+
+    @Test
+    void loteVazioOuSemMedidaEmDevolve400() throws Exception {
+        long estacao = criarEstacao(criarArea("Área Lote Vazio " + sufixoUnico()));
+        String agente = tokenAgente();
+
+        postJson("/api/estacoes/" + estacao + "/leituras/lote", agente, "{\"leituras\": []}")
+                .andExpect(status().isBadRequest());
+        postJson("/api/estacoes/" + estacao + "/leituras/lote", agente,
+                "{\"leituras\": [{\"nivelCm\": 120, \"chuvaMmH\": 0}]}")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0].field").value("leituras[0].medidaEm"));
+        mockMvc.perform(get("/api/estacoes/" + estacao + "/leituras"))
+                .andExpect(jsonPath("$.page.totalElements").value(0));
+    }
+
+    @Test
+    void cidadaoNaoRegistraLote() throws Exception {
+        long estacao = criarEstacao(criarArea("Área Lote Cidadão " + sufixoUnico()));
+        postJson("/api/estacoes/" + estacao + "/leituras/lote", tokenCidadao(),
+                "{\"leituras\": [{\"nivelCm\": 120, \"chuvaMmH\": 0, \"medidaEm\": \"" + java.time.Instant.now().minusSeconds(60) + "\"}]}")
+                .andExpect(status().isForbidden());
+    }
 }

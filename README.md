@@ -51,7 +51,7 @@ Se o wrapper reclamar da versão do Java, confira se `java -version` e a variáv
 Outros comandos:
 
 ```bash
-./mvnw test                                   # roda os 235 testes
+./mvnw test                                   # roda os 240 testes
 ./mvnw clean package                          # gera target/guardario-api-1.0.0.jar
 java -jar target/guardario-api-1.0.0.jar      # roda o jar gerado
 ```
@@ -97,7 +97,7 @@ Sem login dá para consultar áreas, estações, leituras, alertas e abrigos. In
 
 ### Testando com o Postman (ou o Bruno)
 
-A pasta `postman/` tem a coleção `GuardaRio.postman_collection.json`, com 103 requisições em 10 pastas e 165 asserções automáticas (status esperado e regras de negócio); rodada com o Newman contra a API recém-iniciada, dá 0 falhas. O Bruno importa o mesmo arquivo.
+A pasta `postman/` tem a coleção `GuardaRio.postman_collection.json`, com 104 requisições em 10 pastas e 166 asserções automáticas (status esperado e regras de negócio); rodada com o Newman contra a API recém-iniciada, dá 0 falhas. O Bruno importa o mesmo arquivo.
 
 1. Suba a API e importe o arquivo no Postman.
 2. Rode a pasta **01 Autenticação**: os logins guardam os tokens nas variáveis da coleção, e as outras requisições já usam o token certo para cada papel.
@@ -421,6 +421,7 @@ Requisição que o Tomcat recusa antes de chegar ao Spring (barra codificada `%2
 | DELETE | `/api/estacoes/{id}` | ADMIN | 204 |
 | GET | `/api/estacoes/{id}/leituras` | público | 200 |
 | POST | `/api/estacoes/{id}/leituras` | AGENTE, ADMIN | 201 + Location |
+| POST | `/api/estacoes/{id}/leituras/lote` | AGENTE, ADMIN | 201 + Location |
 | GET | `/api/estacoes/{id}/leituras/{leituraId}` | público | 200 |
 | GET | `/api/estacoes/{id}/leituras/estatisticas?horas=24` | público | 200 |
 | GET | `/api/alertas?status=` | público | 200 |
@@ -458,10 +459,10 @@ As rotas de listagem aceitam também `page`, `size` e `sort`. A descrição de c
 
 ## Testes
 
-`./mvnw test` roda 235 testes:
+`./mvnw test` roda 240 testes:
 
 - 22 testes de unidade, sem Spring e sem banco: 17 das regras que ficam nas entidades e nos enums (régua de risco nas fronteiras de cada cota, nível da área só com estações ativas, leitura atrasada ou antiga, lotação do abrigo, prioridade, máquina de estados, encerramento de alerta), 3 da chave do JWT (`JwtServiceTest`) e 2 da lista vazia no HAL (`RespostaHalTest`).
-- 213 testes de integração que sobem a aplicação inteira e chamam a API por HTTP (com o MockMvc; o `ServidorRealIntegrationTest`, por socket), passando pela segurança, pelo cache e pelo banco de verdade: status e formato de cada erro, 401 x 403, token expirado, posse, alerta automático, substituição de alertas, nível da área quando a estação muda de área ou de status, filtros com Specification, links HATEOAS mudando com o estado e sem template, invalidação e métricas do cache, link excluir sem N+1 (contando os comandos SQL), Actuator, OpenAPI, CORS e o perfil prod subindo sem carga de demonstração. Três classes cobrem o que costuma escapar: `MatrizDeAutorizacaoIntegrationTest` passa por toda rota protegida (401 sem token, 403 para quem não tem o papel) e pelas rotas públicas de consulta (200 sem token); `ConcorrenciaIntegrationTest` e os testes de abrigo e leitura disparam requisições ao mesmo tempo (entradas no abrigo, leituras da mesma área, encerrar o mesmo alerta, atender e descartar o mesmo relato, cadastros com o mesmo email); `CasosExtremosIntegrationTest` cobre corpo ausente, campo obrigatório nulo, lista vazia e paginação nos limites (página depois da última, size zero, negativo e acima do teto). O `ServidorRealIntegrationTest` sobe o Tomcat de verdade numa porta livre e manda requisições cruas por socket, para conferir o JSON dos erros que o Tomcat responde antes do Spring e o `Allow` do TRACE. O `HalFormsIntegrationTest` confere os templates de cada ação em HAL-FORMS e que o HAL padrão continua sem eles.
+- 218 testes de integração que sobem a aplicação inteira e chamam a API por HTTP (com o MockMvc; o `ServidorRealIntegrationTest`, por socket), passando pela segurança, pelo cache e pelo banco de verdade: status e formato de cada erro, 401 x 403, token expirado, posse, alerta automático, substituição de alertas, nível da área quando a estação muda de área ou de status, filtros com Specification, links HATEOAS mudando com o estado e sem template, invalidação e métricas do cache, link excluir sem N+1 (contando os comandos SQL), Actuator, OpenAPI, CORS e o perfil prod subindo sem carga de demonstração. Três classes cobrem o que costuma escapar: `MatrizDeAutorizacaoIntegrationTest` passa por toda rota protegida (401 sem token, 403 para quem não tem o papel) e pelas rotas públicas de consulta (200 sem token); `ConcorrenciaIntegrationTest` e os testes de abrigo e leitura disparam requisições ao mesmo tempo (entradas no abrigo, leituras da mesma área, encerrar o mesmo alerta, atender e descartar o mesmo relato, cadastros com o mesmo email); `CasosExtremosIntegrationTest` cobre corpo ausente, campo obrigatório nulo, lista vazia e paginação nos limites (página depois da última, size zero, negativo e acima do teto). O `ServidorRealIntegrationTest` sobe o Tomcat de verdade numa porta livre e manda requisições cruas por socket, para conferir o JSON dos erros que o Tomcat responde antes do Spring e o `Allow` do TRACE. O `HalFormsIntegrationTest` confere os templates de cada ação em HAL-FORMS e que o HAL padrão continua sem eles.
 
 ## Estrutura do projeto
 
