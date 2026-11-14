@@ -1,5 +1,6 @@
 package br.com.fiap.guardario.service;
 
+import br.com.fiap.guardario.dto.AtualizarPerfilRequest;
 import br.com.fiap.guardario.dto.AuthResponse;
 import br.com.fiap.guardario.dto.LoginRequest;
 import br.com.fiap.guardario.dto.RegisterRequest;
@@ -75,6 +76,27 @@ public class AuthServiceImpl implements AuthService {
         Usuario usuario = (Usuario) autenticacao.getPrincipal();
         String token = jwtService.gerarToken(usuario);
         return new AuthResponse(token, "Bearer", jwtService.getExpiracaoSegundos(), usuario.getEmail(), usuario.getPapel());
+    }
+
+    @Override
+    @Transactional
+    public UsuarioResponse atualizarPerfil(AtualizarPerfilRequest request) {
+        // recarrega pelo id do token: o usuário do filtro JWT foi carregado fora desta transação
+        Long id = SecurityUtils.usuarioLogado().getId();
+        Usuario usuario = usuarioRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("usuário", id));
+
+        // só nome, telefone e área: email, senha e papel não estão no DTO e não mudam aqui
+        usuario.setNome(request.nome());
+        usuario.setTelefone(request.telefone());
+        if (request.areaId() != null) {
+            AreaRisco area = areaRepository.findById(request.areaId())
+                    .orElseThrow(() -> new ResourceNotFoundException("área", request.areaId()));
+            usuario.setArea(area);
+        } else {
+            usuario.setArea(null);
+        }
+        return UsuarioMapper.toResponse(usuario);
     }
 
     @Override
