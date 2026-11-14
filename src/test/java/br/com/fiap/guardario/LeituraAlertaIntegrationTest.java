@@ -408,4 +408,45 @@ class LeituraAlertaIntegrationTest extends IntegracaoBase {
         registrarLeitura(estacao, 50, 0.0).andExpect(status().isCreated());
         registrarLeitura(estacao, 50, 0.0).andExpect(status().isCreated());
     }
+
+    // ---------- alertas da área do morador (GET /api/alertas/minha-area) ----------
+    // cada teste cadastra o próprio morador: os dados dos usuários de demonstração não podem mudar
+
+    @Test
+    void minhaAreaDevolveSoOsAlertasAtivosDaAreaDoMorador() throws Exception {
+        long area = criarArea("Área Minha " + sufixoUnico());
+        String email = "minhaarea" + sufixoUnico().toLowerCase() + "@email.com";
+        postJson("/api/auth/register", null, """
+                {"nome": "Morador da Área", "email": "%s", "senha": "Senha@123", "areaId": %d}""".formatted(email, area))
+                .andExpect(status().isCreated());
+        long estacao = criarEstacao(area);
+        registrarLeitura(estacao, 250, 0.0).andExpect(status().isCreated());
+
+        mockMvc.perform(get("/api/alertas/minha-area").header(HttpHeaders.AUTHORIZATION, bearer(token(email, "Senha@123"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$._embedded.alertas", hasSize(1)))
+                .andExpect(jsonPath("$._embedded.alertas[0].areaId").value(area))
+                .andExpect(jsonPath("$._embedded.alertas[0].status").value("ATIVO"))
+                .andExpect(jsonPath("$._embedded.alertas[*].areaNome", not(hasItem("Sarandi"))))
+                .andExpect(jsonPath("$._links.self.href", endsWith("/api/alertas/minha-area")));
+    }
+
+    @Test
+    void minhaAreaDeMoradorSemAreaDevolveListaVazia() throws Exception {
+        String email = "semarea" + sufixoUnico().toLowerCase() + "@email.com";
+        postJson("/api/auth/register", null, """
+                {"nome": "Morador Sem Área", "email": "%s", "senha": "Senha@123"}""".formatted(email))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(get("/api/alertas/minha-area").header(HttpHeaders.AUTHORIZATION, bearer(token(email, "Senha@123"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$._embedded.alertas").isEmpty());
+    }
+
+    @Test
+    void minhaAreaSemTokenDevolve401() throws Exception {
+        mockMvc.perform(get("/api/alertas/minha-area"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401));
+    }
 }

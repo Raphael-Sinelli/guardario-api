@@ -25,6 +25,7 @@ class MatrizDeAutorizacaoIntegrationTest extends IntegracaoBase {
     @CsvSource({
             // qualquer usuário logado
             "GET,    /api/auth/me,                    LOGADO",
+            "GET,    /api/alertas/minha-area,         LOGADO",
             "POST,   /api/relatos,                    LOGADO",
             "GET,    /api/relatos/meus,               LOGADO",
             "GET,    /api/relatos/1,                  LOGADO",
