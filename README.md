@@ -269,6 +269,7 @@ erDiagram
 |---|---|---|
 | `AreaRiscoRepository.rankingPorRelatosEmAberto` | `GET /api/areas/ranking` | `left join Relato r on ... and r.status in (...)` para a área sem relato também aparecer, `group by`, `count`, `max`, `coalesce` e `select new RankingAreaResponse(...)` |
 | `EstacaoRepository.buscarCriticas` | `GET /api/estacoes/criticas` | só estações ATIVAS, `join fetch e.area` (sem N+1) e `order by (e.ultimoNivelCm - e.cotaTransbordoCm) desc`, da estação mais perto do transbordo para a mais longe |
+| `EstacaoRepository.buscarSilenciosas` | `GET /api/estacoes/silenciosas` | estações ATIVAS com `ultimaLeituraEm is null or ultimaLeituraEm < :limite` e `order by e.ultimaLeituraEm asc nulls first` (as que nunca mandaram leitura primeiro): o derived query não expressa o "nulo **ou** antes do limite" com a ordenação dos nulos; `join fetch e.area` traz a área no mesmo SELECT (sem N+1) |
 | `LeituraRepository.estatisticas` | `GET /api/estacoes/{id}/leituras/estatisticas` | `count`, `avg`, `min` e `max` calculados no banco e projetados num record, sem trazer as leituras para a memória |
 
 **Specification** nos filtros de tela, em que todos os parâmetros são opcionais e combináveis. Com derived query, um filtro nulo vira `is null`, e cada combinação pediria um método novo: com os 6 filtros de relato seriam 64 métodos. Cada filtro é um método pequeno em `RelatoSpecification` ou `AbrigoSpecification` e só entra no WHERE se o parâmetro veio preenchido.
@@ -415,6 +416,7 @@ Requisição que o Tomcat recusa antes de chegar ao Spring (barra codificada `%2
 | GET | `/api/estacoes?areaId=` | público | 200 |
 | GET | `/api/estacoes/{id}` | público | 200 |
 | GET | `/api/estacoes/criticas` | público | 200 |
+| GET | `/api/estacoes/silenciosas?minutos=30` | AGENTE, ADMIN | 200 |
 | POST | `/api/estacoes` | ADMIN | 201 + Location |
 | PUT | `/api/estacoes/{id}` | ADMIN | 200 |
 | DELETE | `/api/estacoes/{id}` | ADMIN | 204 |
