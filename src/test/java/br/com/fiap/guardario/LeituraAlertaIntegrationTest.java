@@ -370,4 +370,42 @@ class LeituraAlertaIntegrationTest extends IntegracaoBase {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errors[0].field").value("medidaEm"));
     }
+
+    @Test
+    void leituraRepetidaDaMesmaEstacaoDevolve409ENaoGrava() throws Exception {
+        long estacao = criarEstacao(criarArea("Área Repetida " + sufixoUnico()));
+        String medidaEm = java.time.Instant.now().minus(5, java.time.temporal.ChronoUnit.MINUTES).toString();
+        String corpo = "{\"nivelCm\": 250, \"chuvaMmH\": 0, \"medidaEm\": \"" + medidaEm + "\"}";
+
+        postJson("/api/estacoes/" + estacao + "/leituras", tokenAgente(), corpo)
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.alertaGeradoId").isNumber());
+        postJson("/api/estacoes/" + estacao + "/leituras", tokenAgente(), corpo)
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.status").value(409))
+                .andExpect(jsonPath("$.message", startsWith("Leitura já registrada para esta estação em ")));
+
+        mockMvc.perform(get("/api/estacoes/" + estacao + "/leituras"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.page.totalElements").value(1));
+    }
+
+    @Test
+    void mesmoMedidaEmEmOutraEstacaoEhAceito() throws Exception {
+        long area = criarArea("Área Duas Estações Repetida " + sufixoUnico());
+        long primeira = criarEstacao(area);
+        long segunda = criarEstacao(area);
+        String corpo = "{\"nivelCm\": 50, \"chuvaMmH\": 0, \"medidaEm\": \""
+                + java.time.Instant.now().minus(5, java.time.temporal.ChronoUnit.MINUTES) + "\"}";
+
+        postJson("/api/estacoes/" + primeira + "/leituras", tokenAgente(), corpo).andExpect(status().isCreated());
+        postJson("/api/estacoes/" + segunda + "/leituras", tokenAgente(), corpo).andExpect(status().isCreated());
+    }
+
+    @Test
+    void leiturasSemMedidaEmNuncaSaoRepetidas() throws Exception {
+        long estacao = criarEstacao(criarArea("Área Sem Horário " + sufixoUnico()));
+        registrarLeitura(estacao, 50, 0.0).andExpect(status().isCreated());
+        registrarLeitura(estacao, 50, 0.0).andExpect(status().isCreated());
+    }
 }
