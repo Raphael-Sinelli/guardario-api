@@ -1,37 +1,27 @@
 package br.com.fiap.guardario.controller;
 
-import br.com.fiap.guardario.assembler.AreaModelAssembler;
 import br.com.fiap.guardario.assembler.UsuarioModelAssembler;
 import br.com.fiap.guardario.dto.AlterarSenhaRequest;
-import br.com.fiap.guardario.dto.AreaResponse;
 import br.com.fiap.guardario.dto.AtualizarPerfilRequest;
 import br.com.fiap.guardario.dto.AuthResponse;
 import br.com.fiap.guardario.dto.LoginRequest;
 import br.com.fiap.guardario.dto.RegisterRequest;
 import br.com.fiap.guardario.dto.UsuarioResponse;
-import br.com.fiap.guardario.service.AreaSeguidaService;
 import br.com.fiap.guardario.service.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
-import org.springframework.hateoas.CollectionModel;
 import org.springframework.hateoas.EntityModel;
 import org.springframework.http.ResponseEntity;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
 
-import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
-import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
-
 @RestController
-@Validated
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
 @Tag(name = "Autenticação", description = "Cadastro, login com JWT e dados do usuário logado")
@@ -39,8 +29,6 @@ public class AuthController {
 
     private final AuthService authService;
     private final UsuarioModelAssembler assembler;
-    private final AreaSeguidaService areaSeguidaService;
-    private final AreaModelAssembler areaAssembler;
 
     @PostMapping("/register")
     @SecurityRequirements
@@ -105,46 +93,5 @@ public class AuthController {
     public ResponseEntity<Void> alterarSenha(@RequestBody @Valid AlterarSenhaRequest request) {
         authService.alterarSenha(request);
         return ResponseEntity.noContent().build();
-    }
-
-    // ---------- áreas seguidas: o usuário acompanha outras áreas além da área do cadastro (N:M) ----------
-
-    @PutMapping("/me/areas-seguidas/{areaId}")
-    @Operation(summary = "Segue uma área",
-            description = "Qualquer usuário logado, sempre no próprio cadastro: o usuário vem do token, e não existe rota para "
-                    + "as áreas seguidas de outra pessoa. Acompanha a área além da área do cadastro. Idempotente: seguir de "
-                    + "novo uma área que já segue também dá 204. O limite é de 20 áreas seguidas por usuário.")
-    @ApiResponse(responseCode = "204", description = "Área seguida, agora ou de antes; a resposta não tem corpo")
-    @ApiResponse(responseCode = "400", description = "Id menor ou igual a zero, ou o usuário já segue 20 áreas (campo areasSeguidas)")
-    @ApiResponse(responseCode = "401", description = "Sem token, ou token inválido ou expirado")
-    @ApiResponse(responseCode = "404", description = "A área não existe")
-    public ResponseEntity<Void> seguirArea(@PathVariable @Positive Long areaId) {
-        areaSeguidaService.seguir(areaId);
-        return ResponseEntity.noContent().build();
-    }
-
-    @DeleteMapping("/me/areas-seguidas/{areaId}")
-    @Operation(summary = "Deixa de seguir uma área",
-            description = "Qualquer usuário logado, sempre no próprio cadastro. Idempotente: deixar de seguir uma área que "
-                    + "não segue também dá 204. A área do cadastro não muda por esta rota.")
-    @ApiResponse(responseCode = "204", description = "A área não é mais seguida; a resposta não tem corpo")
-    @ApiResponse(responseCode = "400", description = "Id menor ou igual a zero")
-    @ApiResponse(responseCode = "401", description = "Sem token, ou token inválido ou expirado")
-    @ApiResponse(responseCode = "404", description = "A área não existe")
-    public ResponseEntity<Void> deixarDeSeguirArea(@PathVariable @Positive Long areaId) {
-        areaSeguidaService.deixarDeSeguir(areaId);
-        return ResponseEntity.noContent().build();
-    }
-
-    @GetMapping("/me/areas-seguidas")
-    @Operation(summary = "Lista as áreas seguidas",
-            description = "Qualquer usuário logado, sempre as do próprio cadastro. Ordenadas por nome, no formato HAL e com os "
-                    + "mesmos links de GET /api/areas/{id}. Quem não segue nenhuma recebe a lista vazia. Carrega o usuário e as "
-                    + "áreas num SELECT só (@EntityGraph), sem N+1.")
-    @ApiResponse(responseCode = "200", description = "Áreas seguidas (no máximo 20)")
-    @ApiResponse(responseCode = "401", description = "Sem token, ou token inválido ou expirado")
-    public ResponseEntity<CollectionModel<EntityModel<AreaResponse>>> areasSeguidas() {
-        return ResponseEntity.ok(areaAssembler.toCollectionModel(areaSeguidaService.listar(),
-                linkTo(methodOn(AuthController.class).areasSeguidas()).withSelfRel()));
     }
 }

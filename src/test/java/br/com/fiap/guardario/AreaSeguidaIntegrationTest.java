@@ -7,13 +7,9 @@ import br.com.fiap.guardario.model.Usuario;
 import br.com.fiap.guardario.repository.AreaRiscoRepository;
 import br.com.fiap.guardario.repository.UsuarioRepository;
 import br.com.fiap.guardario.service.AreaSeguidaService;
-import jakarta.persistence.EntityManagerFactory;
-import org.hibernate.SessionFactory;
-import org.hibernate.stat.Statistics;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -26,13 +22,7 @@ import java.util.function.Supplier;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.hamcrest.Matchers.contains;
-import static org.hamcrest.Matchers.endsWith;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -56,9 +46,6 @@ class AreaSeguidaIntegrationTest extends IntegracaoBase {
     @Autowired
     private AreaSeguidaService areaSeguidaService;
 
-    @Autowired
-    private EntityManagerFactory entityManagerFactory;
-
     // seguir uma área mexe só na tabela de junção: a versão do Usuario não sobe, para não derrubar com 409 uma edição
     // de perfil feita ao mesmo tempo (@OptimisticLock(excluded = true) na coleção)
     @Test
@@ -75,138 +62,6 @@ class AreaSeguidaIntegrationTest extends IntegracaoBase {
         assertThat(versao(usuario)).isEqualTo(versaoAntes);
         assertThat(jdbc.queryForObject("select count(*) from usuario_area_seguida where usuario_id = ? and area_id = ?",
                 Integer.class, usuario, area)).isEqualTo(1);
-    }
-
-    // ---------- rotas: /api/auth/me/areas-seguidas ----------
-
-    private static final String ROTA = "/api/auth/me/areas-seguidas";
-
-    // seguir e deixar de seguir são idempotentes (204 nas duas vezes); a lista sai em HAL, ordenada por nome, com os
-    // mesmos links do recurso de área, e vazia (com o _embedded) quando o usuário não segue nenhuma
-    @Test
-    void donoSegueListaEDeixaDeSeguirPelasRotas() throws Exception {
-        String token = tokenDe(cadastrar("rotas"));
-        String sufixo = sufixoUnico();
-        long beta = criarArea("Beta Rota " + sufixo);
-        long alfa = criarArea("Alfa Rota " + sufixo);
-
-        for (long area : new long[]{beta, alfa, beta}) {
-            mockMvc.perform(put(ROTA + "/" + area).header(HttpHeaders.AUTHORIZATION, bearer(token)))
-                    .andExpect(status().isNoContent());
-        }
-        mockMvc.perform(get(ROTA).header(HttpHeaders.AUTHORIZATION, bearer(token)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$._embedded.areas[*].id", contains((int) alfa, (int) beta)))
-                .andExpect(jsonPath("$._embedded.areas[0]._links.self.href", endsWith("/api/areas/" + alfa)))
-                .andExpect(jsonPath("$._embedded.areas[0]._links.alertas-ativos.href").exists())
-                .andExpect(jsonPath("$._links.self.href", endsWith(ROTA)));
-
-        for (int vez = 0; vez < 2; vez++) {
-            for (long area : new long[]{alfa, beta}) {
-                mockMvc.perform(delete(ROTA + "/" + area).header(HttpHeaders.AUTHORIZATION, bearer(token)))
-                        .andExpect(status().isNoContent());
-            }
-        }
-        mockMvc.perform(get(ROTA).header(HttpHeaders.AUTHORIZATION, bearer(token)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$._embedded.areas").isEmpty());
-    }
-
-    @Test
-    void erros404400E401NoJsonPadrao() throws Exception {
-        String token = tokenDe(cadastrar("erros"));
-        for (var requisicao : List.of(put(ROTA + "/999999"), delete(ROTA + "/999999"))) {
-            mockMvc.perform(requisicao.header(HttpHeaders.AUTHORIZATION, bearer(token)))
-                    .andExpect(status().isNotFound())
-                    .andExpect(jsonPath("$.status").value(404));
-        }
-        mockMvc.perform(put(ROTA + "/0").header(HttpHeaders.AUTHORIZATION, bearer(token)))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.status").value(400));
-        for (var requisicao : List.of(put(ROTA + "/1"), delete(ROTA + "/1"), get(ROTA))) {
-            mockMvc.perform(requisicao)
-                    .andExpect(status().isUnauthorized())
-                    .andExpect(header().string(HttpHeaders.WWW_AUTHENTICATE, "Bearer"))
-                    .andExpect(jsonPath("$.status").value(401));
-        }
-    }
-
-    @Test
-    void tetoPelaRotaDa400NoCampoAreasSeguidas() throws Exception {
-        String token = tokenDe(cadastrar("tetorota"));
-        for (int i = 0; i < Usuario.LIMITE_DE_AREAS_SEGUIDAS; i++) {
-            mockMvc.perform(put(ROTA + "/" + criarArea("Área Teto Rota " + i + " " + sufixoUnico()))
-                    .header(HttpHeaders.AUTHORIZATION, bearer(token))).andExpect(status().isNoContent());
-        }
-        mockMvc.perform(put(ROTA + "/" + criarArea("Área Teto Rota Extra " + sufixoUnico()))
-                        .header(HttpHeaders.AUTHORIZATION, bearer(token)))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.errors[0].field").value("areasSeguidas"));
-    }
-
-    // cada um só enxerga e só mexe nas próprias áreas seguidas: o DELETE de outra pessoa não tira a área de quem segue
-    @Test
-    void isolamentoEntreUsuarios() throws Exception {
-        String maria = tokenDe(cadastrar("isolamentoa"));
-        String joao = tokenDe(cadastrar("isolamentob"));
-        long area = criarArea("Área Isolamento " + sufixoUnico());
-        mockMvc.perform(put(ROTA + "/" + area).header(HttpHeaders.AUTHORIZATION, bearer(maria))).andExpect(status().isNoContent());
-
-        mockMvc.perform(get(ROTA).header(HttpHeaders.AUTHORIZATION, bearer(joao)))
-                .andExpect(jsonPath("$._embedded.areas").isEmpty());
-        mockMvc.perform(delete(ROTA + "/" + area).header(HttpHeaders.AUTHORIZATION, bearer(joao))).andExpect(status().isNoContent());
-        mockMvc.perform(get(ROTA).header(HttpHeaders.AUTHORIZATION, bearer(maria)))
-                .andExpect(jsonPath("$._embedded.areas[*].id", contains((int) area)));
-    }
-
-    // a listagem carrega o usuário e as áreas num SELECT só: seguir 1 ou 5 áreas faz o mesmo número de consultas,
-    // inclusive para o ADMIN, que tem o link excluir (uma consulta para a lista toda)
-    @Test
-    void listagemNaoFazUmaConsultaPorArea() throws Exception {
-        List<Long> areas = new ArrayList<>();
-        for (int i = 0; i < 5; i++) {
-            areas.add(criarArea("Área Contagem " + i + " " + sufixoUnico()));
-        }
-        for (String token : List.of(tokenDe(cadastrar("contagem")), tokenAdmin())) {
-            mockMvc.perform(put(ROTA + "/" + areas.get(0)).header(HttpHeaders.AUTHORIZATION, bearer(token)));
-            long comUma = comandosSql(token);
-            for (long area : areas) {
-                mockMvc.perform(put(ROTA + "/" + area).header(HttpHeaders.AUTHORIZATION, bearer(token)));
-            }
-            assertThat(comandosSql(token)).isEqualTo(comUma);
-            for (long area : areas) {
-                mockMvc.perform(delete(ROTA + "/" + area).header(HttpHeaders.AUTHORIZATION, bearer(token)));
-            }
-        }
-    }
-
-    // o /me anuncia a lista e as duas ações, com title, e o HAL-FORMS traz o template de cada ação
-    @Test
-    void meAnunciaAsAreasSeguidas() throws Exception {
-        String token = tokenDe(cadastrar("links"));
-        mockMvc.perform(get("/api/auth/me").header(HttpHeaders.AUTHORIZATION, bearer(token)))
-                .andExpect(jsonPath("$._links.areas-seguidas.href", endsWith(ROTA)))
-                .andExpect(jsonPath("$._links.areas-seguidas.title").isNotEmpty())
-                .andExpect(jsonPath("$._links.seguir-area.href", endsWith(ROTA + "/{areaId}")))
-                .andExpect(jsonPath("$._links.seguir-area.title").isNotEmpty())
-                .andExpect(jsonPath("$._links.deixar-de-seguir-area.href", endsWith(ROTA + "/{areaId}")))
-                .andExpect(jsonPath("$._links.deixar-de-seguir-area.title").isNotEmpty());
-        mockMvc.perform(get("/api/auth/me").header(HttpHeaders.AUTHORIZATION, bearer(token))
-                        .accept(MediaType.parseMediaType("application/prs.hal-forms+json")))
-                .andExpect(jsonPath("$._templates.seguir-area.method").value("PUT"))
-                .andExpect(jsonPath("$._templates.deixar-de-seguir-area.method").value("DELETE"));
-    }
-
-    private long comandosSql(String token) throws Exception {
-        Statistics estatisticas = entityManagerFactory.unwrap(SessionFactory.class).getStatistics();
-        estatisticas.clear();
-        mockMvc.perform(get(ROTA).header(HttpHeaders.AUTHORIZATION, bearer(token))).andExpect(status().isOk());
-        return estatisticas.getPrepareStatementCount();
-    }
-
-    private String tokenDe(long usuario) throws Exception {
-        String email = jdbc.queryForObject("select email from usuario where id = ?", String.class, usuario);
-        return token(email, "Senha@123");
     }
 
     // ---------- serviço (chamado como o usuário logado, como faz o filtro JWT) ----------
