@@ -106,10 +106,8 @@ public class LeituraServiceImpl implements LeituraService {
         leitura.setTemperaturaC(request.temperaturaC());
         leitura.setUmidadePct(request.umidadePct());
         leitura.setNivelRisco(risco);
-        // a validação aceita o relógio da estação até 1 minuto adiantado, mas grava no máximo a hora do servidor:
-        // gravada no futuro, ela faria a próxima leitura (sem horário) parecer atrasada e segurar o alerta
-        Instant agora = Instant.now();
-        leitura.setMedidaEm(request.medidaEm() == null || request.medidaEm().isAfter(agora) ? agora : request.medidaEm());
+        // a validação já recusou data no futuro (400): grava o medidaEm como veio, ou a hora do servidor se não veio
+        leitura.setMedidaEm(request.medidaEm() == null ? Instant.now() : request.medidaEm());
 
         boolean ehAMaisRecente = estacao.registrarLeitura(leitura);
         leituraRepository.save(leitura);

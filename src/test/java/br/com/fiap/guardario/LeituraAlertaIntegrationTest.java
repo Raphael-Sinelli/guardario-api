@@ -273,29 +273,22 @@ class LeituraAlertaIntegrationTest extends IntegracaoBase {
         }
     }
 
-    // o relógio da estação pode estar uns segundos adiantado em relação ao servidor
+    // data no futuro é 400 antes de qualquer conferência de repetição: na leitura avulsa (mandada duas vezes, a
+    // repetida também é 400, e nada é gravado) e no lote, com o índice do item
     @Test
-    void leituraComRelogioPoucosSegundosAdiantadoEhAceita() throws Exception {
-        long estacao = criarEstacao(criarArea("Área Relógio " + sufixoUnico()));
-        postJson("/api/estacoes/" + estacao + "/leituras", tokenAgente(),
-                "{\"nivelCm\": 120, \"chuvaMmH\": 0, \"medidaEm\": \"" + java.time.Instant.now().plusSeconds(20) + "\"}")
-                .andExpect(status().isCreated());
-    }
-
-    // a leitura adiantada é gravada com a hora do servidor: senão a próxima leitura, sem horário, pareceria atrasada
-    // e uma EMERGENCIA de verdade não abriria alerta
-    @Test
-    void leituraComRelogioAdiantadoNaoBloqueiaOAlertaDaLeituraSeguinte() throws Exception {
-        long estacao = criarEstacao(criarArea("Área Relógio Adiantado " + sufixoUnico()));
-        postJson("/api/estacoes/" + estacao + "/leituras", tokenAgente(),
-                "{\"nivelCm\": 10, \"chuvaMmH\": 0, \"medidaEm\": \"" + java.time.Instant.now().plusSeconds(55) + "\"}")
-                .andExpect(status().isCreated());
-
-        registrarLeitura(estacao, 400, 80.0)
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.leitura.nivelRisco").value("EMERGENCIA"))
-                .andExpect(jsonPath("$.nivelArea").value("EMERGENCIA"))
-                .andExpect(jsonPath("$.alertaGeradoId").isNumber());
+    void leituraComMedidaEmNoFuturoDevolve400MesmoRepetida() throws Exception {
+        long estacao = criarEstacao(criarArea("Área Futuro " + sufixoUnico()));
+        String corpo = "{\"nivelCm\": 60, \"chuvaMmH\": 2.0, \"medidaEm\": \"" + java.time.Instant.now().plusSeconds(30) + "\"}";
+        for (int vez = 0; vez < 2; vez++) {
+            postJson("/api/estacoes/" + estacao + "/leituras", tokenAgente(), corpo)
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.errors[0].field").value("medidaEm"));
+        }
+        postJson("/api/estacoes/" + estacao + "/leituras/lote", tokenAgente(), "{\"leituras\": [" + corpo + "]}")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0].field").value("leituras[0].medidaEm"));
+        mockMvc.perform(get("/api/estacoes/" + estacao + "/leituras"))
+                .andExpect(jsonPath("$.page.totalElements").value(0));
     }
 
     // o Java mede o horário em frações de 100 ns e o banco guarda microssegundos, arredondando: sem cortar a fração,

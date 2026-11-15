@@ -1909,6 +1909,70 @@
           ]
         },
         {
+          "name": "Leitura com medidaEm no futuro (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/estacoes/{{estacaoId}}/leituras",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "estacoes",
+                "{{estacaoId}}",
+                "leituras"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAgente}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nivelCm\": 60,\n  \"chuvaMmH\": 2.0,\n  \"medidaEm\": \"{{medidaFutura}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set(\"medidaFutura\", new Date(Date.now() + 30 * 1000).toISOString());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Erro no campo medidaEm\", () => pm.expect(pm.response.json().errors[0].field).to.eql(\"medidaEm\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Buscar a leitura criada (endereço do Location)",
           "request": {
             "method": "GET",

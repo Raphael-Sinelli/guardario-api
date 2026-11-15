@@ -10,8 +10,8 @@ import java.lang.annotation.Target;
 
 /**
  * Momento da medição dentro de uma janela plausível: no máximo diasAtras no passado (a estação guarda poucos dias
- * de leitura sem internet; ano 1900 é relógio errado) e no máximo segundosAdiante no futuro (o relógio da estação
- * pode estar uns segundos adiantado em relação ao servidor; com o @PastOrPresent, 5 segundos já davam 400).
+ * de leitura sem internet; ano 1900 é relógio errado) e nunca no futuro. Data no futuro é relógio adiantado: aceita,
+ * ela deixava a leitura repetida escapar da conferência de repetição. O 400 sai antes do service.
  */
 @Target(ElementType.FIELD)
 @Retention(RetentionPolicy.RUNTIME)
@@ -19,8 +19,6 @@ import java.lang.annotation.Target;
 public @interface JanelaDeMedicao {
 
     int diasAtras();
-
-    int segundosAdiante();
 
     String message() default "deve estar entre {diasAtras} dias atrás e agora";
 

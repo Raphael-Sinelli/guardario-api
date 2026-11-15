@@ -9,12 +9,10 @@ import java.time.Instant;
 public class JanelaDeMedicaoValidator implements ConstraintValidator<JanelaDeMedicao, Instant> {
 
     private Duration atras;
-    private Duration adiante;
 
     @Override
     public void initialize(JanelaDeMedicao anotacao) {
         this.atras = Duration.ofDays(anotacao.diasAtras());
-        this.adiante = Duration.ofSeconds(anotacao.segundosAdiante());
     }
 
     // nulo é válido: sem medidaEm, o servidor usa o horário atual
@@ -24,6 +22,6 @@ public class JanelaDeMedicaoValidator implements ConstraintValidator<JanelaDeMed
             return true;
         }
         Instant agora = Instant.now();
-        return !medidaEm.isBefore(agora.minus(atras)) && !medidaEm.isAfter(agora.plus(adiante));
+        return !medidaEm.isBefore(agora.minus(atras)) && !medidaEm.isAfter(agora);
     }
 }
