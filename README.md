@@ -404,6 +404,7 @@ Requisição que o Tomcat recusa antes de chegar ao Spring (barra codificada `%2
 |---|---|---|---|
 | POST | `/api/auth/register` | público | 201 + Location (o cadastro criado, que o próprio usuário consulta depois do login) |
 | POST | `/api/auth/login` | público | 200 |
+| PUT | `/api/auth/me` | logado | 200 |
 | GET | `/api/auth/me` | logado | 200 |
 | PUT | `/api/auth/senha` | logado | 204 |
 | GET | `/api/usuarios` | ADMIN | 200 |

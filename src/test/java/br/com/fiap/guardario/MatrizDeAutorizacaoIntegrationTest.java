@@ -32,6 +32,7 @@ class MatrizDeAutorizacaoIntegrationTest extends IntegracaoBase {
             "PUT,    /api/relatos/1,                  LOGADO",
             "DELETE, /api/relatos/1,                  LOGADO",
             "GET,    /api/usuarios/1,                 LOGADO",
+            "PUT,    /api/auth/me,                    LOGADO",
             // AGENTE ou ADMIN
             "POST,   /api/estacoes/1/leituras,        AGENTE",
             "POST,   /api/estacoes/1/leituras/lote,   AGENTE",
