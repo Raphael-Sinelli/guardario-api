@@ -83,9 +83,11 @@ public class AuthController {
     @Operation(summary = "Troca a senha do usuário dono do token",
             description = "Qualquer usuário logado. O usuário vem do token, nunca de um id no corpo ou na URL. "
                     + "Confere a senha atual e grava a nova (de 8 a 72 caracteres, até 72 bytes) com BCrypt. "
-                    + "O token atual continua valendo até expirar; o próximo login já usa a senha nova.")
+                    + "A nova senha precisa ser diferente da atual. Depois da troca, todo token emitido antes deixa de valer, "
+                    + "inclusive o usado nesta chamada e o de outras sessões (401): faça login de novo com a senha nova.")
     @ApiResponse(responseCode = "204", description = "Senha trocada; a resposta não tem corpo")
-    @ApiResponse(responseCode = "400", description = "Senha atual incorreta (campo senhaAtual), ou nova senha em branco, com menos de 8 caracteres ou mais de 72 bytes")
+    @ApiResponse(responseCode = "400", description = "Senha atual incorreta (campo senhaAtual), ou nova senha em branco, com menos de 8 caracteres, "
+            + "mais de 72 bytes ou igual à atual (campo novaSenha)")
     @ApiResponse(responseCode = "401", description = "Sem token, ou token inválido ou expirado")
     @ApiResponse(responseCode = "409", description = "O cadastro foi alterado por outra requisição ao mesmo tempo (troca de senha, de papel ou do perfil): tente de novo")
     public ResponseEntity<Void> alterarSenha(@RequestBody @Valid AlterarSenhaRequest request) {

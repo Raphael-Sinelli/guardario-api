@@ -51,7 +51,7 @@ Se o wrapper reclamar da versão do Java, confira se `java -version` e a variáv
 Outros comandos:
 
 ```bash
-./mvnw test                                   # roda os 264 testes
+./mvnw test                                   # roda os 266 testes
 ./mvnw clean package                          # gera target/guardario-api-1.0.0.jar
 java -jar target/guardario-api-1.0.0.jar      # roda o jar gerado
 ```
@@ -97,13 +97,13 @@ Sem login dá para consultar áreas, estações, leituras, alertas e abrigos. In
 
 ### Testando com o Postman (ou o Bruno)
 
-A pasta `postman/` tem a coleção `GuardaRio.postman_collection.json`, com 110 requisições em 10 pastas e 174 asserções automáticas (status esperado e regras de negócio); rodada com o Newman contra a API recém-iniciada, dá 0 falhas. O Bruno importa o mesmo arquivo.
+A pasta `postman/` tem a coleção `GuardaRio.postman_collection.json`, com 113 requisições em 10 pastas e 179 asserções automáticas (status esperado e regras de negócio); rodada com o Newman contra a API recém-iniciada, dá 0 falhas. O Bruno importa o mesmo arquivo.
 
 1. Suba a API e importe o arquivo no Postman.
 2. Rode a pasta **01 Autenticação**: os logins guardam os tokens nas variáveis da coleção, e as outras requisições já usam o token certo para cada papel.
 3. Rode a pasta **02 Fluxo principal**, que é o roteiro da demonstração, ou a coleção inteira pelo Runner.
 
-A coleção conta com os dados de uma API recém-iniciada. Para rodar tudo de novo do zero, reinicie a API. Ela troca a senha da Maria (pasta 01 Autenticação), então, depois de rodá-la, a senha `Maria@123` da tabela de usuários só volta a valer com a API reiniciada.
+A coleção conta com os dados de uma API recém-iniciada. Para rodar tudo de novo do zero, reinicie a API. Ela troca a senha da Maria (pasta 01 Autenticação), confere que o token antigo dela deixa de valer e faz login de novo com a senha nova; depois de rodá-la, a senha `Maria@123` da tabela de usuários só volta a valer com a API reiniciada.
 
 ## Regras de negócio
 
@@ -339,9 +339,9 @@ Quem não está logado não recebe link de ação. O `excluir` só aparece quand
 
 1. `POST /api/auth/register` grava o usuário como CIDADAO, com a senha em hash BCrypt.
 2. `POST /api/auth/login` passa pelo `AuthenticationManager`, que busca o usuário pelo `UserDetailsService` e compara a senha com `BCrypt.matches`. Senha errada lança `BadCredentialsException`, que vira 401 com uma mensagem genérica, para não revelar quais emails existem. O cadastro, como no projeto da disciplina, ainda responde 409 para email repetido; esconder isso exigiria confirmar o email por mensagem, o que fica fora do escopo.
-3. O `JwtService` gera um token HS256 que vale 1 hora, com o email no `sub` e o papel numa claim informativa.
+3. O `JwtService` gera um token HS256 que vale 1 hora, com o email no `sub`, o papel numa claim informativa e a `versaoToken` do usuário, que sobe a cada troca de senha.
 4. O app manda `Authorization: Bearer <token>` em cada requisição.
-5. O `JwtAuthenticationFilter` (um `OncePerRequestFilter`) valida assinatura e expiração, carrega o usuário do banco e coloca no `SecurityContext`. O papel que vale é o do banco: uma promoção feita pelo ADMIN vale na hora, e um papel forjado no token não adianta.
+5. O `JwtAuthenticationFilter` (um `OncePerRequestFilter`) valida assinatura e expiração, carrega o usuário do banco e coloca no `SecurityContext`. O papel que vale é o do banco: uma promoção feita pelo ADMIN vale na hora, e um papel forjado no token não adianta. O filtro também compara a `versaoToken` do token com a do banco: a troca de senha (`PUT /api/auth/senha`) derruba todo token emitido antes, inclusive o da própria chamada, que passa a dar 401 com `WWW-Authenticate: Bearer error="invalid_token"`. Token emitido antes desta regra, sem a claim, conta como versão 0 e vale até expirar. A nova senha igual à atual dá 400 no campo `novaSenha`.
 6. O `SecurityConfig` controla as áreas de URL: rotas públicas (o GET e também o HEAD, que é o GET sem corpo, e o OPTIONS, que só lista os métodos da rota), a área de cada papel (as escritas de AGENTE e de ADMIN, que assim são negadas antes da validação do corpo), `/api/usuarios/**` e `/actuator/**` só para ADMIN, menos o `GET /api/usuarios/{id}`, que o próprio usuário também faz. Depois disso, o `@PreAuthorize` de cada método controla a ação, e o service confere a posse (relato de outra pessoa dá 403, sempre depois de verificar se existe: 404 vem antes de 403).
 
 **401 x 403.** Sem token, ou com token inválido ou expirado, o `RestAuthenticationEntryPoint` responde 401. Usuário logado sem permissão recebe 403, do `RestAccessDeniedHandler` (área de URL) ou do `GlobalExceptionHandler` (`@PreAuthorize` e regra de posse). Os dois handlers da cadeia de filtros escrevem o mesmo JSON de erro do resto da API.
@@ -464,10 +464,10 @@ As rotas de listagem aceitam também `page`, `size` e `sort`. A descrição de c
 
 ## Testes
 
-`./mvnw test` roda 264 testes:
+`./mvnw test` roda 266 testes:
 
 - 22 testes de unidade, sem Spring e sem banco: 17 das regras que ficam nas entidades e nos enums (régua de risco nas fronteiras de cada cota, nível da área só com estações ativas, leitura atrasada ou antiga, lotação do abrigo, prioridade, máquina de estados, encerramento de alerta), 3 da chave do JWT (`JwtServiceTest`) e 2 da lista vazia no HAL (`RespostaHalTest`).
-- 242 testes de integração que sobem a aplicação inteira e chamam a API por HTTP (com o MockMvc; o `ServidorRealIntegrationTest`, por socket), passando pela segurança, pelo cache e pelo banco de verdade: status e formato de cada erro, 401 x 403, token expirado, posse, alerta automático, substituição de alertas, nível da área quando a estação muda de área ou de status, filtros com Specification, links HATEOAS mudando com o estado e sem template, invalidação e métricas do cache, link excluir sem N+1 (contando os comandos SQL), Actuator, OpenAPI, CORS e o perfil prod subindo sem carga de demonstração. Três classes cobrem o que costuma escapar: `MatrizDeAutorizacaoIntegrationTest` passa por toda rota protegida (401 sem token, 403 para quem não tem o papel) e pelas rotas públicas de consulta (200 sem token); `ConcorrenciaIntegrationTest` e os testes de abrigo e leitura disparam requisições ao mesmo tempo (entradas no abrigo, leituras da mesma área, encerrar o mesmo alerta, atender e descartar o mesmo relato, cadastros com o mesmo email); `CasosExtremosIntegrationTest` cobre corpo ausente, campo obrigatório nulo, lista vazia e paginação nos limites (página depois da última, size zero, negativo e acima do teto). O `ServidorRealIntegrationTest` sobe o Tomcat de verdade numa porta livre e manda requisições cruas por socket, para conferir o JSON dos erros que o Tomcat responde antes do Spring e o `Allow` do TRACE. O `HalFormsIntegrationTest` confere os templates de cada ação em HAL-FORMS e que o HAL padrão continua sem eles.
+- 244 testes de integração que sobem a aplicação inteira e chamam a API por HTTP (com o MockMvc; o `ServidorRealIntegrationTest`, por socket), passando pela segurança, pelo cache e pelo banco de verdade: status e formato de cada erro, 401 x 403, token expirado, posse, alerta automático, substituição de alertas, nível da área quando a estação muda de área ou de status, filtros com Specification, links HATEOAS mudando com o estado e sem template, invalidação e métricas do cache, link excluir sem N+1 (contando os comandos SQL), Actuator, OpenAPI, CORS e o perfil prod subindo sem carga de demonstração. Três classes cobrem o que costuma escapar: `MatrizDeAutorizacaoIntegrationTest` passa por toda rota protegida (401 sem token, 403 para quem não tem o papel) e pelas rotas públicas de consulta (200 sem token); `ConcorrenciaIntegrationTest` e os testes de abrigo e leitura disparam requisições ao mesmo tempo (entradas no abrigo, leituras da mesma área, encerrar o mesmo alerta, atender e descartar o mesmo relato, cadastros com o mesmo email); `CasosExtremosIntegrationTest` cobre corpo ausente, campo obrigatório nulo, lista vazia e paginação nos limites (página depois da última, size zero, negativo e acima do teto). O `ServidorRealIntegrationTest` sobe o Tomcat de verdade numa porta livre e manda requisições cruas por socket, para conferir o JSON dos erros que o Tomcat responde antes do Spring e o `Allow` do TRACE. O `HalFormsIntegrationTest` confere os templates de cada ação em HAL-FORMS e que o HAL padrão continua sem eles.
 
 ## Estrutura do projeto
 

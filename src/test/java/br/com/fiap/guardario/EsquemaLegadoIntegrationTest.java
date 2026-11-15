@@ -17,13 +17,14 @@ import java.sql.SQLException;
 import java.sql.Statement;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
  * O perfil prod cria o schema com ddl-auto: update, sem Flyway nem script. Este teste sobe o prod sobre um banco que
- * já tem a tabela usuario da versão anterior (sem as colunas novas) e um usuário gravado, como o banco da VM: a coluna
- * nova entra com o valor padrão nas linhas antigas, e o usuário antigo continua entrando e trocando a senha.
+ * já tem a tabela usuario da versão anterior (sem versao e sem versao_token) e um usuário gravado, como o banco da VM:
+ * as colunas novas entram com 0 nas linhas antigas, e o usuário antigo continua entrando e trocando a senha.
  */
 @ActiveProfiles("prod")
 @TestPropertySource(properties = {
@@ -66,6 +67,7 @@ class EsquemaLegadoIntegrationTest extends IntegracaoBase {
     @Test
     void usuarioQueJaExistiaGanhaAVersaoZeroEContinuaTrocandoASenha() throws Exception {
         assertThat(jdbc.queryForObject("select versao from usuario where email = ?", Long.class, EMAIL)).isZero();
+        assertThat(jdbc.queryForObject("select versao_token from usuario where email = ?", Integer.class, EMAIL)).isZero();
 
         String token = token(EMAIL, "Senha-Antiga-1");
         mockMvc.perform(put("/api/auth/senha").header(HttpHeaders.AUTHORIZATION, bearer(token))
@@ -74,6 +76,8 @@ class EsquemaLegadoIntegrationTest extends IntegracaoBase {
                 .andExpect(status().isNoContent());
 
         assertThat(jdbc.queryForObject("select versao from usuario where email = ?", Long.class, EMAIL)).isEqualTo(1L);
+        assertThat(jdbc.queryForObject("select versao_token from usuario where email = ?", Integer.class, EMAIL)).isEqualTo(1);
+        mockMvc.perform(get("/api/auth/me").header(HttpHeaders.AUTHORIZATION, bearer(token))).andExpect(status().isUnauthorized());
         token(EMAIL, "Senha-Nova-2");
     }
 }

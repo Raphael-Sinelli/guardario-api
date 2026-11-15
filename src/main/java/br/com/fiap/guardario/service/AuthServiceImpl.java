@@ -123,7 +123,11 @@ public class AuthServiceImpl implements AuthService {
         if (!passwordEncoder.matches(request.senhaAtual(), usuario.getSenha())) {
             throw new CampoInvalidoException("senhaAtual", "Senha atual incorreta");
         }
-        usuario.setSenha(passwordEncoder.encode(request.novaSenha()));
+        // a senha atual acabou de ser conferida: a nova igual a ela não troca nada
+        if (request.novaSenha().equals(request.senhaAtual())) {
+            throw new CampoInvalidoException("novaSenha", "deve ser diferente da senha atual");
+        }
+        usuario.trocarSenha(passwordEncoder.encode(request.novaSenha())); // os tokens emitidos antes deixam de valer
     }
 
     private String normalizarEmail(String email) {

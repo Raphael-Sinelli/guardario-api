@@ -42,13 +42,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String token = header.substring(PREFIXO.length());
         try {
-            String email = jwtService.extrairEmail(token);
-            // o papel vem do banco a cada requisição: um "papel" forjado no token não adianta
-            usuarioRepository.findByEmail(email).ifPresent(usuario -> {
-                var autenticacao = new UsernamePasswordAuthenticationToken(usuario, null, usuario.getAuthorities());
-                autenticacao.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(autenticacao);
-            });
+            JwtService.TokenLido lido = jwtService.ler(token);
+            // o papel vem do banco a cada requisição: um "papel" forjado no token não adianta. E o token emitido antes
+            // da última troca de senha (versão antiga) não autentica: a rota protegida responde 401
+            usuarioRepository.findByEmail(lido.email())
+                    .filter(usuario -> usuario.getVersaoToken() == lido.versaoToken())
+                    .ifPresent(usuario -> {
+                        var autenticacao = new UsernamePasswordAuthenticationToken(usuario, null, usuario.getAuthorities());
+                        autenticacao.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                        SecurityContextHolder.getContext().setAuthentication(autenticacao);
+                    });
         } catch (JwtException | IllegalArgumentException e) {
             // token inválido não responde nada aqui: segue sem usuário e, se a rota exigir login, o entry point devolve 401
             SecurityContextHolder.clearContext();

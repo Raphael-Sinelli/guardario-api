@@ -246,6 +246,47 @@ class AuthIntegrationTest extends IntegracaoBase {
                 .andExpect(status().isUnauthorized());
     }
 
+    // a nova senha igual à atual não troca nada: 400 no campo novaSenha, e a senha continua valendo
+    @Test
+    void trocaDeSenhaComNovaSenhaIgualAAtualDevolve400NoCampoNovaSenha() throws Exception {
+        String email = cadastrarUsuarioParaTrocaDeSenha();
+        String token = token(email, "Senha@123");
+
+        mockMvc.perform(put("/api/auth/senha").header(HttpHeaders.AUTHORIZATION, bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"senhaAtual": "Senha@123", "novaSenha": "Senha@123"}"""))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0].field").value("novaSenha"));
+
+        mockMvc.perform(get("/api/auth/me").header(HttpHeaders.AUTHORIZATION, bearer(token)))
+                .andExpect(status().isOk());
+    }
+
+    // trocar a senha derruba todo token emitido antes, inclusive o da própria chamada e o de outra sessão; o login
+    // com a senha nova dá um token que vale
+    @Test
+    void trocaDeSenhaRevogaOsTokensEmitidosAntes() throws Exception {
+        String email = cadastrarUsuarioParaTrocaDeSenha();
+        String daChamada = token(email, "Senha@123");
+        String deOutraSessao = token(email, "Senha@123");
+
+        mockMvc.perform(put("/api/auth/senha").header(HttpHeaders.AUTHORIZATION, bearer(daChamada))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"senhaAtual": "Senha@123", "novaSenha": "NovaSenha@456"}"""))
+                .andExpect(status().isNoContent());
+
+        for (String antigo : new String[]{daChamada, deOutraSessao}) {
+            mockMvc.perform(get("/api/auth/me").header(HttpHeaders.AUTHORIZATION, bearer(antigo)))
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(header().string(HttpHeaders.WWW_AUTHENTICATE, "Bearer error=\"invalid_token\""))
+                    .andExpect(jsonPath("$.status").value(401));
+        }
+        mockMvc.perform(get("/api/auth/me").header(HttpHeaders.AUTHORIZATION, bearer(token(email, "NovaSenha@456"))))
+                .andExpect(status().isOk());
+    }
+
     // ---------- edição do próprio perfil (PUT /api/auth/me) ----------
     // cada teste cadastra o próprio usuário: os dados dos usuários de demonstração não podem mudar
 

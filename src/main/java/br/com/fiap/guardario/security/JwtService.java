@@ -1,6 +1,7 @@
 package br.com.fiap.guardario.security;
 
 import br.com.fiap.guardario.model.Usuario;
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import lombok.extern.slf4j.Slf4j;
@@ -19,6 +20,8 @@ import java.util.Date;
 @Slf4j
 @Service
 public class JwtService {
+
+    private static final String CLAIM_VERSAO = "versaoToken";
 
     private static final int TAMANHO_MINIMO_CHAVE_BYTES = 32; // HS256 exige 256 bits
 
@@ -62,6 +65,7 @@ public class JwtService {
         return Jwts.builder()
                 .subject(usuario.getEmail())
                 .claim("papel", usuario.getPapel().name()) // só informativo: o papel que vale é o do banco
+                .claim(CLAIM_VERSAO, usuario.getVersaoToken()) // conferida no filtro: a troca de senha revoga o token
                 .issuedAt(Date.from(agora))
                 .expiration(Date.from(agora.plusSeconds(expiracaoSegundos)))
                 .signWith(chave, Jwts.SIG.HS256)
@@ -69,16 +73,21 @@ public class JwtService {
     }
 
     /**
-     * Valida assinatura e expiração e devolve o email (subject).
-     * Token adulterado, expirado ou de outra chave lança JwtException.
+     * Valida assinatura e expiração e devolve o email (subject) e a versão do token.
+     * Token adulterado, expirado ou de outra chave lança JwtException. Token emitido antes de existir a claim
+     * versaoToken conta como versão 0, e continua valendo até expirar enquanto o usuário não trocar a senha.
      */
-    public String extrairEmail(String token) {
-        return Jwts.parser()
+    public TokenLido ler(String token) {
+        Claims claims = Jwts.parser()
                 .verifyWith(chave)
                 .build()
                 .parseSignedClaims(token)
-                .getPayload()
-                .getSubject();
+                .getPayload();
+        Integer versao = claims.get(CLAIM_VERSAO, Integer.class);
+        return new TokenLido(claims.getSubject(), versao == null ? 0 : versao);
+    }
+
+    public record TokenLido(String email, int versaoToken) {
     }
 
     public long getExpiracaoSegundos() {

@@ -56,6 +56,18 @@ public class Usuario implements UserDetails {
     @Column(nullable = false)
     private Long versao;
 
+    // sobe a cada troca de senha. O token leva esse número na claim versaoToken, e o filtro JWT recusa o token de
+    // número antigo: trocar a senha derruba todo token emitido antes. O default 0 vale para as linhas que já existem
+    @ColumnDefault("0")
+    @Column(nullable = false)
+    private int versaoToken;
+
+    // troca o hash e invalida os tokens emitidos antes da troca
+    public void trocarSenha(String novoHash) {
+        this.senha = novoHash;
+        this.versaoToken++;
+    }
+
     @PrePersist
     void aoCriar() {
         criadoEm = Horario.agora();
