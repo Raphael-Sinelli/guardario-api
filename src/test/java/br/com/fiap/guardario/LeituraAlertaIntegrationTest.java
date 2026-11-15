@@ -459,6 +459,43 @@ class LeituraAlertaIntegrationTest extends IntegracaoBase {
                 .andExpect(jsonPath("$.page.totalElements").value(0));
     }
 
+    // o 409 do lote diz qual item repetiu (o índice que o cliente mandou) e o medidaEm, tanto para a leitura que a
+    // estação já tem quanto para a que aparece duas vezes no próprio lote; e nada do lote é gravado
+    @Test
+    void loteComLeituraRepetidaDizOIndiceEOMedidaEm() throws Exception {
+        long estacao = criarEstacao(criarArea("Área Lote Repetido " + sufixoUnico()));
+        java.time.Instant agora = java.time.Instant.now();
+        String jaGravada = agora.minusSeconds(20 * 60).toString();
+        postJson("/api/estacoes/" + estacao + "/leituras", tokenAgente(),
+                "{\"nivelCm\": 70, \"chuvaMmH\": 0, \"medidaEm\": \"" + jaGravada + "\"}")
+                .andExpect(status().isCreated());
+
+        String nova = agora.minusSeconds(10 * 60).toString();
+        postJson("/api/estacoes/" + estacao + "/leituras/lote", tokenAgente(), """
+                {"leituras": [
+                  {"nivelCm": 90, "chuvaMmH": 0, "medidaEm": "%s"},
+                  {"nivelCm": 70, "chuvaMmH": 0, "medidaEm": "%s"}
+                ]}""".formatted(nova, jaGravada))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message", containsString("leituras[1]")))
+                .andExpect(jsonPath("$.message", containsString(jaGravada)));
+
+        String outra = agora.minusSeconds(5 * 60).toString();
+        postJson("/api/estacoes/" + estacao + "/leituras/lote", tokenAgente(), """
+                {"leituras": [
+                  {"nivelCm": 80, "chuvaMmH": 0, "medidaEm": "%s"},
+                  {"nivelCm": 90, "chuvaMmH": 0, "medidaEm": "%s"},
+                  {"nivelCm": 80, "chuvaMmH": 0, "medidaEm": "%s"}
+                ]}""".formatted(outra, nova, outra))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message", containsString("leituras[2]")))
+                .andExpect(jsonPath("$.message", containsString(outra)));
+
+        // tudo ou nada: só a leitura avulsa do começo ficou
+        mockMvc.perform(get("/api/estacoes/" + estacao + "/leituras"))
+                .andExpect(jsonPath("$.page.totalElements").value(1));
+    }
+
     // um item nulo na lista é erro do cliente: 400 no campo do item, e não 500 no service
     @Test
     void loteComLeituraNulaDevolve400() throws Exception {

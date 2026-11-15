@@ -185,7 +185,8 @@ public class EstacaoController {
     @ApiResponse(responseCode = "401", description = "Sem token ou token inválido")
     @ApiResponse(responseCode = "403", description = "Usuário logado é CIDADAO")
     @ApiResponse(responseCode = "404", description = "Estação não existe")
-    @ApiResponse(responseCode = "409", description = "Estação em MANUTENCAO ou INATIVA, ou leitura repetida")
+    @ApiResponse(responseCode = "409", description = "Estação em MANUTENCAO ou INATIVA, ou leitura repetida (já gravada na estação ou "
+            + "repetida dentro do lote): a mensagem diz o índice do item, como leituras[2], e o medidaEm, e nenhuma leitura do lote é gravada")
     public ResponseEntity<EntityModel<LoteLeiturasResponse>> registrarLote(@PathVariable @Positive Long id,
                                                                            @RequestBody @Valid LoteLeiturasRequest request) {
         LoteLeiturasResponse resposta = leituraService.registrarLote(id, request);

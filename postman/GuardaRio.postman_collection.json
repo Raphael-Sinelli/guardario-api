@@ -2108,6 +2108,71 @@
           ]
         },
         {
+          "name": "Lote com leitura repetida (409 com o índice)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/estacoes/{{estacaoId}}/leituras/lote",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "estacoes",
+                "{{estacaoId}}",
+                "leituras",
+                "lote"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAgente}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"leituras\": [\n    { \"nivelCm\": 75, \"chuvaMmH\": 0, \"medidaEm\": \"{{loteRepetida}}\" },\n    { \"nivelCm\": 75, \"chuvaMmH\": 0, \"medidaEm\": \"{{loteRepetida}}\" }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set(\"loteRepetida\", new Date(Date.now() - 2 * 60 * 1000).toISOString());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"Diz o índice do item repetido\", () => pm.expect(pm.response.json().message).to.include(\"leituras[1]\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Desativar estação (ADMIN)",
           "request": {
             "method": "PUT",

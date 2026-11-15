@@ -29,6 +29,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.stream.IntStream;
 
 @Service
 @RequiredArgsConstructor
@@ -78,9 +79,19 @@ public class LeituraServiceImpl implements LeituraService {
             }
         }
 
+        // processa em ordem cronológica, mas guarda o índice que o cliente mandou: é ele que o 409 da repetida mostra.
+        // A repetida pode ser de uma leitura que a estação já tem ou de um item anterior do próprio lote
+        List<Integer> ordem = IntStream.range(0, leituras.size()).boxed()
+                .sorted(Comparator.comparing(i -> leituras.get(i).medidaEm()))
+                .toList();
         List<Long> alertasGerados = new ArrayList<>();
         LeituraRegistradaResponse ultima = null;
-        for (LeituraRequest leitura : leituras.stream().sorted(Comparator.comparing(LeituraRequest::medidaEm)).toList()) {
+        for (int i : ordem) {
+            LeituraRequest leitura = leituras.get(i);
+            if (ehRepetida(estacao, leitura)) {
+                throw new RegraNegocioException("A leitura leituras[" + i + "] (medidaEm " + leitura.medidaEm()
+                        + ") repete uma leitura que a estação já tem ou que aparece antes no lote. Nenhuma leitura do lote foi gravada");
+            }
             ultima = registrarNaEstacao(estacao, leitura);
             if (ultima.alertaGeradoId() != null) {
                 alertasGerados.add(ultima.alertaGeradoId());
@@ -89,13 +100,16 @@ public class LeituraServiceImpl implements LeituraService {
         return new LoteLeiturasResponse(leituras.size(), ultima.areaId(), ultima.nivelArea(), alertasGerados);
     }
 
+    // a mesma leitura (mesmo medidaEm e mesmas medidas) já está gravada na estação: é o reenvio da ponte MQTT
+    private boolean ehRepetida(Estacao estacao, LeituraRequest request) {
+        return request.medidaEm() != null && leituraRepository.existsByEstacaoIdAndMedidaEmAndNivelCmAndChuvaMmH(
+                estacao.getId(), request.medidaEm().truncatedTo(ChronoUnit.MICROS), request.nivelCm(), request.chuvaMmH());
+    }
+
     private LeituraRegistradaResponse registrarNaEstacao(Estacao estacao, LeituraRequest request) {
-        if (request.medidaEm() != null) {
-            Instant medidaEm = request.medidaEm().truncatedTo(ChronoUnit.MICROS);
-            if (leituraRepository.existsByEstacaoIdAndMedidaEmAndNivelCmAndChuvaMmH(
-                    estacao.getId(), medidaEm, request.nivelCm(), request.chuvaMmH())) {
-                throw new RegraNegocioException("Leitura já registrada para esta estação em " + medidaEm);
-            }
+        if (ehRepetida(estacao, request)) {
+            throw new RegraNegocioException("Leitura já registrada para esta estação em "
+                    + request.medidaEm().truncatedTo(ChronoUnit.MICROS));
         }
 
         NivelRisco risco = estacao.classificar(request.nivelCm(), request.chuvaMmH());
