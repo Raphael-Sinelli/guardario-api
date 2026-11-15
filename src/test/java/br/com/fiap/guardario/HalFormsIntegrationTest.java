@@ -90,6 +90,36 @@ class HalFormsIntegrationTest extends IntegracaoBase {
         assertThat(abrigo.indexOf("\"self\"")).isLessThan(abrigo.indexOf("\"atualizar\""));
     }
 
+    // o /me anuncia as ações do próprio cadastro, como os outros recursos: editar o perfil e trocar a senha, com title
+    // e template HAL-FORMS, e o link dos alertas da área. O ADMIN vendo o cadastro de outra pessoa não recebe essas ações
+    @Test
+    void meAnunciaAsAcoesDoProprioCadastro() throws Exception {
+        String cidadao = tokenCidadao();
+        mockMvc.perform(get("/api/auth/me").header(HttpHeaders.AUTHORIZATION, bearer(cidadao)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$._links.editar-perfil.href", endsWith("/api/auth/me")))
+                .andExpect(jsonPath("$._links.editar-perfil.title").isNotEmpty())
+                .andExpect(jsonPath("$._links.trocar-senha.href", endsWith("/api/auth/senha")))
+                .andExpect(jsonPath("$._links.trocar-senha.title").isNotEmpty())
+                .andExpect(jsonPath("$._links.alertas-da-minha-area.href", endsWith("/api/alertas/minha-area")))
+                .andExpect(jsonPath("$._templates").doesNotExist());
+
+        mockMvc.perform(get("/api/auth/me").header(HttpHeaders.AUTHORIZATION, bearer(cidadao)).accept(HAL_FORMS))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$._templates.editar-perfil.method").value("PUT"))
+                .andExpect(jsonPath("$._templates.editar-perfil.target", endsWith("/api/auth/me")))
+                .andExpect(jsonPath("$._templates.editar-perfil.properties[*].name", containsInAnyOrder("nome", "telefone", "areaId")))
+                .andExpect(jsonPath("$._templates.trocar-senha.method").value("PUT"))
+                .andExpect(jsonPath("$._templates.trocar-senha.target", endsWith("/api/auth/senha")))
+                .andExpect(jsonPath("$._templates.trocar-senha.properties[*].name", containsInAnyOrder("senhaAtual", "novaSenha")))
+                .andExpect(jsonPath("$..properties[?(@.readOnly == true)]").isEmpty());
+
+        mockMvc.perform(get("/api/usuarios/3").header(HttpHeaders.AUTHORIZATION, bearer(tokenAdmin())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$._links.editar-perfil").doesNotExist())
+                .andExpect(jsonPath("$._links.trocar-senha").doesNotExist());
+    }
+
     // o formato padrão não muda: HAL, sem _templates, com ou sem Accept de JSON
     @Test
     void halContinuaOPadraoESemTemplates() throws Exception {

@@ -366,6 +366,52 @@
           ]
         },
         {
+          "name": "Ações do /me em HAL-FORMS",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/prs.hal-forms+json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "me"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenCidadao}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Template de editar o perfil\", () => pm.expect(pm.response.json()._templates[\"editar-perfil\"].method).to.eql(\"PUT\"));",
+                  "pm.test(\"Template de trocar a senha\", () => pm.expect(pm.response.json()._templates[\"trocar-senha\"].method).to.eql(\"PUT\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Editar o próprio perfil (Maria)",
           "request": {
             "method": "PUT",

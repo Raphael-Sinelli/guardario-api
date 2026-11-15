@@ -1,8 +1,12 @@
 package br.com.fiap.guardario.assembler;
 
 import br.com.fiap.guardario.dto.AlterarPapelRequest;
+import br.com.fiap.guardario.dto.AlterarSenhaRequest;
+import br.com.fiap.guardario.dto.AtualizarPerfilRequest;
 import org.springframework.http.HttpMethod;
+import br.com.fiap.guardario.controller.AlertaController;
 import br.com.fiap.guardario.controller.AreaController;
+import br.com.fiap.guardario.controller.AuthController;
 import br.com.fiap.guardario.controller.RelatoController;
 import br.com.fiap.guardario.controller.UsuarioController;
 import br.com.fiap.guardario.dto.UsuarioResponse;
@@ -42,6 +46,13 @@ public class UsuarioModelAssembler implements RepresentationModelAssembler<Usuar
         boolean ehOLogado = SecurityUtils.usuarioOpcional().map(logado -> logado.getId().equals(usuario.id())).orElse(false);
         if (ehOLogado) {
             model.add(linkTo(methodOn(RelatoController.class).meus(null)).withRel("meus-relatos").expand());
+            model.add(linkTo(methodOn(AlertaController.class).ativosDaMinhaArea()).withRel("alertas-da-minha-area"));
+            // as ações do próprio cadastro, com o template HAL-FORMS de cada uma (só para o dono: o ADMIN que vê o
+            // cadastro de outra pessoa não edita o perfil nem troca a senha dela)
+            Acoes.adicionar(model, linkTo(methodOn(AuthController.class).atualizarPerfil(null)).withRel("editar-perfil")
+                    .withTitle("PUT com {\"nome\", \"telefone\", \"areaId\"}"), HttpMethod.PUT, AtualizarPerfilRequest.class);
+            Acoes.adicionar(model, linkTo(methodOn(AuthController.class).alterarSenha(null)).withRel("trocar-senha")
+                    .withTitle("PUT com {\"senhaAtual\", \"novaSenha\"}; depois, faça login de novo"), HttpMethod.PUT, AlterarSenhaRequest.class);
         }
         return model;
     }
