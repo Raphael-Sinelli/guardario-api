@@ -2,6 +2,7 @@ package br.com.fiap.guardario.repository;
 
 import br.com.fiap.guardario.dto.RankingAreaResponse;
 import br.com.fiap.guardario.model.AreaRisco;
+import br.com.fiap.guardario.model.NivelRisco;
 import br.com.fiap.guardario.model.StatusRelato;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -42,6 +43,10 @@ public interface AreaRiscoRepository extends JpaRepository<AreaRisco, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select a from AreaRisco a where a.id = :id")
     Optional<AreaRisco> buscarComTrava(@Param("id") Long id);
+
+    // só os ids: a reavaliação carrega cada área já travada, e uma área carregada antes da trava viria da memória
+    @Query("select a.id from AreaRisco a where a.nivelAtual <> :nivel")
+    List<Long> buscarIdsComNivelDiferenteDe(@Param("nivel") NivelRisco nivel);
 
     /*
      * Ranking das áreas pelos relatos ainda em aberto. Derived query não faz isso:

@@ -71,6 +71,7 @@ class RegrasDeDominioTest {
     void nivelDaAreaConsideraSoEstacoesAtivas() {
         Estacao ativa = estacaoComCotas(100, 200, 300);
         ativa.setUltimoRisco(NivelRisco.ATENCAO);
+        ativa.setUltimaLeituraEm(java.time.Instant.now()); // leitura recente: a estação silenciosa não conta (RN03)
         Estacao inativa = estacaoComCotas(100, 200, 300);
         inativa.setStatus(StatusEstacao.INATIVA);
         inativa.setUltimoRisco(NivelRisco.EMERGENCIA);

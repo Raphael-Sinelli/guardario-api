@@ -77,6 +77,8 @@ public class SecurityConfig {
                                 "/api/relatos/*/status").hasAnyRole("AGENTE", "ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/relatos").hasAnyRole("AGENTE", "ADMIN")
                         .requestMatchers(HttpMethod.HEAD, "/api/relatos").hasAnyRole("AGENTE", "ADMIN")
+                        // antes da LEITURA_PUBLICA: sem esta linha, o GET sem token passaria pelo filtro e sairia 403 em vez de 401
+                        .requestMatchers("/api/estacoes/silenciosas").hasAnyRole("AGENTE", "ADMIN")
                         // informação de segurança é pública: nível do rio, alertas e abrigos não exigem login.
                         // O HEAD é o GET sem corpo (o Spring MVC atende pelo mesmo método), então segue a mesma regra
                         .requestMatchers(HttpMethod.GET, LEITURA_PUBLICA).permitAll()

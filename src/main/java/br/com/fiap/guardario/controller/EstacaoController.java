@@ -73,11 +73,29 @@ public class EstacaoController {
     @GetMapping("/criticas")
     @SecurityRequirements
     @Operation(summary = "Estações ativas em ALERTA ou EMERGENCIA",
-            description = "JPQL com join fetch (sem N+1), da mais perto do transbordo para a mais longe.")
+            description = "Entram só as estações ATIVAS com leitura da última hora: a que parou de mandar leitura não segura o risco antigo. "
+                    + "JPQL com join fetch (sem N+1), da mais perto do transbordo para a mais longe.")
     @ApiResponse(responseCode = "200", description = "Estações críticas")
     public ResponseEntity<CollectionModel<EntityModel<EstacaoResponse>>> criticas() {
         CollectionModel<EntityModel<EstacaoResponse>> model = assembler.toCollectionModel(estacaoService.criticas())
                 .add(linkTo(methodOn(EstacaoController.class).criticas()).withSelfRel());
+        return ResponseEntity.ok(RespostaHal.colecao(model, EstacaoResponse.class));
+    }
+
+    @GetMapping("/silenciosas")
+    @PreAuthorize("hasAnyRole('AGENTE', 'ADMIN')")
+    @Operation(summary = "Estações ativas que pararam de mandar leitura",
+            description = "Somente AGENTE e ADMIN. Estações ATIVAS sem leitura há mais de 'minutos' minutos, ou que nunca mandaram leitura: "
+                    + "as que nunca mandaram vêm primeiro, depois da leitura mais antiga para a mais recente. JPQL com join fetch (sem N+1).")
+    @ApiResponse(responseCode = "200", description = "Estações silenciosas")
+    @ApiResponse(responseCode = "400", description = "Minutos fora de 1 a 1440")
+    @ApiResponse(responseCode = "401", description = "Sem token ou token inválido")
+    @ApiResponse(responseCode = "403", description = "Usuário logado não é AGENTE nem ADMIN")
+    public ResponseEntity<CollectionModel<EntityModel<EstacaoResponse>>> silenciosas(
+            @Parameter(description = "Minutos sem leitura (1 a 1440)", example = "30")
+            @RequestParam(defaultValue = "30") @Positive @Max(1440) Integer minutos) {
+        CollectionModel<EntityModel<EstacaoResponse>> model = assembler.toCollectionModel(estacaoService.silenciosas(minutos))
+                .add(linkTo(methodOn(EstacaoController.class).silenciosas(minutos)).withSelfRel());
         return ResponseEntity.ok(RespostaHal.colecao(model, EstacaoResponse.class));
     }
 

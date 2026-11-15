@@ -26,4 +26,7 @@ public interface AreaService {
     AreaResponse atualizar(Long id, AreaRequest request);
 
     void excluir(Long id);
+
+    // solta o risco velho das áreas cujas estações pararam de mandar leitura; true se o nível de alguma área mudou
+    boolean reavaliarNiveis();
 }

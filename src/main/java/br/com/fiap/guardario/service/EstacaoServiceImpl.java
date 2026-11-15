@@ -21,6 +21,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -64,7 +66,18 @@ public class EstacaoServiceImpl implements EstacaoService {
     @Override
     @Transactional(readOnly = true)
     public List<EstacaoResponse> criticas() {
-        return estacaoRepository.buscarCriticas(StatusEstacao.ATIVA, List.of(NivelRisco.ALERTA, NivelRisco.EMERGENCIA)).stream()
+        // a estação sem leitura há mais de 1 hora não descreve o rio de agora (mesma regra de Estacao.leituraAtualEhRecente)
+        return estacaoRepository.buscarCriticas(StatusEstacao.ATIVA, List.of(NivelRisco.ALERTA, NivelRisco.EMERGENCIA),
+                        Instant.now().minus(Estacao.JANELA_LEITURA_ATUAL)).stream()
+                .map(EstacaoMapper::toResponse)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<EstacaoResponse> silenciosas(int minutos) {
+        Instant limite = Instant.now().minus(minutos, ChronoUnit.MINUTES);
+        return estacaoRepository.buscarSilenciosas(StatusEstacao.ATIVA, limite).stream()
                 .map(EstacaoMapper::toResponse)
                 .toList();
     }
