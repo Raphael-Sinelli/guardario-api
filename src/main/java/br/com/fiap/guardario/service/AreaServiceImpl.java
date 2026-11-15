@@ -105,6 +105,8 @@ public class AreaServiceImpl implements AreaService {
         if (temVinculos) {
             throw new RegraNegocioException("A área tem estações, abrigos, alertas, relatos ou moradores vinculados e não pode ser excluída");
         }
+        // seguir não é vínculo: quem seguia a área deixa de seguir, e as linhas da tabela de junção saem antes da área
+        usuarioRepository.buscarSeguidoresDaArea(id).forEach(seguidor -> seguidor.deixarDeSeguir(area));
         areaRepository.delete(area);
     }
 

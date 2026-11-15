@@ -1,5 +1,6 @@
 package br.com.fiap.guardario.model;
 
+import br.com.fiap.guardario.exceptions.CampoInvalidoException;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -76,6 +77,25 @@ public class Usuario implements UserDetails {
     @ColumnDefault("0")
     @Column(nullable = false)
     private int versaoToken;
+
+    public static final int LIMITE_DE_AREAS_SEGUIDAS = 20;
+
+    // seguir de novo uma área que já segue não muda nada (idempotente); a área nova esbarra no teto de 20
+    public void seguir(AreaRisco area) {
+        if (areasSeguidas.contains(area)) {
+            return;
+        }
+        if (areasSeguidas.size() >= LIMITE_DE_AREAS_SEGUIDAS) {
+            throw new CampoInvalidoException("areasSeguidas", "o limite é de " + LIMITE_DE_AREAS_SEGUIDAS
+                    + " áreas seguidas por usuário: deixe de seguir uma antes de seguir outra");
+        }
+        areasSeguidas.add(area);
+    }
+
+    // deixar de seguir uma área que não segue também não muda nada
+    public void deixarDeSeguir(AreaRisco area) {
+        areasSeguidas.remove(area);
+    }
 
     // troca o hash e invalida os tokens emitidos antes da troca
     public void trocarSenha(String novoHash) {
