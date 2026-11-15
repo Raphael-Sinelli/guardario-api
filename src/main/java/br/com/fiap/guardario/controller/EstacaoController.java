@@ -181,7 +181,7 @@ public class EstacaoController {
                     regras de uma leitura só: classificação, nível da área e alerta automático. Tudo ou nada: se uma leitura
                     falhar, nenhuma é gravada. O Location aponta para o histórico de leituras da estação.""")
     @ApiResponse(responseCode = "201", description = "Lote registrado, com a quantidade, o nível final da área e os alertas gerados")
-    @ApiResponse(responseCode = "400", description = "Lista vazia, mais de 100 leituras, leitura sem medidaEm ou com valores fora da faixa")
+    @ApiResponse(responseCode = "400", description = "Lista vazia, mais de 100 leituras, item nulo, leitura sem medidaEm ou com valores fora da faixa")
     @ApiResponse(responseCode = "401", description = "Sem token ou token inválido")
     @ApiResponse(responseCode = "403", description = "Usuário logado é CIDADAO")
     @ApiResponse(responseCode = "404", description = "Estação não existe")

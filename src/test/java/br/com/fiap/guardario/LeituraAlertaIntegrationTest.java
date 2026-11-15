@@ -466,6 +466,18 @@ class LeituraAlertaIntegrationTest extends IntegracaoBase {
                 .andExpect(jsonPath("$.page.totalElements").value(0));
     }
 
+    // um item nulo na lista é erro do cliente: 400 no campo do item, e não 500 no service
+    @Test
+    void loteComLeituraNulaDevolve400() throws Exception {
+        long estacao = criarEstacao(criarArea("Área Lote Nulo " + sufixoUnico()));
+        postJson("/api/estacoes/" + estacao + "/leituras/lote", tokenAgente(), "{\"leituras\": [null]}")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.errors[0].field", startsWith("leituras[0]")));
+        mockMvc.perform(get("/api/estacoes/" + estacao + "/leituras"))
+                .andExpect(jsonPath("$.page.totalElements").value(0));
+    }
+
     @Test
     void cidadaoNaoRegistraLote() throws Exception {
         long estacao = criarEstacao(criarArea("Área Lote Cidadão " + sufixoUnico()));
