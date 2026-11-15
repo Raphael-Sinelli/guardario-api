@@ -68,7 +68,7 @@ public class UsuarioController {
     @ApiResponse(responseCode = "400", description = "Papel inválido")
     @ApiResponse(responseCode = "403", description = "Usuário logado não é ADMIN")
     @ApiResponse(responseCode = "404", description = "Usuário não existe")
-    @ApiResponse(responseCode = "409", description = "O ADMIN tentou alterar o próprio papel")
+    @ApiResponse(responseCode = "409", description = "O ADMIN tentou alterar o próprio papel, ou o cadastro foi alterado por outra requisição ao mesmo tempo")
     public ResponseEntity<EntityModel<UsuarioResponse>> alterarPapel(@PathVariable @Positive Long id,
                                                                      @RequestBody @Valid AlterarPapelRequest request) {
         return ResponseEntity.ok(assembler.toModel(usuarioService.alterarPapel(id, request.papel())));

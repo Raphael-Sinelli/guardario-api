@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.ColumnDefault;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -46,6 +47,14 @@ public class Usuario implements UserDetails {
 
     @Column(nullable = false, updatable = false)
     private Instant criadoEm;
+
+    // duas requisições mudando o mesmo cadastro ao mesmo tempo (troca de senha, de papel ou do perfil): a segunda
+    // recebe 409, em vez de gravar o cadastro inteiro por cima da primeira. O perfil prod cria o schema com
+    // ddl-auto: update, então o default 0 e o not null preenchem as linhas que já existem no banco quando a coluna entra
+    @Version
+    @ColumnDefault("0")
+    @Column(nullable = false)
+    private Long versao;
 
     @PrePersist
     void aoCriar() {

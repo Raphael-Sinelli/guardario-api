@@ -65,6 +65,7 @@ public class AuthController {
     @ApiResponse(responseCode = "400", description = "Campos inválidos (nome em branco, telefone fora do formato, areaId menor ou igual a zero)")
     @ApiResponse(responseCode = "401", description = "Sem token, ou token inválido ou expirado")
     @ApiResponse(responseCode = "404", description = "A área informada não existe")
+    @ApiResponse(responseCode = "409", description = "O cadastro foi alterado por outra requisição ao mesmo tempo (troca de senha, de papel ou do perfil): tente de novo")
     public ResponseEntity<EntityModel<UsuarioResponse>> atualizarPerfil(@RequestBody @Valid AtualizarPerfilRequest request) {
         return ResponseEntity.ok(assembler.toModel(authService.atualizarPerfil(request)));
     }
@@ -86,6 +87,7 @@ public class AuthController {
     @ApiResponse(responseCode = "204", description = "Senha trocada; a resposta não tem corpo")
     @ApiResponse(responseCode = "400", description = "Senha atual incorreta (campo senhaAtual), ou nova senha em branco, com menos de 8 caracteres ou mais de 72 bytes")
     @ApiResponse(responseCode = "401", description = "Sem token, ou token inválido ou expirado")
+    @ApiResponse(responseCode = "409", description = "O cadastro foi alterado por outra requisição ao mesmo tempo (troca de senha, de papel ou do perfil): tente de novo")
     public ResponseEntity<Void> alterarSenha(@RequestBody @Valid AlterarSenhaRequest request) {
         authService.alterarSenha(request);
         return ResponseEntity.noContent().build();

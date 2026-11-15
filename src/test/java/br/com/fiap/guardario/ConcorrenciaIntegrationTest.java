@@ -123,6 +123,59 @@ class ConcorrenciaIntegrationTest extends IntegracaoBase {
                 .noneMatch(linha -> linha.contains("Violação de integridade") || linha.contains("org.hibernate.orm.jdbc.error"));
     }
 
+    // a troca de senha (lenta, por causa do BCrypt) ao mesmo tempo que o ADMIN troca o papel e o próprio usuário edita
+    // o perfil: cada mudança que respondeu 2xx tem que estar no estado final. Sem o @Version no Usuario, a troca de
+    // senha gravava o cadastro inteiro por cima e desfazia as outras duas
+    @Test
+    void trocaDeSenhaAoMesmoTempoQueTrocaDePapelEEdicaoDePerfilNaoDesfazNenhuma(CapturedOutput saida) throws Exception {
+        String admin = tokenAdmin();
+        for (int atraso : new int[]{10, 25, 40, 60, 80, 100, 130, 160}) {
+            String email = "corrida" + sufixoUnico().toLowerCase() + "@email.com";
+            String location = postJson("/api/auth/register", null, """
+                    {"nome": "Pessoa da Corrida", "email": "%s", "senha": "Senha@123"}""".formatted(email))
+                    .andExpect(status().isCreated()).andReturn().getResponse().getHeader(HttpHeaders.LOCATION);
+            String usuario = location.substring(location.lastIndexOf('/') + 1);
+            mockMvc.perform(put("/api/usuarios/" + usuario + "/papel").header(HttpHeaders.AUTHORIZATION, bearer(admin))
+                    .contentType(MediaType.APPLICATION_JSON).content("{\"papel\": \"AGENTE\"}")).andExpect(status().isOk());
+            String token = token(email, "Senha@123");
+
+            ExecutorService pool = Executors.newFixedThreadPool(3);
+            Future<Integer> senha = pool.submit(() -> mockMvc.perform(put("/api/auth/senha").header(HttpHeaders.AUTHORIZATION, bearer(token))
+                    .contentType(MediaType.APPLICATION_JSON).content("{\"senhaAtual\": \"Senha@123\", \"novaSenha\": \"NovaSenha@456\"}"))
+                    .andReturn().getResponse().getStatus());
+            Future<Integer> papel = pool.submit(() -> {
+                Thread.sleep(atraso);
+                return mockMvc.perform(put("/api/usuarios/" + usuario + "/papel").header(HttpHeaders.AUTHORIZATION, bearer(admin))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"papel\": \"CIDADAO\"}")).andReturn().getResponse().getStatus();
+            });
+            Future<Integer> perfil = pool.submit(() -> {
+                Thread.sleep(atraso + 5);
+                return mockMvc.perform(put("/api/auth/me").header(HttpHeaders.AUTHORIZATION, bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"nome\": \"Nome Novo\"}")).andReturn().getResponse().getStatus();
+            });
+            pool.shutdown();
+            int codigoSenha = senha.get(60, TimeUnit.SECONDS);
+            int codigoPapel = papel.get(60, TimeUnit.SECONDS);
+            int codigoPerfil = perfil.get(60, TimeUnit.SECONDS);
+            assertThat(codigoSenha).as("senha, atraso %d", atraso).isIn(204, 409);
+            assertThat(codigoPapel).as("papel, atraso %d", atraso).isIn(200, 409);
+            assertThat(codigoPerfil).as("perfil, atraso %d", atraso).isIn(200, 401, 409);
+
+            String cadastro = mockMvc.perform(get("/api/usuarios/" + usuario).header(HttpHeaders.AUTHORIZATION, bearer(admin)))
+                    .andReturn().getResponse().getContentAsString();
+            if (codigoPapel == 200) {
+                assertThat((String) JsonPath.read(cadastro, "$.papel")).as("papel perdido, atraso %d", atraso).isEqualTo("CIDADAO");
+            }
+            if (codigoPerfil == 200) {
+                assertThat((String) JsonPath.read(cadastro, "$.nome")).as("perfil perdido, atraso %d", atraso).isEqualTo("Nome Novo");
+            }
+            String senhaQueVale = codigoSenha == 204 ? "NovaSenha@456" : "Senha@123";
+            postJson("/api/auth/login", null, """
+                    {"email": "%s", "senha": "%s"}""".formatted(email, senhaQueVale)).andExpect(status().isOk());
+        }
+        assertThat(saida.getOut().lines().filter(linha -> linha.contains(" WARN ") || linha.contains(" ERROR "))).isEmpty();
+    }
+
     // relatos enviados enquanto uma leitura muda o nível da área: no fim, todo relato em aberto tem a prioridade do
     // nível final. Sem a trava da área na criação, o relato lia o nível antigo e ficava com a prioridade errada
     @Test
