@@ -16,6 +16,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.web.PagedResourcesAssembler;
 import org.springframework.hateoas.CollectionModel;
 import org.springframework.hateoas.EntityModel;
+import org.springframework.hateoas.Link;
 import org.springframework.hateoas.PagedModel;
 import org.springframework.hateoas.server.RepresentationModelAssembler;
 import org.springframework.stereotype.Component;
@@ -44,6 +45,13 @@ public class AreaModelAssembler implements RepresentationModelAssembler<AreaResp
                                                              PagedResourcesAssembler<AreaResponse> paginador) {
         Set<Long> excluiveis = excluiveis(pagina.getContent());
         return RespostaHal.pagina(pagina, paginador, area -> toModel(area, excluiveis), AreaResponse.class);
+    }
+
+    // lista sem paginação (as áreas seguidas, no máximo 20), com o mesmo formato e uma consulta só para o link excluir
+    public CollectionModel<EntityModel<AreaResponse>> toCollectionModel(List<AreaResponse> areas, Link self) {
+        Set<Long> excluiveis = excluiveis(areas);
+        List<EntityModel<AreaResponse>> itens = areas.stream().map(area -> toModel(area, excluiveis)).toList();
+        return RespostaHal.colecao(CollectionModel.of(itens, self), AreaResponse.class);
     }
 
     private EntityModel<AreaResponse> toModel(AreaResponse area, Set<Long> excluiveis) {

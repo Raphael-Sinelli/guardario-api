@@ -59,6 +59,8 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/login").permitAll()
+                        // o próprio cadastro (perfil, senha e áreas seguidas) é sempre de quem está logado
+                        .requestMatchers("/api/auth/me", "/api/auth/me/**", "/api/auth/senha").authenticated()
                         .requestMatchers("/v3/api-docs/**", "/v3/api-docs.yaml", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         // só o status geral é público; cada componente (/actuator/health/db, disco) é detalhe do ADMIN,
                         // e o anônimo recebe o 401 padrão em vez do 404 vazio do Actuator
