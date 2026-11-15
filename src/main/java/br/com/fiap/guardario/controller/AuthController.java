@@ -1,6 +1,7 @@
 package br.com.fiap.guardario.controller;
 
 import br.com.fiap.guardario.assembler.UsuarioModelAssembler;
+import br.com.fiap.guardario.dto.AlterarSenhaRequest;
 import br.com.fiap.guardario.dto.AuthResponse;
 import br.com.fiap.guardario.dto.LoginRequest;
 import br.com.fiap.guardario.dto.RegisterRequest;
@@ -61,5 +62,18 @@ public class AuthController {
     @ApiResponse(responseCode = "401", description = "Sem token, ou token inválido ou expirado")
     public ResponseEntity<EntityModel<UsuarioResponse>> me() {
         return ResponseEntity.ok(assembler.toModel(authService.usuarioAtual()));
+    }
+
+    @PutMapping("/senha")
+    @Operation(summary = "Troca a senha do usuário dono do token",
+            description = "Qualquer usuário logado. O usuário vem do token, nunca de um id no corpo ou na URL. "
+                    + "Confere a senha atual e grava a nova (de 8 a 72 caracteres, até 72 bytes) com BCrypt. "
+                    + "O token atual continua valendo até expirar; o próximo login já usa a senha nova.")
+    @ApiResponse(responseCode = "204", description = "Senha trocada; a resposta não tem corpo")
+    @ApiResponse(responseCode = "400", description = "Senha atual incorreta (campo senhaAtual), ou nova senha em branco, com menos de 8 caracteres ou mais de 72 bytes")
+    @ApiResponse(responseCode = "401", description = "Sem token, ou token inválido ou expirado")
+    public ResponseEntity<Void> alterarSenha(@RequestBody @Valid AlterarSenhaRequest request) {
+        authService.alterarSenha(request);
+        return ResponseEntity.noContent().build();
     }
 }

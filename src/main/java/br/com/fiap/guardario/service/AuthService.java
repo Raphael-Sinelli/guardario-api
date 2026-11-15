@@ -1,5 +1,6 @@
 package br.com.fiap.guardario.service;
 
+import br.com.fiap.guardario.dto.AlterarSenhaRequest;
 import br.com.fiap.guardario.dto.AuthResponse;
 import br.com.fiap.guardario.dto.LoginRequest;
 import br.com.fiap.guardario.dto.RegisterRequest;
@@ -12,4 +13,6 @@ public interface AuthService {
     AuthResponse login(LoginRequest request);
 
     UsuarioResponse usuarioAtual();
+
+    void alterarSenha(AlterarSenhaRequest request);
 }

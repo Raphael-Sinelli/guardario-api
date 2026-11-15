@@ -2,10 +2,12 @@ package br.com.fiap.guardario;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasItems;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 class AuthIntegrationTest extends IntegracaoBase {
@@ -151,6 +153,94 @@ class AuthIntegrationTest extends IntegracaoBase {
 
         String adulterado = tokenCidadao() + "x";
         mockMvc.perform(get("/api/auth/me").header(HttpHeaders.AUTHORIZATION, bearer(adulterado)))
+                .andExpect(status().isUnauthorized());
+    }
+
+    // ---------- troca de senha (PUT /api/auth/senha) ----------
+    // cada teste cadastra o próprio usuário: a senha dos usuários de demonstração não pode mudar
+
+    private String cadastrarUsuarioParaTrocaDeSenha() throws Exception {
+        String email = "senha" + sufixoUnico().toLowerCase() + "@email.com";
+        postJson("/api/auth/register", null, """
+                {"nome": "Pessoa da Senha", "email": "%s", "senha": "Senha@123"}""".formatted(email))
+                .andExpect(status().isCreated());
+        return email;
+    }
+
+    @Test
+    void trocaDeSenhaDevolve204EOLoginPassaAUsarASenhaNova() throws Exception {
+        String email = cadastrarUsuarioParaTrocaDeSenha();
+        String token = token(email, "Senha@123");
+
+        mockMvc.perform(put("/api/auth/senha").header(HttpHeaders.AUTHORIZATION, bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"senhaAtual": "Senha@123", "novaSenha": "NovaSenha@456"}"""))
+                .andExpect(status().isNoContent())
+                .andExpect(content().string(""));
+
+        postJson("/api/auth/login", null, """
+                {"email": "%s", "senha": "Senha@123"}""".formatted(email))
+                .andExpect(status().isUnauthorized());
+        postJson("/api/auth/login", null, """
+                {"email": "%s", "senha": "NovaSenha@456"}""".formatted(email))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void trocaDeSenhaComSenhaAtualErradaDevolve400NoCampoSenhaAtual() throws Exception {
+        String email = cadastrarUsuarioParaTrocaDeSenha();
+        String token = token(email, "Senha@123");
+
+        mockMvc.perform(put("/api/auth/senha").header(HttpHeaders.AUTHORIZATION, bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"senhaAtual": "Errada@999", "novaSenha": "NovaSenha@456"}"""))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0].field").value("senhaAtual"))
+                .andExpect(jsonPath("$.errors[0].message").value("Senha atual incorreta"));
+
+        // a senha continua a mesma
+        token(email, "Senha@123");
+    }
+
+    @Test
+    void trocaDeSenhaComNovaSenhaCurtaDevolve400NoCampoNovaSenha() throws Exception {
+        String email = cadastrarUsuarioParaTrocaDeSenha();
+        String token = token(email, "Senha@123");
+
+        mockMvc.perform(put("/api/auth/senha").header(HttpHeaders.AUTHORIZATION, bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"senhaAtual": "Senha@123", "novaSenha": "12345"}"""))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0].field").value("novaSenha"));
+    }
+
+    // 40 letras "á" passam no @Size (40 caracteres), mas são 80 bytes: só o limite de 72 bytes do BCrypt barra
+    @Test
+    void trocaDeSenhaComNovaSenhaDeMaisDe72BytesDevolve400() throws Exception {
+        String email = cadastrarUsuarioParaTrocaDeSenha();
+        String token = token(email, "Senha@123");
+
+        mockMvc.perform(put("/api/auth/senha").header(HttpHeaders.AUTHORIZATION, bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"senhaAtual": "Senha@123", "novaSenha": "%s"}""".formatted("á".repeat(40))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0].field").value("novaSenha"))
+                .andExpect(jsonPath("$.errors[0].message", containsString("72 bytes")));
+
+        // a senha continua a mesma
+        token(email, "Senha@123");
+    }
+
+    @Test
+    void trocaDeSenhaSemTokenDevolve401() throws Exception {
+        mockMvc.perform(put("/api/auth/senha")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"senhaAtual": "Senha@123", "novaSenha": "NovaSenha@456"}"""))
                 .andExpect(status().isUnauthorized());
     }
 }
