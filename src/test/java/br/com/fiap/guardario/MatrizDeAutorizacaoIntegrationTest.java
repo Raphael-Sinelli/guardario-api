@@ -26,6 +26,7 @@ class MatrizDeAutorizacaoIntegrationTest extends IntegracaoBase {
             // qualquer usuário logado
             "GET,    /api/auth/me,                    LOGADO",
             "PUT,    /api/auth/senha,                 LOGADO",
+            "GET,    /api/alertas/minha-area,         LOGADO",
             "POST,   /api/relatos,                    LOGADO",
             "GET,    /api/relatos/meus,               LOGADO",
             "GET,    /api/relatos/1,                  LOGADO",

@@ -430,6 +430,7 @@ Requisição que o Tomcat recusa antes de chegar ao Spring (barra codificada `%2
 | GET | `/api/estacoes/{id}/leituras/estatisticas?horas=24` | público | 200 |
 | GET | `/api/alertas?status=` | público | 200 |
 | GET | `/api/alertas/ativos` | público (cache) | 200 |
+| GET | `/api/alertas/minha-area` | logado | 200 |
 | GET | `/api/alertas/{id}` | público | 200 |
 | POST | `/api/alertas` | AGENTE, ADMIN | 201 + Location |
 | PUT | `/api/alertas/{id}` | AGENTE, ADMIN | 200 |
