@@ -5,13 +5,16 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.ColumnDefault;
+import org.hibernate.annotations.OptimisticLock;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.time.Instant;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Entity
 @Getter
@@ -44,6 +47,18 @@ public class Usuario implements UserDetails {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "area_id")
     private AreaRisco area;
+
+    // áreas que a pessoa acompanha além da área do cadastro (a do trabalho, a da escola dos filhos): N:M unidirecional,
+    // como Task e Tag no curso. Set, porque a mesma área não entra duas vezes e a chave da tabela de junção é o par
+    // (usuario_id, area_id). Sem cascade: a área existe sem o morador, e deixar de seguir não pode apagar a área.
+    // @OptimisticLock(excluded = true): seguir uma área mexe só na tabela de junção e não sobe o @Version, para não
+    // derrubar com 409 uma edição de perfil feita ao mesmo tempo
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(name = "usuario_area_seguida",
+            joinColumns = @JoinColumn(name = "usuario_id"),
+            inverseJoinColumns = @JoinColumn(name = "area_id"))
+    @OptimisticLock(excluded = true)
+    private Set<AreaRisco> areasSeguidas = new HashSet<>();
 
     @Column(nullable = false, updatable = false)
     private Instant criadoEm;

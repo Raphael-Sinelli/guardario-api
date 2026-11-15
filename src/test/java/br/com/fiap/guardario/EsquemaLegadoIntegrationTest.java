@@ -24,7 +24,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * O perfil prod cria o schema com ddl-auto: update, sem Flyway nem script. Este teste sobe o prod sobre um banco que
  * já tem a tabela usuario da versão anterior (sem versao e sem versao_token) e um usuário gravado, como o banco da VM:
- * as colunas novas entram com 0 nas linhas antigas, e o usuário antigo continua entrando e trocando a senha.
+ * as colunas novas entram com 0 nas linhas antigas, a tabela de junção das áreas seguidas nasce do zero, e o usuário
+ * antigo continua entrando e trocando a senha.
  */
 @ActiveProfiles("prod")
 @TestPropertySource(properties = {
@@ -79,5 +80,21 @@ class EsquemaLegadoIntegrationTest extends IntegracaoBase {
         assertThat(jdbc.queryForObject("select versao_token from usuario where email = ?", Integer.class, EMAIL)).isEqualTo(1);
         mockMvc.perform(get("/api/auth/me").header(HttpHeaders.AUTHORIZATION, bearer(token))).andExpect(status().isUnauthorized());
         token(EMAIL, "Senha-Nova-2");
+    }
+
+    // a tabela de junção do N:M (áreas seguidas) nasce na subida, com chave composta e as duas chaves estrangeiras,
+    // e o usuário que já estava no banco continua lá
+    @Test
+    void tabelaDeJuncaoNasceComChaveCompostaSemMexerNoUsuarioAntigo() {
+        assertThat(jdbc.queryForList("""
+                select kcu.column_name from information_schema.table_constraints tc
+                join information_schema.key_column_usage kcu
+                  on kcu.constraint_name = tc.constraint_name and kcu.table_name = tc.table_name
+                where tc.table_name = 'USUARIO_AREA_SEGUIDA' and tc.constraint_type = 'PRIMARY KEY'
+                order by kcu.ordinal_position""", String.class)).containsExactlyInAnyOrder("USUARIO_ID", "AREA_ID");
+        assertThat(jdbc.queryForObject("""
+                select count(*) from information_schema.table_constraints
+                where table_name = 'USUARIO_AREA_SEGUIDA' and constraint_type = 'FOREIGN KEY'""", Integer.class)).isEqualTo(2);
+        assertThat(jdbc.queryForObject("select count(*) from usuario where email = ?", Integer.class, EMAIL)).isEqualTo(1);
     }
 }
