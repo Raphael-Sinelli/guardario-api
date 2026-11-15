@@ -424,6 +424,7 @@ Requisição que o Tomcat recusa antes de chegar ao Spring (barra codificada `%2
 | DELETE | `/api/estacoes/{id}` | ADMIN | 204 |
 | GET | `/api/estacoes/{id}/leituras` | público | 200 |
 | POST | `/api/estacoes/{id}/leituras` | AGENTE, ADMIN | 201 + Location |
+| POST | `/api/estacoes/{id}/leituras/lote` | AGENTE, ADMIN | 201 + Location |
 | GET | `/api/estacoes/{id}/leituras/{leituraId}` | público | 200 |
 | GET | `/api/estacoes/{id}/leituras/estatisticas?horas=24` | público | 200 |
 | GET | `/api/alertas?status=` | público | 200 |
