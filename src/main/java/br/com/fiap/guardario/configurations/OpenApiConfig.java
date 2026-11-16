@@ -40,7 +40,9 @@ import java.util.Map;
                         mostra abrigos com vaga e recebe relatos dos moradores com prioridade calculada.
 
                         Usuários de teste (perfil dev): admin@guardario.com / Admin@123,
-                        agente@guardario.com / Agente@123 e cidadao@guardario.com / Cidadao@123.
+                        agente@guardario.com / Agente@123, cidadao@guardario.com / Cidadao@123 e
+                        maria@guardario.com / Maria@123 (segunda moradora, para testar que um cidadão não mexe
+                        no relato do outro).
                         """,
                 contact = @Contact(name = "Equipe GuardaRio")),
         security = @SecurityRequirement(name = "bearerAuth"))

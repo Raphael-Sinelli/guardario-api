@@ -126,6 +126,17 @@ class InfraIntegrationTest extends IntegracaoBase {
                 .andExpect(jsonPath("$.paths['/api/abrigos/{id}'].put.responses['409'].description").exists());
     }
 
+    // a descrição do Swagger lista os mesmos quatro usuários de teste do README, inclusive a Maria, a segunda moradora
+    // que serve para testar que um cidadão não mexe no relato do outro
+    @Test
+    void swaggerListaOsQuatroUsuariosDeTesteDoReadme() throws Exception {
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(jsonPath("$.info.description", containsString("admin@guardario.com / Admin@123")))
+                .andExpect(jsonPath("$.info.description", containsString("agente@guardario.com / Agente@123")))
+                .andExpect(jsonPath("$.info.description", containsString("cidadao@guardario.com / Cidadao@123")))
+                .andExpect(jsonPath("$.info.description", containsString("maria@guardario.com / Maria@123")));
+    }
+
     // o Swagger mostra o Content-Type que a API manda de verdade: hal+json nos recursos com links, json no resto
     @Test
     void swaggerDocumentaOTipoDeConteudoRealDasRespostas() throws Exception {
