@@ -278,6 +278,50 @@
           ]
         },
         {
+          "name": "Email que cresce em minúsculas (400, e não 409)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Pessoa do Email Longo\",\n  \"email\": \"İİİİİİİİİİİİİİİİİİİİİİİİİİİİİİİİİİİİİİİİİİİİİİİİİİİİİİİİİİİİİİİİ@dddddddddddddddddddddddddddddddddddddddd.dddddddddddddddddddddddddddddddddddddddd.com\",\n  \"senha\": \"Senha@123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Aponta o campo email\", () => pm.expect(pm.response.json().errors[0].field).to.eql(\"email\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Login com senha errada",
           "request": {
             "method": "POST",
@@ -360,6 +404,41 @@
                   "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
                   "pm.test(\"Email do token\", () => pm.expect(pm.response.json().email).to.eql(\"cidadao@guardario.com\"));",
                   "pm.test(\"Links do usuário\", () => pm.expect(pm.response.json()._links).to.have.property(\"meus-relatos\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Esquema bearer em minúsculas também vale",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "bearer {{tokenCidadao}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "me"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"É a Cida\", () => pm.expect(pm.response.json().email).to.eql(\"cidadao@guardario.com\"));"
                 ]
               }
             }
@@ -4927,6 +5006,135 @@
           ]
         },
         {
+          "name": "Página fora do intervalo com size zero (400)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/areas?page=300000000&size=0",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "areas"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "300000000"
+                },
+                {
+                  "key": "size",
+                  "value": "0"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Aponta o campo page\", () => pm.expect(pm.response.json().errors[0].field).to.eql(\"page\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "ignorecase em campo que não é texto (400)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/estacoes/1/leituras?sort=id,ignorecase",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "estacoes",
+                "1",
+                "leituras"
+              ],
+              "query": [
+                {
+                  "key": "sort",
+                  "value": "id,ignorecase"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Aponta o campo sort\", () => pm.expect(pm.response.json().errors[0].field).to.eql(\"sort\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Caractere nulo no texto (400 com o campo)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/relatos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "relatos"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenCidadao}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipo\": \"RIO_SUBINDO\",\n  \"descricao\": \"Rua alagada \\u0000 perto da ponte\",\n  \"areaId\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Aponta o campo descricao\", () => pm.expect(pm.response.json().errors[0].field).to.eql(\"descricao\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Corpo enviado como texto (415)",
           "request": {
             "method": "POST",
@@ -5164,6 +5372,48 @@
                 "exec": [
                   "pm.test(\"Status 405\", () => pm.response.to.have.status(405));",
                   "pm.test(\"Allow da rota fixa\", () => pm.expect(pm.response.headers.get(\"Allow\")).to.eql(\"GET,HEAD,OPTIONS\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET na rota do lote (405, Allow só de POST)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/estacoes/1/leituras/lote",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "estacoes",
+                "1",
+                "leituras",
+                "lote"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAgente}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 405\", () => pm.response.to.have.status(405));",
+                  "pm.test(\"Allow só com POST\", () => pm.expect(pm.response.headers.get(\"Allow\")).to.eql(\"POST,OPTIONS\"));"
                 ]
               }
             }
