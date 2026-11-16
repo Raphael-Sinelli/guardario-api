@@ -4,6 +4,32 @@ API REST do GuardaRio, um sistema de alerta comunitário de enchentes. Estaçõe
 
 Global Solution 2026/2 (tema CitizenTech), disciplina Java Advanced, FIAP. Esta é a API consumida pelo app Flutter da disciplina de Mobile.
 
+## Sumário
+
+- [Integrantes](#integrantes)
+- [Vídeo pitch](#vídeo-pitch)
+- [O problema](#o-problema)
+- [Como rodar](#como-rodar)
+  - [Variáveis de ambiente](#variáveis-de-ambiente)
+- [Usuários de teste por papel](#usuários-de-teste-por-papel)
+  - [Testando pelo Swagger](#testando-pelo-swagger)
+  - [Testando com o Postman (ou o Bruno)](#testando-com-o-postman-ou-o-bruno)
+- [Regras de negócio](#regras-de-negócio)
+- [Diagrama das entidades](#diagrama-das-entidades)
+- [Modelagem: relacionamentos, cascade e fetch](#modelagem-relacionamentos-cascade-e-fetch)
+- [Consultas: por que cada tipo](#consultas-por-que-cada-tipo)
+- [Cache](#cache)
+- [HATEOAS](#hateoas)
+- [Actuator](#actuator)
+- [Segurança](#segurança)
+- [Validação e tratamento de erros](#validação-e-tratamento-de-erros)
+- [Endpoints](#endpoints)
+- [Integração com o app Mobile](#integração-com-o-app-mobile)
+- [Testes](#testes)
+- [Estrutura do projeto](#estrutura-do-projeto)
+- [Uso de IA generativa](#uso-de-ia-generativa)
+- [Referências](#referências)
+
 ## Integrantes
 
 | Nome | RM |
@@ -14,7 +40,7 @@ Global Solution 2026/2 (tema CitizenTech), disciplina Java Advanced, FIAP. Esta 
 
 ## Vídeo pitch
 
-Link: **(colocar aqui o link do YouTube antes da entrega)**
+Link: **PITCH_PENDENTE: o link do vídeo no YouTube entra aqui antes da entrega**
 
 ## O problema
 
@@ -51,7 +77,7 @@ Se o wrapper reclamar da versão do Java, confira se `java -version` e a variáv
 Outros comandos:
 
 ```bash
-./mvnw test                                   # roda os 298 testes
+./mvnw test                                   # roda os 299 testes
 ./mvnw clean package                          # gera target/guardario-api-1.0.0.jar
 java -jar target/guardario-api-1.0.0.jar      # roda o jar gerado
 ```
@@ -279,6 +305,9 @@ erDiagram
 
 ## Consultas: por que cada tipo
 
+<details>
+<summary>Derived query, JPQL com @Query, Specification, paginação e ordenação: quando cada um é usado e por quê (clique para abrir)</summary>
+
 **Derived query** quando a consulta tem uma ou duas condições simples. O nome do método já documenta o que ele faz, e o Spring valida o nome na subida da aplicação.
 
 | Método | Uso |
@@ -313,7 +342,12 @@ erDiagram
 
 **Paginação e ordenação.** As listas recebem `Pageable` do Spring Data (`?page=0&size=10&sort=nome,asc`) com padrão definido em `@PageableDefault` e no máximo 100 itens por página. Valor inválido não dá erro, como no Spring Data: `size` acima de 100 vira 100, `size` zero, negativo ou que não é número volta ao padrão da rota, e `page` negativa ou que não é número volta para 0. O Swagger diz isso na descrição de cada parâmetro. Cada rota declara com `@CamposDeOrdenacao` a lista de campos pelos quais deixa ordenar, e o `PaginacaoConfig` recusa qualquer outro com 400, dizendo quais são aceitos. A mesma anotação diz quais desses campos são texto: só neles vale o `ignorecase` (`?sort=nome,asc,ignorecase`), porque o banco não aplica `upper()` em número, data ou enum, e o pedido daria 500. Termo com caractere de controle, como `%00`, também dá 400. Sem a lista, `?sort=emitidoPor.senha` (ou `emitidoPorSenha`, que o Spring Data resolve pelo camelCase) ordenaria alertas pelo hash da senha de quem emitiu, numa rota pública. O nível de risco (`nivel`, `nivelAtual`, `ultimoRisco`, `nivelRisco`) fica fora das listas: ele é gravado como texto (`EnumType.STRING`, como na semana 2), e o banco ordenaria NORMAL depois de EMERGENCIA, em ordem alfabética. A ordem por gravidade está nas rotas feitas para isso: `/api/alertas/ativos` (mais grave primeiro), `/api/estacoes/criticas` (mais perto do transbordo primeiro) e `/api/areas/ranking`. Os outros enums da lista (status, tipo, papel, origem) ordenam pelo nome, o que serve para agrupar os registros. Página com `page` vezes `size` acima do maior inteiro também dá 400, e não 500; a conta usa o tamanho que vale de fato, então `?page=300000000&size=0` dá 400, porque o `size` zero vira o padrão da rota. O painel de relatos ordena por padrão pela maior prioridade e, no empate, pelo mais antigo.
 
+</details>
+
 ## Cache
+
+<details>
+<summary>Os três caches, o que fica fora deles, quando cada um é limpo e como ver o cache funcionando (clique para abrir)</summary>
 
 Spring Cache com o Caffeine como provedor. O cache guarda DTOs (records), nunca entidades: entidade fora da transação causaria `LazyInitializationException`.
 
@@ -336,6 +370,8 @@ Três jeitos de ver o cache funcionando:
 `GET /actuator/caches` lista os três caches.
 
 Limitação conhecida: o Caffeine guarda o cache na memória de cada instância. Com várias réplicas da API, o próximo passo seria um cache distribuído, como o Redis.
+
+</details>
 
 ## HATEOAS
 
@@ -366,6 +402,9 @@ Quem não está logado não recebe link de ação. O `excluir` só aparece quand
 
 ## Segurança
 
+<details>
+<summary>Fluxo do JWT, 401 x 403, sessão stateless, CORS para o app e segredos (clique para abrir)</summary>
+
 **Fluxo do JWT, do login à requisição protegida:**
 
 1. `POST /api/auth/register` grava o usuário como CIDADAO, com a senha em hash BCrypt.
@@ -382,6 +421,8 @@ Quem não está logado não recebe link de ação. O `excluir` só aparece quand
 **CORS para o app.** O `CorsConfigurationSource` libera as origens de `CORS_ALLOWED_ORIGINS` (o padrão inclui `10.0.2.2`, endereço com que o emulador Android enxerga a máquina), os métodos GET, HEAD, POST, PUT, PATCH, DELETE e OPTIONS, os headers `Authorization`, `Content-Type` e `Accept`, e expõe o header `Location` para o app ler o id do recurso criado. Origem fora da lista, ou preflight que pede um método ou header que a API não aceita, recebe 403 com o mesmo JSON de erro do resto da API e o motivo na mensagem (origem, método ou header recusado): o CORS roda no `CorsComErroEmJson`, que usa o processador do Spring e escreve a recusa pelo `JsonErrorWriter`.
 
 **Segredos.** Nenhuma senha ou chave real está no repositório. A chave do JWT vem de `JWT_SECRET`; sem ela, a API gera uma chave temporária a cada subida. No perfil dev isso é o esperado e sai no log como INFO. No perfil `prod` a chave é obrigatória e a aplicação não sobe sem ela, porque uma chave aleatória invalidaria os tokens a cada reinício. A senha do PostgreSQL vem de `DB_PASSWORD`, sem valor padrão, e a do primeiro ADMIN de produção vem de `ADMIN_PASSWORD`. As senhas da tabela de usuários de teste existem só na carga do perfil `dev`.
+
+</details>
 
 ## Validação e tratamento de erros
 
@@ -498,10 +539,10 @@ As rotas de listagem aceitam também `page`, `size` e `sort`. A descrição de c
 
 ## Testes
 
-`./mvnw test` roda 298 testes:
+`./mvnw test` roda 299 testes:
 
 - 24 testes de unidade, sem Spring e sem banco: 17 das regras que ficam nas entidades e nos enums (régua de risco nas fronteiras de cada cota, nível da área só com estações ativas, leitura atrasada ou antiga, lotação do abrigo, prioridade, máquina de estados, encerramento de alerta), 4 do JWT (`JwtServiceTest`: a chave e o token sem `exp`), 2 da lista vazia no HAL (`RespostaHalTest`) e 1 do que o banco recusa (`GlobalExceptionHandlerTest`: valor inválido dá 400, unique violada dá 409).
-- 274 testes de integração que sobem a aplicação inteira e chamam a API por HTTP (com o MockMvc; o `ServidorRealIntegrationTest`, por socket), passando pela segurança, pelo cache e pelo banco de verdade: status e formato de cada erro, 401 x 403, token expirado, posse, alerta automático, substituição de alertas, nível da área quando a estação muda de área ou de status, filtros com Specification, links HATEOAS mudando com o estado e sem template, invalidação e métricas do cache, link excluir sem N+1 (contando os comandos SQL), Actuator, OpenAPI, CORS e o perfil prod subindo sem carga de demonstração. Três classes cobrem o que costuma escapar: `MatrizDeAutorizacaoIntegrationTest` passa por toda rota protegida (401 sem token, 403 para quem não tem o papel) e pelas rotas públicas de consulta (200 sem token); `ConcorrenciaIntegrationTest` e os testes de abrigo e leitura disparam requisições ao mesmo tempo (entradas no abrigo, leituras da mesma área, encerrar o mesmo alerta, atender e descartar o mesmo relato, cadastros com o mesmo email); `CasosExtremosIntegrationTest` cobre corpo ausente, campo obrigatório nulo, lista vazia e paginação nos limites (página depois da última, size zero, negativo e acima do teto). O `ServidorRealIntegrationTest` sobe o Tomcat de verdade numa porta livre e manda requisições cruas por socket, para conferir o JSON dos erros que o Tomcat responde antes do Spring e o `Allow` do TRACE. O `HalFormsIntegrationTest` confere os templates de cada ação em HAL-FORMS e que o HAL padrão continua sem eles.
+- 275 testes de integração que sobem a aplicação inteira e chamam a API por HTTP (com o MockMvc; o `ServidorRealIntegrationTest`, por socket), passando pela segurança, pelo cache e pelo banco de verdade: status e formato de cada erro, 401 x 403, token expirado, posse, alerta automático, substituição de alertas, nível da área quando a estação muda de área ou de status, filtros com Specification, links HATEOAS mudando com o estado e sem template, invalidação e métricas do cache, link excluir sem N+1 (contando os comandos SQL), Actuator, OpenAPI, CORS e o perfil prod subindo sem carga de demonstração. Três classes cobrem o que costuma escapar: `MatrizDeAutorizacaoIntegrationTest` passa por toda rota protegida (401 sem token, 403 para quem não tem o papel) e pelas rotas públicas de consulta (200 sem token); `ConcorrenciaIntegrationTest` e os testes de abrigo e leitura disparam requisições ao mesmo tempo (entradas no abrigo, leituras da mesma área, encerrar o mesmo alerta, atender e descartar o mesmo relato, cadastros com o mesmo email); `CasosExtremosIntegrationTest` cobre corpo ausente, campo obrigatório nulo, lista vazia e paginação nos limites (página depois da última, size zero, negativo e acima do teto). O `ServidorRealIntegrationTest` sobe o Tomcat de verdade numa porta livre e manda requisições cruas por socket, para conferir o JSON dos erros que o Tomcat responde antes do Spring e o `Allow` do TRACE. O `HalFormsIntegrationTest` confere os templates de cada ação em HAL-FORMS e que o HAL padrão continua sem eles.
 
 ## Estrutura do projeto
 
