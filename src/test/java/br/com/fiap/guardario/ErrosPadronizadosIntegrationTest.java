@@ -413,6 +413,24 @@ class ErrosPadronizadosIntegrationTest extends IntegracaoBase {
         mockMvc.perform(get("/api/estacoes").param("sort", "codigo,ignorecase")).andExpect(status().isOk());
     }
 
+    // o PostgreSQL não guarda o caractere nulo (U+0000) em texto: o INSERT falhava e virava 409 de "email já
+    // cadastrado" ou de "registro duplicado", e o H2 gravava. Agora é 400 no campo, nos dois bancos, no corpo e na query
+    @Test
+    void caractereNuloNoTextoDevolve400NoCampo() throws Exception {
+        postJson("/api/auth/register", null, """
+                {"nome": "Nome \\u0000 com nulo", "email": "nulo.no.nome@email.com", "senha": "Senha@123"}""")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0].field").value("nome"))
+                .andExpect(jsonPath("$.errors[0].message", containsString("caractere nulo")));
+        postJson("/api/relatos", tokenCidadao(), """
+                {"tipo": "RIO_SUBINDO", "descricao": "Rua alagada \\u0000 perto da ponte", "areaId": 1}""")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0].field").value("descricao"));
+        mockMvc.perform(get("/api/areas").param("uf", "S\u0000P"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0].field").value("uf"));
+    }
+
     // erro de um campo ou parâmetro sai sempre em errors com o nome dele, mesmo quando a regra está no service
     @Test
     void erroDeCampoConferidoNoServiceTambemApontaOCampo() throws Exception {

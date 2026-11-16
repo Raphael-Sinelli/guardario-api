@@ -23,6 +23,8 @@ import java.util.Set;
  * - sort: o Pageable aceita ordenar por qualquer caminho, inclusive de outra entidade: ?sort=emitidoPor.senha (ou
  *   emitidoPorSenha, que o Spring Data resolve pelo camelCase) ordenaria os alertas pelo hash da senha de quem emitiu,
  *   numa rota pública. Só valem os campos da lista branca de cada rota, declarada com @CamposDeOrdenacao.
+ * - qualquer parâmetro de query: o caractere nulo (U+0000), que o PostgreSQL não aceita em texto, dá 400 no parâmetro
+ *   em vez de chegar ao banco num filtro como ?uf= ou ?nome=.
  */
 @Configuration
 public class PaginacaoConfig implements WebMvcConfigurer {
@@ -36,11 +38,22 @@ public class PaginacaoConfig implements WebMvcConfigurer {
         registry.addInterceptor(new HandlerInterceptor() {
             @Override
             public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
+                conferirCaractereNulo(request);
                 conferirPagina(request, handler);
                 conferirOrdenacao(request, handler);
                 return true;
             }
         }).addPathPatterns("/api/**");
+    }
+
+    private static void conferirCaractereNulo(HttpServletRequest request) {
+        request.getParameterMap().forEach((nome, valores) -> {
+            for (String valor : valores) {
+                if (valor.indexOf(0) >= 0) { // o código 0 é o caractere nulo
+                    throw new CampoInvalidoException(nome, "não pode ter o caractere nulo (U+0000)");
+                }
+            }
+        });
     }
 
     private void conferirPagina(HttpServletRequest request, Object handler) {

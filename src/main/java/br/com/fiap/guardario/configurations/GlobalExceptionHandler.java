@@ -159,7 +159,8 @@ public class GlobalExceptionHandler {
             return erro(HttpStatus.BAD_REQUEST, "O corpo da requisição é obrigatório: envie o JSON com os campos da rota", request);
         }
         if (ex.getCause() instanceof JacksonException erro && !erro.getPath().isEmpty()) {
-            String motivo = erro instanceof MismatchedInputException desencontro
+            String motivo = erro instanceof JacksonConfig.TextoComCaractereNulo ? "não pode ter o caractere nulo (U+0000)"
+                    : erro instanceof MismatchedInputException desencontro
                     ? valoresDoCampo(erro).map(aceitos -> "valor inválido; os aceitos são " + String.join(", ", aceitos))
                             .orElseGet(() -> motivo(desencontro.getTargetType()))
                     : erro instanceof InputCoercionException ? "número fora do intervalo aceito pelo campo"
