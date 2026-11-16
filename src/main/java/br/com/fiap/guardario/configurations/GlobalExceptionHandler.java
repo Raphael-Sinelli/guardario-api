@@ -50,6 +50,7 @@ import tools.jackson.core.JsonToken;
 import tools.jackson.core.exc.InputCoercionException;
 import tools.jackson.databind.exc.MismatchedInputException;
 
+import java.sql.SQLException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -90,11 +91,27 @@ public class GlobalExceptionHandler {
         return erro(HttpStatus.CONFLICT, "O registro foi alterado por outra requisição ao mesmo tempo. Tente de novo", request);
     }
 
-    // rede de segurança para FK ou unique violada no banco (ex.: excluir registro ainda referenciado)
+    // rede de segurança para o que o banco recusa. FK ou unique violada (ex.: excluir registro ainda referenciado) é
+    // conflito, 409. Valor que o banco não aceita (SQLState da classe 22: texto longo demais, caractere inválido, número
+    // fora da faixa) é erro do pedido, 400, e não "registro duplicado"
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ErrorCustomResponse> integridade(DataIntegrityViolationException ex, HttpServletRequest request) {
+        if (valorRecusadoPeloBanco(ex)) {
+            log.info("Valor recusado pelo banco em {}: {}", request.getRequestURI(), ex.getMostSpecificCause().getMessage());
+            return erro(HttpStatus.BAD_REQUEST,
+                    "Algum valor enviado não cabe no banco: texto longo demais, caractere inválido ou número fora da faixa", request);
+        }
         log.warn("Violação de integridade em {}: {}", request.getRequestURI(), ex.getMostSpecificCause().getMessage());
         return erro(HttpStatus.CONFLICT, "A operação conflita com dados existentes (registro duplicado ou ainda em uso)", request);
+    }
+
+    private static boolean valorRecusadoPeloBanco(Throwable erro) {
+        for (Throwable causa = erro; causa != null; causa = causa.getCause()) {
+            if (causa instanceof SQLException sql) {
+                return sql.getSQLState() != null && sql.getSQLState().startsWith("22");
+            }
+        }
+        return false;
     }
 
     // ---------- 400: Bean Validation ----------
