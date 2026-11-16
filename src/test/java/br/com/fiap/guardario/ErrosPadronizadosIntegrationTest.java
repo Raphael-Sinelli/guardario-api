@@ -377,7 +377,7 @@ class ErrosPadronizadosIntegrationTest extends IntegracaoBase {
     // termo com caractere de controle e ignorecase em campo que não é texto chegavam ao Spring Data e davam 500
     @Test
     void ordenacaoComCaractereDeControleOuIgnorecaseForaDeTextoDevolve400() throws Exception {
-        for (String sort : new String[]{" ", "nome ", ",asc"}) {
+        for (String sort : new String[]{"\u0000", "nome\u0000", "\u0001,asc"}) {
             mockMvc.perform(get("/api/areas").param("sort", sort))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.errors[0].field").value("sort"));
