@@ -62,8 +62,10 @@ public class AreaSeguidaServiceImpl implements AreaSeguidaService {
                 .orElse(Set.of());
     }
 
+    // trava a área antes do cadastro (sempre nesta ordem): a exclusão da área, que também trava a área, não cruza com
+    // um seguir no meio, e quem chega depois da exclusão recebe 404
     private AreaRisco buscarArea(Long areaId) {
-        return areaRepository.findById(areaId)
+        return areaRepository.buscarComTrava(areaId)
                 .orElseThrow(() -> new ResourceNotFoundException("área", areaId));
     }
 

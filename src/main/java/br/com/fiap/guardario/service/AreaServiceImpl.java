@@ -96,7 +96,10 @@ public class AreaServiceImpl implements AreaService {
     @Transactional
     @CacheEvict(cacheNames = "areas", key = "#id")
     public void excluir(Long id) {
-        AreaRisco area = buscarEntidade(id);
+        // trava a área antes de ler quem a segue: um seguir que chegasse no meio faria a FK da tabela de junção barrar a
+        // exclusão; com a trava, ele espera e recebe 404 depois
+        AreaRisco area = areaRepository.buscarComTrava(id)
+                .orElseThrow(() -> new ResourceNotFoundException("área", id));
         boolean temVinculos = estacaoRepository.existsByAreaId(id)
                 || abrigoRepository.existsByAreaId(id)
                 || alertaRepository.existsByAreaId(id)

@@ -18,6 +18,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -221,6 +222,37 @@ class ConcorrenciaIntegrationTest extends IntegracaoBase {
                 .andReturn().getResponse().getContentAsString();
         List<Integer> ids = JsonPath.read(lista, "$._embedded.areas[*].id");
         assertThat(ids).hasSize(20).doesNotHaveDuplicates().contains((int) primeira, (int) mesma);
+    }
+
+    // o ADMIN exclui uma área enquanto outras pessoas começam a segui-la: a exclusão sempre dá certo (204) e quem chega
+    // depois recebe 404. Sem travar a área nas duas pontas, um seguir que entrava no meio fazia a FK da tabela de
+    // junção barrar a exclusão (409 com WARN no log)
+    @Test
+    void excluirAreaEnquantoAlguemComecaASeguirNaoDa409(CapturedOutput saida) throws Exception {
+        String admin = tokenAdmin();
+        List<String> tokens = new ArrayList<>();
+        for (int i = 0; i < 4; i++) {
+            String email = "seguidor" + i + sufixoUnico().toLowerCase() + "@email.com";
+            postJson("/api/auth/register", null, """
+                    {"nome": "Seguidor", "email": "%s", "senha": "Senha@123"}""".formatted(email)).andExpect(status().isCreated());
+            tokens.add(token(email, "Senha@123"));
+        }
+        for (int rodada = 0; rodada < 30; rodada++) {
+            long area = criarArea("Área Exclusão Corrida " + rodada + " " + sufixoUnico());
+            mockMvc.perform(put("/api/auth/me/areas-seguidas/" + area).header(HttpHeaders.AUTHORIZATION, bearer(tokens.get(0))))
+                    .andExpect(status().isNoContent());
+            AtomicInteger proximo = new AtomicInteger(1);
+            List<Integer> codigos = emParalelo(4,
+                    () -> mockMvc.perform(delete("/api/areas/" + area).header(HttpHeaders.AUTHORIZATION, bearer(admin)))
+                            .andReturn().getResponse().getStatus(),
+                    () -> mockMvc.perform(put("/api/auth/me/areas-seguidas/" + area)
+                                    .header(HttpHeaders.AUTHORIZATION, bearer(tokens.get(proximo.getAndIncrement()))))
+                            .andReturn().getResponse().getStatus());
+            assertThat(codigos.get(0)).as("DELETE na rodada %d", rodada).isEqualTo(204);
+            assertThat(codigos.subList(1, 4)).as("PUT na rodada %d", rodada).isSubsetOf(204, 404);
+            mockMvc.perform(get("/api/areas/" + area)).andExpect(status().isNotFound());
+        }
+        assertThat(saida.getOut().lines().filter(linha -> linha.contains(" WARN ") || linha.contains(" ERROR "))).isEmpty();
     }
 
     // relatos enviados enquanto uma leitura muda o nível da área: no fim, todo relato em aberto tem a prioridade do
