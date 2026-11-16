@@ -21,6 +21,7 @@ public record LeituraRequest(
 
         // sem example fixo: uma data fixa vira futuro ou passado demais com o tempo, e o "Try it out" do Swagger daria 400
         @Schema(description = "Momento da medição em UTC, dos últimos 30 dias e nunca no futuro (data no futuro dá 400). "
+                + "Em texto ISO 8601 com fuso (2026-11-15T10:30:00Z) ou em segundos desde 1970. "
                 + "Se não vier, o servidor usa o horário atual")
         @JanelaDeMedicao(diasAtras = 30)
         Instant medidaEm
