@@ -102,7 +102,7 @@ public class LeituraServiceImpl implements LeituraService {
 
     // a mesma leitura (mesmo medidaEm e mesmas medidas) já está gravada na estação: é o reenvio da ponte MQTT
     private boolean ehRepetida(Estacao estacao, LeituraRequest request) {
-        return request.medidaEm() != null && leituraRepository.existsByEstacaoIdAndMedidaEmAndNivelCmAndChuvaMmH(
+        return request.medidaEm() != null && leituraRepository.existeLeituraIgual(
                 estacao.getId(), request.medidaEm().truncatedTo(ChronoUnit.MICROS), request.nivelCm(), request.chuvaMmH());
     }
 

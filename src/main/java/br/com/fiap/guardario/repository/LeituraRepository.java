@@ -18,7 +18,17 @@ public interface LeituraRepository extends JpaRepository<Leitura, Long> {
     // a leitura que deu o estado atual da estação (a de medidaEm igual a ultimaLeituraEm), para reclassificar com a régua nova
     Optional<Leitura> findFirstByEstacaoIdAndMedidaEm(Long estacaoId, Instant medidaEm);
 
-    boolean existsByEstacaoIdAndMedidaEmAndNivelCmAndChuvaMmH(Long estacaoId, Instant medidaEm, Integer nivelCm, Double chuvaMmH);
+    // a mesma leitura (mesmo medidaEm e mesmas medidas) já gravada na estação: é o reenvio da ponte MQTT. São quatro
+    // condições, e o derived query com elas teria um nome de parágrafo; o JPQL deixa o nome curto e a regra à vista.
+    // Os quatro valores nunca chegam nulos (o medidaEm é conferido antes, e as medidas têm @NotNull)
+    @Query("""
+            select case when count(l) > 0 then true else false end
+            from Leitura l
+            where l.estacao.id = :estacaoId and l.medidaEm = :medidaEm
+              and l.nivelCm = :nivelCm and l.chuvaMmH = :chuvaMmH
+            """)
+    boolean existeLeituraIgual(@Param("estacaoId") Long estacaoId, @Param("medidaEm") Instant medidaEm,
+                               @Param("nivelCm") Integer nivelCm, @Param("chuvaMmH") Double chuvaMmH);
 
     // a leitura só é encontrada pela URL da estação dona dela
     Optional<Leitura> findByIdAndEstacaoId(Long id, Long estacaoId);

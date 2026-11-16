@@ -399,6 +399,19 @@ class LeituraAlertaIntegrationTest extends IntegracaoBase {
         postJson("/api/estacoes/" + segunda + "/leituras", tokenAgente(), corpo).andExpect(status().isCreated());
     }
 
+    // repetida é só a leitura com o mesmo medidaEm e as mesmas medidas: com a chuva diferente, no mesmo instante, é outra
+    @Test
+    void mesmoMedidaEmComChuvaDiferenteEhAceito() throws Exception {
+        long estacao = criarEstacao(criarArea("Área Chuva Diferente " + sufixoUnico()));
+        String medidaEm = java.time.Instant.now().minus(5, java.time.temporal.ChronoUnit.MINUTES).toString();
+        postJson("/api/estacoes/" + estacao + "/leituras", tokenAgente(),
+                "{\"nivelCm\": 50, \"chuvaMmH\": 0, \"medidaEm\": \"" + medidaEm + "\"}").andExpect(status().isCreated());
+        postJson("/api/estacoes/" + estacao + "/leituras", tokenAgente(),
+                "{\"nivelCm\": 50, \"chuvaMmH\": 2.5, \"medidaEm\": \"" + medidaEm + "\"}").andExpect(status().isCreated());
+        postJson("/api/estacoes/" + estacao + "/leituras", tokenAgente(),
+                "{\"nivelCm\": 50, \"chuvaMmH\": 2.5, \"medidaEm\": \"" + medidaEm + "\"}").andExpect(status().isConflict());
+    }
+
     @Test
     void leiturasSemMedidaEmNuncaSaoRepetidas() throws Exception {
         long estacao = criarEstacao(criarArea("Área Sem Horário " + sufixoUnico()));
