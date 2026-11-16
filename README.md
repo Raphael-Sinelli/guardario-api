@@ -51,7 +51,7 @@ Se o wrapper reclamar da versão do Java, confira se `java -version` e a variáv
 Outros comandos:
 
 ```bash
-./mvnw test                                   # roda os 267 testes
+./mvnw test                                   # roda os 287 testes
 ./mvnw clean package                          # gera target/guardario-api-1.0.0.jar
 java -jar target/guardario-api-1.0.0.jar      # roda o jar gerado
 ```
@@ -97,7 +97,7 @@ Sem login dá para consultar áreas, estações, leituras, alertas e abrigos. In
 
 ### Testando com o Postman (ou o Bruno)
 
-A pasta `postman/` tem a coleção `GuardaRio.postman_collection.json`, com 114 requisições em 10 pastas e 182 asserções automáticas (status esperado e regras de negócio); rodada com o Newman contra a API recém-iniciada, dá 0 falhas. O Bruno importa o mesmo arquivo.
+A pasta `postman/` tem a coleção `GuardaRio.postman_collection.json`, com 121 requisições em 10 pastas e 193 asserções automáticas (status esperado e regras de negócio); rodada com o Newman contra a API recém-iniciada, dá 0 falhas. O Bruno importa o mesmo arquivo.
 
 1. Suba a API e importe o arquivo no Postman.
 2. Rode a pasta **01 Autenticação**: os logins guardam os tokens nas variáveis da coleção, e as outras requisições já usam o token certo para cada papel.
@@ -133,7 +133,8 @@ Outras regras:
 - o ADMIN não pode alterar o próprio papel;
 - no PUT, abrigo sem `ocupacao` mantém as pessoas que já estão lá (e a capacidade não pode ficar abaixo delas, 409) e estação sem `status` mantém o status atual;
 - mudar as cotas da estação reclassifica a última leitura com a régua nova na hora, o nível da área acompanha e, se o risco subir para ALERTA ou pior, nasce o alerta automático (RN02);
-- estação reativada depois de mais de 1 hora parada volta sem risco conhecido até a próxima leitura, para não devolver à área um risco velho.
+- estação reativada depois de mais de 1 hora parada volta sem risco conhecido até a próxima leitura, para não devolver à área um risco velho;
+- cada pessoa segue no máximo 20 áreas além da área do cadastro (a 21ª dá 400 no campo `areasSeguidas`); seguir e deixar de seguir são idempotentes (204 mesmo sem mudança), e excluir uma área tira ela da lista de quem seguia.
 
 ## Diagrama das entidades
 
@@ -148,6 +149,8 @@ erDiagram
     Estacao |o--o{ Alerta : "origina"
     Usuario ||--o{ Relato : "escreve"
     Usuario |o--o{ Alerta : "emite ou encerra"
+    Usuario ||--o{ usuario_area_seguida : "segue"
+    AreaRisco ||--o{ usuario_area_seguida : "é seguida"
 
     Usuario {
         bigint id PK
@@ -160,6 +163,10 @@ erDiagram
         varchar telefone
         bigint area_id FK "opcional"
         timestamp criado_em
+    }
+    usuario_area_seguida {
+        bigint usuario_id PK, FK
+        bigint area_id PK, FK
     }
     AreaRisco {
         bigint id PK
@@ -252,8 +259,11 @@ erDiagram
 | AreaRisco 1:N Estacao (bidirecional) | `estacao.area_id` | nenhum | não | A estação tem vida própria. Apagar uma área não pode levar estações embora; a exclusão é barrada com 409 |
 | AreaRisco 1:N Abrigo, Alerta e Relato | FK no lado N | nenhum | não se aplica | Mapeadas só com `@ManyToOne`: ninguém precisa navegar da área para a lista de relatos |
 | Usuario N:1 AreaRisco | `usuario.area_id` (opcional) | nenhum | não se aplica | Bairro onde a pessoa mora |
+| Usuario N:M AreaRisco (áreas seguidas, unidirecional) | tabela de junção `usuario_area_seguida` (`usuario_id`, `area_id`) | nenhum | não se aplica | Áreas que a pessoa acompanha além da do cadastro: a do trabalho, a da escola dos filhos |
 | Relato N:1 Usuario | `relato.autor_id` | nenhum | não se aplica | O autor vem do token |
 | Alerta N:1 Estacao e Usuario | `estacao_id`, `emitido_por_id`, `encerrado_por_id` (opcionais) | nenhum | não se aplica | Alerta manual pode não ter estação; alerta automático não tem emissor humano |
+
+**O N:M das áreas seguidas.** Uma pessoa segue várias áreas, e uma área é seguida por várias pessoas: nenhum dos dois lados guarda a chave do outro, então a relação vive na tabela de junção `usuario_area_seguida` (`@ManyToMany` com `@JoinTable` no `Usuario`, como `Task` e `Tag` no curso). A chave é o par (`usuario_id`, `area_id`), e a coleção é um `Set`: a mesma área não entra duas vezes, e o seguir de novo não muda nada. É unidirecional porque ninguém navega da área para quem a segue; a única consulta nesse sentido, a da exclusão da área, é um JPQL. Não tem cascade: a área existe sem o morador, e deixar de seguir não pode apagar a área. A coleção tem `@OptimisticLock(excluded = true)`: seguir uma área mexe só na tabela de junção e não sobe o `@Version` do `Usuario`, então não derruba com 409 uma edição de perfil feita ao mesmo tempo. Para duas chamadas simultâneas não repetirem o par nem passarem do teto de 20 áreas, o serviço trava o cadastro com `PESSIMISTIC_WRITE`, que não mexe na versão. A listagem carrega o usuário e as áreas num SELECT só (`@EntityGraph(attributePaths = "areasSeguidas")`), sem N+1. O perfil prod cria a tabela com `ddl-auto: update`, sem mexer nas linhas que já existem.
 
 **Fetch.** Todas as associações têm `fetch = FetchType.LAZY` escrito, inclusive os `@ManyToOne`, cujo padrão é EAGER. Listar alertas não precisa carregar estação e usuário de cada um. Quando a resposta precisa de um dado do pai, a consulta busca junto de forma pontual: `@EntityGraph(attributePaths = "area")` em `EstacaoRepository` e `AlertaRepository` (as respostas mostram o nome da área) e `join fetch` em `EstacaoRepository.buscarCriticas`. Assim a listagem faz um SELECT só, sem o problema N+1.
 
@@ -338,9 +348,9 @@ As respostas usam o formato HAL. As listas vêm com os itens em `_embedded`, os 
 | Abrigo | `area`, `abrigos-disponiveis` | Com vaga: `registrar-entrada`. Com gente: `registrar-saida`. Aberto ou lotado: `fechar`. Fechado: `reabrir`. ADMIN: `excluir`, só com o abrigo vazio |
 | Estação | `area`, `leituras`, `estatisticas-24h` | Estação ATIVA e usuário AGENTE ou ADMIN: `registrar-leitura`. ADMIN: `atualizar` e, se a estação não tem alerta no histórico, `excluir` |
 | Leitura | `estacao`, `estatisticas-24h`. Na resposta do registro: `estacao`, `area` e, quando a leitura abre um alerta automático, `alerta` | nenhuma: leitura não muda depois de gravada |
-| Área | `estacoes`, `abrigos-com-vaga`, `alertas-ativos` | ADMIN: `atualizar` e, se a área não tem estações, abrigos, alertas, relatos nem moradores, `excluir` |
+| Área | `estacoes`, `abrigos-com-vaga`, `alertas-ativos` | Usuário logado: `seguir-area` ou, se já segue, `deixar-de-seguir-area`. ADMIN: `atualizar` e, se a área não tem estações, abrigos, alertas, relatos nem moradores, `excluir` |
 | Linha do ranking | `area`, `abrigos-com-vaga` | nenhuma: é um relatório |
-| Usuário (também no `/api/auth/me`) | `area`; no próprio cadastro, `meus-relatos` e `alertas-da-minha-area`; para o ADMIN, também `usuarios` | No próprio cadastro: `editar-perfil` e `trocar-senha`. ADMIN: `alterar-papel`, menos no registro dele mesmo, que não pode mudar o próprio papel |
+| Usuário (também no `/api/auth/me`) | `area`; no próprio cadastro, `meus-relatos`, `alertas-da-minha-area` e `areas-seguidas`; para o ADMIN, também `usuarios` | No próprio cadastro: `editar-perfil` e `trocar-senha`. ADMIN: `alterar-papel`, menos no registro dele mesmo, que não pode mudar o próprio papel |
 | Estatística das leituras | `estacao`, `leituras`; o `self` guarda a janela pedida (`?horas=24`) | nenhuma: é um relatório |
 
 Quem não está logado não recebe link de ação. O `excluir` só aparece quando a exclusão vai dar certo: numa lista, uma consulta agregada por página (`AreaRiscoRepository.buscarIdsComVinculos`, `AlertaRepository.buscarEstacaoIdsComAlertas`) diz quais itens têm vínculo, sem uma consulta por item. O link orienta o cliente, mas não substitui a checagem: o servidor confere a permissão em toda requisição.
@@ -428,6 +438,9 @@ Requisição que o Tomcat recusa antes de chegar ao Spring (barra codificada `%2
 | PUT | `/api/auth/me` | logado | 200 |
 | GET | `/api/auth/me` | logado | 200 |
 | PUT | `/api/auth/senha` | logado | 204 |
+| GET | `/api/auth/me/areas-seguidas` | logado (só as próprias) | 200 |
+| PUT | `/api/auth/me/areas-seguidas/{areaId}` | logado (só as próprias; até 20) | 204 |
+| DELETE | `/api/auth/me/areas-seguidas/{areaId}` | logado (só as próprias) | 204 |
 | GET | `/api/usuarios` | ADMIN | 200 |
 | GET | `/api/usuarios/{id}` | ADMIN, ou o próprio usuário (é o `Location` do cadastro) | 200 |
 | PUT | `/api/usuarios/{id}/papel` | ADMIN | 200 |
@@ -485,10 +498,10 @@ As rotas de listagem aceitam também `page`, `size` e `sort`. A descrição de c
 
 ## Testes
 
-`./mvnw test` roda 267 testes:
+`./mvnw test` roda 287 testes:
 
 - 22 testes de unidade, sem Spring e sem banco: 17 das regras que ficam nas entidades e nos enums (régua de risco nas fronteiras de cada cota, nível da área só com estações ativas, leitura atrasada ou antiga, lotação do abrigo, prioridade, máquina de estados, encerramento de alerta), 3 da chave do JWT (`JwtServiceTest`) e 2 da lista vazia no HAL (`RespostaHalTest`).
-- 245 testes de integração que sobem a aplicação inteira e chamam a API por HTTP (com o MockMvc; o `ServidorRealIntegrationTest`, por socket), passando pela segurança, pelo cache e pelo banco de verdade: status e formato de cada erro, 401 x 403, token expirado, posse, alerta automático, substituição de alertas, nível da área quando a estação muda de área ou de status, filtros com Specification, links HATEOAS mudando com o estado e sem template, invalidação e métricas do cache, link excluir sem N+1 (contando os comandos SQL), Actuator, OpenAPI, CORS e o perfil prod subindo sem carga de demonstração. Três classes cobrem o que costuma escapar: `MatrizDeAutorizacaoIntegrationTest` passa por toda rota protegida (401 sem token, 403 para quem não tem o papel) e pelas rotas públicas de consulta (200 sem token); `ConcorrenciaIntegrationTest` e os testes de abrigo e leitura disparam requisições ao mesmo tempo (entradas no abrigo, leituras da mesma área, encerrar o mesmo alerta, atender e descartar o mesmo relato, cadastros com o mesmo email); `CasosExtremosIntegrationTest` cobre corpo ausente, campo obrigatório nulo, lista vazia e paginação nos limites (página depois da última, size zero, negativo e acima do teto). O `ServidorRealIntegrationTest` sobe o Tomcat de verdade numa porta livre e manda requisições cruas por socket, para conferir o JSON dos erros que o Tomcat responde antes do Spring e o `Allow` do TRACE. O `HalFormsIntegrationTest` confere os templates de cada ação em HAL-FORMS e que o HAL padrão continua sem eles.
+- 265 testes de integração que sobem a aplicação inteira e chamam a API por HTTP (com o MockMvc; o `ServidorRealIntegrationTest`, por socket), passando pela segurança, pelo cache e pelo banco de verdade: status e formato de cada erro, 401 x 403, token expirado, posse, alerta automático, substituição de alertas, nível da área quando a estação muda de área ou de status, filtros com Specification, links HATEOAS mudando com o estado e sem template, invalidação e métricas do cache, link excluir sem N+1 (contando os comandos SQL), Actuator, OpenAPI, CORS e o perfil prod subindo sem carga de demonstração. Três classes cobrem o que costuma escapar: `MatrizDeAutorizacaoIntegrationTest` passa por toda rota protegida (401 sem token, 403 para quem não tem o papel) e pelas rotas públicas de consulta (200 sem token); `ConcorrenciaIntegrationTest` e os testes de abrigo e leitura disparam requisições ao mesmo tempo (entradas no abrigo, leituras da mesma área, encerrar o mesmo alerta, atender e descartar o mesmo relato, cadastros com o mesmo email); `CasosExtremosIntegrationTest` cobre corpo ausente, campo obrigatório nulo, lista vazia e paginação nos limites (página depois da última, size zero, negativo e acima do teto). O `ServidorRealIntegrationTest` sobe o Tomcat de verdade numa porta livre e manda requisições cruas por socket, para conferir o JSON dos erros que o Tomcat responde antes do Spring e o `Allow` do TRACE. O `HalFormsIntegrationTest` confere os templates de cada ação em HAL-FORMS e que o HAL padrão continua sem eles.
 
 ## Estrutura do projeto
 
