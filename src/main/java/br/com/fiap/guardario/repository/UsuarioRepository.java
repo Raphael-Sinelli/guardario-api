@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
 
@@ -31,6 +32,10 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select u from Usuario u where u.id = :id")
     Optional<Usuario> buscarComTrava(@Param("id") Long id);
+
+    // os ids das áreas que o usuário segue, para o link de cada área dizer se ele já segue: uma consulta por resposta
+    @Query("select a.id from Usuario u join u.areasSeguidas a where u.id = :id")
+    Set<Long> buscarIdsDasAreasSeguidas(@Param("id") Long id);
 
     // quem segue a área: ao excluir a área, ela sai da lista dessas pessoas
     @Query("select u from Usuario u join u.areasSeguidas a where a.id = :areaId")

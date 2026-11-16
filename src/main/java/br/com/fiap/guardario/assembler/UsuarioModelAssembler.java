@@ -51,6 +51,10 @@ public class UsuarioModelAssembler implements RepresentationModelAssembler<Usuar
             // cadastro de outra pessoa não edita o perfil nem troca a senha dela)
             Acoes.adicionar(model, linkTo(methodOn(AuthController.class).atualizarPerfil(null)).withRel("editar-perfil")
                     .withTitle("PUT com {\"nome\", \"telefone\", \"areaId\"}"), HttpMethod.PUT, AtualizarPerfilRequest.class);
+            // as áreas seguidas (N:M): a lista fica aqui; seguir e deixar de seguir ficam em cada área, com a URL já
+            // completa, porque nenhum link sai com template (o app segue o href como está)
+            model.add(linkTo(methodOn(AuthController.class).areasSeguidas()).withRel("areas-seguidas")
+                    .withTitle("GET: as áreas que você segue, além da área do cadastro"));
             Acoes.adicionar(model, linkTo(methodOn(AuthController.class).alterarSenha(null)).withRel("trocar-senha")
                     .withTitle("PUT com {\"senhaAtual\", \"novaSenha\"}; depois, faça login de novo"), HttpMethod.PUT, AlterarSenhaRequest.class);
         }

@@ -16,6 +16,7 @@ import java.text.Collator;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 // o usuário vem sempre do token: não existe rota para ver ou mudar as áreas seguidas de outra pessoa
 @Service
@@ -51,6 +52,14 @@ public class AreaSeguidaServiceImpl implements AreaSeguidaService {
                         .map(AreaMapper::toResponse)
                         .toList())
                 .orElse(List.of());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Set<Long> idsSeguidos() {
+        return SecurityUtils.usuarioOpcional()
+                .map(usuario -> usuarioRepository.buscarIdsDasAreasSeguidas(usuario.getId()))
+                .orElse(Set.of());
     }
 
     private AreaRisco buscarArea(Long areaId) {
