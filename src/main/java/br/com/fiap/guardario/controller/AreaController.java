@@ -46,7 +46,7 @@ public class AreaController {
     @ApiResponse(responseCode = "200", description = "Página de áreas com links de navegação")
     @ApiResponse(responseCode = "400", description = "Campo de ordenação inválido")
     public ResponseEntity<PagedModel<EntityModel<AreaResponse>>> listar(
-            @Parameter(description = "Sigla do estado", example = "SP") @RequestParam(required = false) String uf,
+            @Parameter(description = "Sigla do estado (opcional, por exemplo SP)") @RequestParam(required = false) String uf,
             @ParameterObject @PageableDefault(size = 10, sort = "nome") Pageable pageable) {
         return ResponseEntity.ok(assembler.toPagedModel(areaService.listar(uf, pageable), pagedAssembler));
     }

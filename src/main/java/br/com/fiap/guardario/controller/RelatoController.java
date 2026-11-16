@@ -83,8 +83,8 @@ public class RelatoController {
     public ResponseEntity<PagedModel<EntityModel<RelatoResponse>>> listar(
             @Parameter(description = "Tipo do relato") @RequestParam(required = false) TipoRelato tipo,
             @Parameter(description = "Status do relato") @RequestParam(required = false) StatusRelato status,
-            @Parameter(description = "Id da área", example = "1") @RequestParam(required = false) @Positive Long areaId,
-            @Parameter(description = "Prioridade mínima (1 a 5)", example = "4")
+            @Parameter(description = "Id da área (opcional, por exemplo 1)") @RequestParam(required = false) @Positive Long areaId,
+            @Parameter(description = "Prioridade mínima, de 1 a 5 (opcional, por exemplo 4)")
             @RequestParam(required = false) @Min(1) @Max(5) Integer prioridadeMin,
             @Parameter(description = "Criados a partir de (UTC, ISO 8601, como 2026-11-01T00:00:00Z)")
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant de,

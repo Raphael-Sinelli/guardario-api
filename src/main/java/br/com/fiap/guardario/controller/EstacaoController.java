@@ -56,7 +56,7 @@ public class EstacaoController {
     @ApiResponse(responseCode = "200", description = "Página de estações")
     @ApiResponse(responseCode = "400", description = "Parâmetro inválido")
     public ResponseEntity<PagedModel<EntityModel<EstacaoResponse>>> listar(
-            @Parameter(description = "Id da área", example = "1") @RequestParam(required = false) @Positive Long areaId,
+            @Parameter(description = "Id da área (opcional, por exemplo 1)") @RequestParam(required = false) @Positive Long areaId,
             @ParameterObject @PageableDefault(size = 10, sort = "codigo") Pageable pageable) {
         return ResponseEntity.ok(assembler.toPagedModel(estacaoService.listar(areaId, pageable), pagedAssembler));
     }

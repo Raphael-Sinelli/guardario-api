@@ -388,4 +388,26 @@ class InfraIntegrationTest extends IntegracaoBase {
         assertThat(textos).isNotEmpty();
         assertThat(comTag).isEmpty();
     }
+
+    // o Try it out do Swagger UI preenche o example de cada parâmetro: num filtro opcional sem valor padrão, o Execute
+    // filtrava sem o usuário pedir (GET /api/relatos saía com areaId=1&prioridadeMin=4). O exemplo fica na descrição
+    @Test
+    @SuppressWarnings("unchecked")
+    void filtroOpcionalSemPadraoNaoVemPreenchidoNoSwagger() throws Exception {
+        String json = mockMvc.perform(get("/v3/api-docs")).andReturn().getResponse().getContentAsString();
+        Map<String, Map<String, Map<String, Object>>> rotas = JsonPath.read(json, "$.paths");
+        List<String> preenchidos = new ArrayList<>();
+        rotas.forEach((rota, operacoes) -> operacoes.forEach((metodo, operacao) -> {
+            List<Map<String, Object>> parametros = (List<Map<String, Object>>) operacao.getOrDefault("parameters", List.of());
+            for (Map<String, Object> parametro : parametros) {
+                Map<String, Object> schema = (Map<String, Object>) parametro.getOrDefault("schema", Map.of());
+                boolean opcional = !Boolean.TRUE.equals(parametro.get("required"));
+                if ("query".equals(parametro.get("in")) && opcional && !schema.containsKey("default")
+                        && (parametro.containsKey("example") || schema.containsKey("example"))) {
+                    preenchidos.add(metodo.toUpperCase() + " " + rota + " ?" + parametro.get("name"));
+                }
+            }
+        }));
+        assertThat(preenchidos).isEmpty();
+    }
 }
