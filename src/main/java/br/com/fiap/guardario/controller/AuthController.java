@@ -60,7 +60,8 @@ public class AuthController {
     @PostMapping("/login")
     @SecurityRequirements
     @Operation(summary = "Faz login e devolve o token JWT",
-            description = "Rota pública. Use o token no header Authorization: Bearer <token>. Ele vale 1 hora.")
+            description = "Rota pública. As rotas protegidas pedem o token no header Authorization, no formato `Bearer` seguido "
+                    + "do token. No botão Authorize do Swagger, cole só o token, sem a palavra Bearer. Ele vale 1 hora.")
     @ApiResponse(responseCode = "200", description = "Login feito; o corpo traz o token")
     @ApiResponse(responseCode = "400", description = "Email ou senha em branco")
     @ApiResponse(responseCode = "401", description = "Email ou senha inválidos")

@@ -374,4 +374,18 @@ class InfraIntegrationTest extends IntegracaoBase {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$._embedded.usuarios[0].senha").doesNotExist());
     }
+
+    // o Swagger UI lê summary e description como Markdown e apaga o que parece tag HTML: "Bearer <token>" aparecia na
+    // tela como "Bearer .". Dentro de crase o texto sai como código e fica inteiro
+    @Test
+    void descricoesDoSwaggerNaoTemTextoQueOSwaggerUiApagaComoTagHtml() throws Exception {
+        String json = mockMvc.perform(get("/v3/api-docs")).andReturn().getResponse().getContentAsString();
+        List<Object> textos = new ArrayList<>(JsonPath.<List<Object>>read(json, "$..description"));
+        textos.addAll(JsonPath.<List<Object>>read(json, "$..summary"));
+        List<String> comTag = textos.stream().filter(String.class::isInstance).map(String.class::cast)
+                .filter(texto -> texto.replaceAll("`[^`]*`", "").matches("(?s).*</?[A-Za-z][^>]*>.*"))
+                .toList();
+        assertThat(textos).isNotEmpty();
+        assertThat(comTag).isEmpty();
+    }
 }
