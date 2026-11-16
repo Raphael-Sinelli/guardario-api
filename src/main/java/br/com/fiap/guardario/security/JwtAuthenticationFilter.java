@@ -35,7 +35,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         String header = request.getHeader(HttpHeaders.AUTHORIZATION);
-        if (header == null || !header.startsWith(PREFIXO)) {
+        // o nome do esquema não diferencia maiúsculas (RFC 7235): "bearer" vale como "Bearer", como no JsonErrorWriter
+        if (header == null || !header.regionMatches(true, 0, PREFIXO, 0, PREFIXO.length())) {
             chain.doFilter(request, response);
             return;
         }

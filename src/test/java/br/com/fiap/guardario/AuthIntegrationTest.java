@@ -100,6 +100,17 @@ class AuthIntegrationTest extends IntegracaoBase {
                 .andExpect(jsonPath("$.errors[0].field").value("email"));
     }
 
+    // o nome do esquema não diferencia maiúsculas (RFC 7235): "bearer" e "BEARER" valem como "Bearer". Antes, o filtro
+    // só lia "Bearer " e o token válido em minúsculas dava 401 com invalid_token
+    @Test
+    void esquemaBearerValeEmQualquerCaixa() throws Exception {
+        String token = tokenCidadao();
+        for (String esquema : new String[]{"bearer ", "BEARER ", "Bearer "}) {
+            mockMvc.perform(get("/api/auth/me").header(HttpHeaders.AUTHORIZATION, esquema + token))
+                    .andExpect(status().isOk());
+        }
+    }
+
     @Test
     void cadastroInvalidoDevolve400ComTodosOsCampos() throws Exception {
         postJson("/api/auth/register", null, """
