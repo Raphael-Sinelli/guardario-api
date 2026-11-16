@@ -77,7 +77,7 @@ Se o wrapper reclamar da versão do Java, confira se `java -version` e a variáv
 Outros comandos:
 
 ```bash
-./mvnw test                                   # roda os 302 testes
+./mvnw test                                   # roda os 305 testes
 ./mvnw clean package                          # gera target/guardario-api-1.0.0.jar
 java -jar target/guardario-api-1.0.0.jar      # roda o jar gerado
 ```
@@ -123,7 +123,7 @@ Sem login dá para consultar áreas, estações, leituras, alertas e abrigos. In
 
 ### Testando com o Postman (ou o Bruno)
 
-A pasta `postman/` tem a coleção `GuardaRio.postman_collection.json`, com 133 requisições em 10 pastas e 216 asserções automáticas (status esperado e regras de negócio); rodada com o Newman contra a API recém-iniciada, dá 0 falhas. Ela também pode rodar de novo na mesma API, sem reiniciar: no fim do bloco de autenticação a Maria volta para a senha de antes, e o roteiro de demonstração confere a mudança de nível a partir do nível que encontrou (depois de uma hora sem leitura, o agendamento leva a área para NORMAL). O Bruno importa o mesmo arquivo.
+A pasta `postman/` tem a coleção `GuardaRio.postman_collection.json`, com 133 requisições em 10 pastas e 217 asserções automáticas (status esperado e regras de negócio); rodada com o Newman contra a API recém-iniciada, dá 0 falhas. Ela também pode rodar de novo na mesma API, sem reiniciar: no fim do bloco de autenticação a Maria volta para a senha de antes, e o roteiro de demonstração confere a mudança de nível a partir do nível que encontrou (depois de uma hora sem leitura, o agendamento leva a área para NORMAL). O Bruno importa o mesmo arquivo.
 
 1. Suba a API e importe o arquivo no Postman.
 2. Rode a pasta **01 Autenticação**: os logins guardam os tokens nas variáveis da coleção, e as outras requisições já usam o token certo para cada papel.
@@ -324,13 +324,14 @@ erDiagram
 | `AbrigoRepository.findByStatusOrderByNomeAsc` | Abrigos disponíveis |
 | `existsByAreaId`, `existsByEstacaoId`, `existsByCodigoIgnoreCase` | Bloquear exclusão com vínculo e código duplicado |
 
-**JPQL com `@Query`** quando o derived não alcança: agregação, junção com condição, projeção em record e ordenação por conta entre colunas.
+**JPQL com `@Query`** quando o derived não alcança: agregação, junção com condição, projeção em record, ordenação por conta entre colunas e ordenação por uma regra do negócio, como a gravidade do alerta.
 
 | Consulta | Rota | O que o JPQL faz |
 |---|---|---|
 | `AreaRiscoRepository.rankingPorRelatosEmAberto` | `GET /api/areas/ranking` | `left join Relato r on ... and r.status in (...)` para a área sem relato também aparecer, `group by`, `count`, `max`, `coalesce` e `select new RankingAreaResponse(...)` |
 | `EstacaoRepository.buscarCriticas` | `GET /api/estacoes/criticas` | só estações ATIVAS com leitura da última hora, `join fetch e.area` (sem N+1) e `order by (e.ultimoNivelCm - e.cotaTransbordoCm) desc`, da estação mais perto do transbordo para a mais longe |
 | `EstacaoRepository.buscarSilenciosas` | `GET /api/estacoes/silenciosas` | estações ATIVAS com `ultimaLeituraEm is null or ultimaLeituraEm < :limite` e `order by e.ultimaLeituraEm asc nulls first` (as que nunca mandaram leitura primeiro): o derived query não expressa o "nulo **ou** antes do limite" com a ordenação dos nulos; `join fetch e.area` traz a área no mesmo SELECT (sem N+1) |
+| `AlertaRepository.buscarPorGravidade` e `buscarDaAreaPorGravidade` | `GET /api/alertas/ativos` (com e sem `?areaId=`) e `GET /api/alertas/minha-area` | `order by case a.nivel when EMERGENCIA then 3 when ALERTA then 2 when ATENCAO then 1 else 0 end desc, a.emitidoEm desc, a.id desc`. O nível é gravado como texto, e `order by a.nivel` daria a ordem alfabética (ALERTA, ATENCAO, EMERGENCIA). O CASE dá a cada nível o peso do `NivelRisco`, e o banco entrega a lista pronta, sem o service reordenar em memória. É SQL padrão e roda igual no H2 e no PostgreSQL; `@EntityGraph` traz a área no mesmo SELECT |
 | `LeituraRepository.estatisticas` | `GET /api/estacoes/{id}/leituras/estatisticas` | `count`, `avg`, `min` e `max` calculados no banco e projetados num record, sem trazer as leituras para a memória |
 
 **Specification** nos filtros de tela, em que todos os parâmetros são opcionais e combináveis. Com derived query, um filtro nulo vira `is null`, e cada combinação pediria um método novo: com os 6 filtros de relato seriam 64 métodos. Cada filtro é um método pequeno em `RelatoSpecification` ou `AbrigoSpecification` e só entra no WHERE se o parâmetro veio preenchido.
@@ -540,10 +541,10 @@ As rotas de listagem aceitam também `page`, `size` e `sort`. A descrição de c
 
 ## Testes
 
-`./mvnw test` roda 302 testes:
+`./mvnw test` roda 305 testes:
 
 - 24 testes de unidade, sem Spring e sem banco: 17 das regras que ficam nas entidades e nos enums (régua de risco nas fronteiras de cada cota, nível da área só com estações ativas, leitura atrasada ou antiga, lotação do abrigo, prioridade, máquina de estados, encerramento de alerta), 4 do JWT (`JwtServiceTest`: a chave e o token sem `exp`), 2 da lista vazia no HAL (`RespostaHalTest`) e 1 do que o banco recusa (`GlobalExceptionHandlerTest`: valor inválido dá 400, unique violada dá 409).
-- 278 testes de integração que sobem a aplicação inteira e chamam a API por HTTP (com o MockMvc; o `ServidorRealIntegrationTest`, por socket), passando pela segurança, pelo cache e pelo banco de verdade: status e formato de cada erro, 401 x 403, token expirado, posse, alerta automático, substituição de alertas, nível da área quando a estação muda de área ou de status, filtros com Specification, links HATEOAS mudando com o estado e sem template, invalidação e métricas do cache, link excluir sem N+1 (contando os comandos SQL), Actuator, OpenAPI, CORS e o perfil prod subindo sem carga de demonstração. Três classes cobrem o que costuma escapar: `MatrizDeAutorizacaoIntegrationTest` passa por toda rota protegida (401 sem token, 403 para quem não tem o papel) e pelas rotas públicas de consulta (200 sem token); `ConcorrenciaIntegrationTest` e os testes de abrigo e leitura disparam requisições ao mesmo tempo (entradas no abrigo, leituras da mesma área, encerrar o mesmo alerta, atender e descartar o mesmo relato, cadastros com o mesmo email); `CasosExtremosIntegrationTest` cobre corpo ausente, campo obrigatório nulo, lista vazia e paginação nos limites (página depois da última, size zero, negativo e acima do teto). O `ServidorRealIntegrationTest` sobe o Tomcat de verdade numa porta livre e manda requisições cruas por socket, para conferir o JSON dos erros que o Tomcat responde antes do Spring e o `Allow` do TRACE. O `HalFormsIntegrationTest` confere os templates de cada ação em HAL-FORMS e que o HAL padrão continua sem eles.
+- 281 testes de integração que sobem a aplicação inteira e chamam a API por HTTP (com o MockMvc; o `ServidorRealIntegrationTest`, por socket), passando pela segurança, pelo cache e pelo banco de verdade: status e formato de cada erro, 401 x 403, token expirado, posse, alerta automático, substituição de alertas, nível da área quando a estação muda de área ou de status, filtros com Specification, links HATEOAS mudando com o estado e sem template, invalidação e métricas do cache, link excluir sem N+1 (contando os comandos SQL), Actuator, OpenAPI, CORS e o perfil prod subindo sem carga de demonstração. Três classes cobrem o que costuma escapar: `MatrizDeAutorizacaoIntegrationTest` passa por toda rota protegida (401 sem token, 403 para quem não tem o papel) e pelas rotas públicas de consulta (200 sem token); `ConcorrenciaIntegrationTest` e os testes de abrigo e leitura disparam requisições ao mesmo tempo (entradas no abrigo, leituras da mesma área, encerrar o mesmo alerta, atender e descartar o mesmo relato, cadastros com o mesmo email); `CasosExtremosIntegrationTest` cobre corpo ausente, campo obrigatório nulo, lista vazia e paginação nos limites (página depois da última, size zero, negativo e acima do teto). O `ServidorRealIntegrationTest` sobe o Tomcat de verdade numa porta livre e manda requisições cruas por socket, para conferir o JSON dos erros que o Tomcat responde antes do Spring e o `Allow` do TRACE. O `HalFormsIntegrationTest` confere os templates de cada ação em HAL-FORMS e que o HAL padrão continua sem eles.
 
 ## Estrutura do projeto
 

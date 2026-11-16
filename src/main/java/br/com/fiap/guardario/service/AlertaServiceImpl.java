@@ -23,7 +23,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Comparator;
 import java.util.List;
 
 @Slf4j
@@ -49,15 +48,14 @@ public class AlertaServiceImpl implements AlertaService {
     /*
      * Consulta mais chamada da API: o app pergunta os alertas ativos toda vez que abre.
      * Fica em cache e só é limpa quando um alerta nasce, muda ou é encerrado.
-     * Ordem: mais grave primeiro, depois o mais recente.
+     * Ordem: mais grave primeiro, depois o mais recente. Ela vem pronta do banco (ORDER BY CASE no repositório).
      */
     @Override
     @Transactional(readOnly = true)
     @Cacheable(cacheNames = "alertasAtivos")
     public List<AlertaResponse> ativos() {
         log.info("Cache 'alertasAtivos' vazio: consultando o banco");
-        return alertaRepository.findByStatusOrderByEmitidoEmDesc(StatusAlerta.ATIVO).stream()
-                .sorted(Comparator.comparingInt((Alerta a) -> a.getNivel().getPeso()).reversed())
+        return alertaRepository.buscarPorGravidade(StatusAlerta.ATIVO).stream()
                 .map(AlertaMapper::toResponse)
                 .toList();
     }
@@ -75,8 +73,7 @@ public class AlertaServiceImpl implements AlertaService {
             throw new ResourceNotFoundException("área", areaId);
         }
         log.info("Cache 'alertasAtivos' sem a área {}: consultando o banco", areaId);
-        return alertaRepository.findByAreaIdAndStatus(areaId, StatusAlerta.ATIVO).stream()
-                .sorted(Comparator.comparingInt((Alerta a) -> a.getNivel().getPeso()).reversed())
+        return alertaRepository.buscarDaAreaPorGravidade(areaId, StatusAlerta.ATIVO).stream()
                 .map(AlertaMapper::toResponse)
                 .toList();
     }
@@ -93,8 +90,7 @@ public class AlertaServiceImpl implements AlertaService {
             return List.of();
         }
         // ler o id da área não dispara SELECT: o proxy LAZY já guarda o id
-        return alertaRepository.findByAreaIdAndStatus(usuario.getArea().getId(), StatusAlerta.ATIVO).stream()
-                .sorted(Comparator.comparingInt((Alerta a) -> a.getNivel().getPeso()).reversed())
+        return alertaRepository.buscarDaAreaPorGravidade(usuario.getArea().getId(), StatusAlerta.ATIVO).stream()
                 .map(AlertaMapper::toResponse)
                 .toList();
     }

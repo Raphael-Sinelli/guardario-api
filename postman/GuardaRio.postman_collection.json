@@ -1318,7 +1318,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
-                  "pm.test(\"Mais grave primeiro\", () => pm.expect(pm.response.json()._embedded.alertas[0].nivel).to.eql(\"EMERGENCIA\"));"
+                  "pm.test(\"Mais grave primeiro\", () => pm.expect(pm.response.json()._embedded.alertas[0].nivel).to.eql(\"EMERGENCIA\"));",
+                  "pm.test(\"Lista inteira do mais grave para o menos grave\", () => { const peso = {NORMAL: 0, ATENCAO: 1, ALERTA: 2, EMERGENCIA: 3}; const pesos = pm.response.json()._embedded.alertas.map(a => peso[a.nivel]); pm.expect(pesos.every((p, i) => i === 0 || pesos[i - 1] >= p)).to.be.true; });"
                 ]
               }
             }
