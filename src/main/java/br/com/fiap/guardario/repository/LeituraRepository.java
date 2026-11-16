@@ -15,8 +15,10 @@ public interface LeituraRepository extends JpaRepository<Leitura, Long> {
 
     Page<Leitura> findByEstacaoId(Long estacaoId, Pageable pageable);
 
-    // a leitura que deu o estado atual da estação (a de medidaEm igual a ultimaLeituraEm), para reclassificar com a régua nova
-    Optional<Leitura> findFirstByEstacaoIdAndMedidaEm(Long estacaoId, Instant medidaEm);
+    // a leitura que deu o estado atual da estação (a de medidaEm igual a ultimaLeituraEm), para reclassificar com a régua
+    // nova. Duas leituras podem ter o mesmo medidaEm (o par não é único), e a atual é a última gravada: o OrderByIdDesc
+    // deixa o resultado determinístico, em vez da primeira linha que o banco devolver
+    Optional<Leitura> findFirstByEstacaoIdAndMedidaEmOrderByIdDesc(Long estacaoId, Instant medidaEm);
 
     // a mesma leitura (mesmo medidaEm e mesmas medidas) já gravada na estação: é o reenvio da ponte MQTT. São quatro
     // condições, e o derived query com elas teria um nome de parágrafo; o JPQL deixa o nome curto e a regra à vista.

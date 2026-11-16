@@ -484,4 +484,26 @@ class AreaEstacaoIntegrationTest extends IntegracaoBase {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.prioridade").value(prioridade));
     }
+
+    // duas leituras no mesmo instante: a segunda (chuva muito forte, ALERTA) é a leitura atual. Ao regravar as cotas, a
+    // reclassificação usa a chuva dela, e não a da primeira linha que o banco devolver (sem chuva, o risco cairia para
+    // ATENCAO)
+    @Test
+    void reclassificacaoUsaALeituraAtualQuandoDuasTemOMesmoInstante() throws Exception {
+        long area = criarArea("Área Mesmo Instante Régua " + sufixoUnico());
+        long estacao = criarEstacao(area);
+        String medidaEm = Instant.now().minus(2, ChronoUnit.MINUTES).truncatedTo(ChronoUnit.SECONDS).toString();
+        postJson("/api/estacoes/" + estacao + "/leituras", tokenAgente(),
+                "{\"nivelCm\": 150, \"chuvaMmH\": 0, \"medidaEm\": \"" + medidaEm + "\"}")
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.leitura.nivelRisco").value("ATENCAO"));
+        postJson("/api/estacoes/" + estacao + "/leituras", tokenAgente(),
+                "{\"nivelCm\": 150, \"chuvaMmH\": 55, \"medidaEm\": \"" + medidaEm + "\"}")
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.leitura.nivelRisco").value("ALERTA"));
+
+        atualizarCotas(estacao, area, 100, 200, 300)
+                .andExpect(jsonPath("$.ultimoRisco").value("ALERTA"));
+        mockMvc.perform(get("/api/areas/" + area)).andExpect(jsonPath("$.nivelAtual").value("ALERTA"));
+    }
 }

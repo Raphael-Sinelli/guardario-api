@@ -134,7 +134,7 @@ public class EstacaoServiceImpl implements EstacaoService {
         // com as cotas novas, o último risco pode mudar na hora, sem esperar a próxima leitura
         NivelRisco riscoAnterior = estacao.getUltimoRisco();
         if (estacao.getUltimaLeituraEm() != null) {
-            leituraRepository.findFirstByEstacaoIdAndMedidaEm(estacao.getId(), estacao.getUltimaLeituraEm())
+            leituraRepository.findFirstByEstacaoIdAndMedidaEmOrderByIdDesc(estacao.getId(), estacao.getUltimaLeituraEm())
                     .ifPresent(ultima -> estacao.reclassificarUltimaLeitura(ultima.getChuvaMmH()));
         }
 
