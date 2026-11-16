@@ -26,11 +26,14 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.sql.SQLException;
 import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
+
+    private static final int TAMANHO_MAXIMO_EMAIL = 150; // o mesmo da coluna usuario.email
 
     private final UsuarioRepository usuarioRepository;
     private final AreaRiscoRepository areaRepository;
@@ -42,6 +45,11 @@ public class AuthServiceImpl implements AuthService {
     @Transactional
     public UsuarioResponse registrar(RegisterRequest request) {
         String email = normalizarEmail(request.email());
+        // o @Size do DTO conta o email antes das minúsculas, e o toLowerCase pode crescer o texto ("İ" vira "i" e o
+        // ponto): conferido de novo aqui, o email longo demais dá 400 no campo, e não erro do banco
+        if (email.length() > TAMANHO_MAXIMO_EMAIL) {
+            throw new CampoInvalidoException("email", "deve ter no máximo " + TAMANHO_MAXIMO_EMAIL + " caracteres em minúsculas");
+        }
         if (usuarioRepository.existsByEmail(email)) {
             throw new EmailJaCadastradoException(email);
         }
@@ -60,12 +68,26 @@ public class AuthServiceImpl implements AuthService {
         }
 
         // dois cadastros simultâneos com o mesmo email passam pelo existsByEmail juntos; o índice único do banco
-        // barra o segundo, e o flush aqui dentro transforma isso no mesmo 409 da regra, com a mensagem certa
+        // barra o segundo, e o flush aqui dentro transforma isso no mesmo 409 da regra, com a mensagem certa. Só a
+        // violação de unicidade é email repetido: outro motivo do banco segue para o GlobalExceptionHandler
         try {
             return UsuarioMapper.toResponse(usuarioRepository.saveAndFlush(usuario));
         } catch (DataIntegrityViolationException e) {
-            throw new EmailJaCadastradoException(email);
+            if (violouUnicidade(e)) {
+                throw new EmailJaCadastradoException(email);
+            }
+            throw e;
         }
+    }
+
+    // SQLState 23505 é a violação de índice único, no H2 e no PostgreSQL; o único índice único do usuário é o email
+    private static boolean violouUnicidade(Throwable erro) {
+        for (Throwable causa = erro; causa != null; causa = causa.getCause()) {
+            if (causa instanceof SQLException sql) {
+                return "23505".equals(sql.getSQLState());
+            }
+        }
+        return false;
     }
 
     @Override

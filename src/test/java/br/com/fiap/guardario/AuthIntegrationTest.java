@@ -89,6 +89,17 @@ class AuthIntegrationTest extends IntegracaoBase {
                 .andExpect(status().isConflict());
     }
 
+    // em minúsculas, cada "İ" vira dois caracteres (i e o ponto): o email de 150 cresce para 214 e não cabe na
+    // coluna. Antes, o banco recusava o INSERT e a resposta era 409 dizendo que esse email já tinha cadastro
+    @Test
+    void emailQueCresceEmMinusculasDevolve400ENao409() throws Exception {
+        String email = "İ".repeat(64) + "@" + "d".repeat(40) + "." + "d".repeat(40) + ".com";
+        postJson("/api/auth/register", null, """
+                {"nome": "Pessoa do Email Longo", "email": "%s", "senha": "Senha@123"}""".formatted(email))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0].field").value("email"));
+    }
+
     @Test
     void cadastroInvalidoDevolve400ComTodosOsCampos() throws Exception {
         postJson("/api/auth/register", null, """
