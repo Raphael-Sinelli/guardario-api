@@ -77,7 +77,7 @@ Se o wrapper reclamar da versão do Java, confira se `java -version` e a variáv
 Outros comandos:
 
 ```bash
-./mvnw test                                   # roda os 300 testes
+./mvnw test                                   # roda os 302 testes
 ./mvnw clean package                          # gera target/guardario-api-1.0.0.jar
 java -jar target/guardario-api-1.0.0.jar      # roda o jar gerado
 ```
@@ -123,7 +123,7 @@ Sem login dá para consultar áreas, estações, leituras, alertas e abrigos. In
 
 ### Testando com o Postman (ou o Bruno)
 
-A pasta `postman/` tem a coleção `GuardaRio.postman_collection.json`, com 129 requisições em 10 pastas e 207 asserções automáticas (status esperado e regras de negócio); rodada com o Newman contra a API recém-iniciada, dá 0 falhas. Ela também pode rodar de novo na mesma API, sem reiniciar: no fim do bloco de autenticação a Maria volta para a senha de antes, e o roteiro de demonstração confere a mudança de nível a partir do nível que encontrou (depois de uma hora sem leitura, o agendamento leva a área para NORMAL). O Bruno importa o mesmo arquivo.
+A pasta `postman/` tem a coleção `GuardaRio.postman_collection.json`, com 133 requisições em 10 pastas e 216 asserções automáticas (status esperado e regras de negócio); rodada com o Newman contra a API recém-iniciada, dá 0 falhas. Ela também pode rodar de novo na mesma API, sem reiniciar: no fim do bloco de autenticação a Maria volta para a senha de antes, e o roteiro de demonstração confere a mudança de nível a partir do nível que encontrou (depois de uma hora sem leitura, o agendamento leva a área para NORMAL). O Bruno importa o mesmo arquivo.
 
 1. Suba a API e importe o arquivo no Postman.
 2. Rode a pasta **01 Autenticação**: os logins guardam os tokens nas variáveis da coleção, e as outras requisições já usam o token certo para cada papel.
@@ -355,7 +355,7 @@ Quem mantém o cache correto é o `@CacheEvict` nas escritas. O `CacheConfig` en
 
 | Cache | O que guarda | Quando é limpo | Por que cachear |
 |---|---|---|---|
-| `alertasAtivos` | `AlertaServiceImpl.ativos()`, usado por `GET /api/alertas/ativos` | `@CacheEvict(allEntries = true)` ao emitir, editar, encerrar ou excluir alerta. No alerta automático, só quando um alerta nasce de fato (`condition = "#result != null"`). Também ao atualizar uma área, porque cada alerta guardado leva o nome dela | É a consulta que o app faz toda vez que abre, e só muda quando um alerta muda |
+| `alertasAtivos` | `AlertaServiceImpl.ativos()`, usado por `GET /api/alertas/ativos`, e `ativosDaArea(areaId)`, usado por `GET /api/alertas/ativos?areaId=` (chave: id da área) | `@CacheEvict(allEntries = true)` ao emitir, editar, encerrar ou excluir alerta, o que limpa a lista geral e a de cada área. No alerta automático, só quando um alerta nasce de fato (`condition = "#result != null"`). Também ao atualizar uma área, porque cada alerta guardado leva o nome dela. Ao excluir uma área, sai só a chave dela (`key = "#id"`), e a lista dela passa a dar 404 | É a consulta que o app faz toda vez que abre, e só muda quando um alerta muda |
 | `abrigosDisponiveis` | `AbrigoServiceImpl.disponiveis()`, usado por `GET /api/abrigos/disponiveis` | Em toda escrita de abrigo: criar, atualizar, abrir ou fechar, entrada, saída e exclusão | Durante a cheia muita gente procura vaga ao mesmo tempo |
 | `areas` (chave: id) | `AreaServiceImpl.buscarPorId`, usado por `GET /api/areas/{id}` | Ao atualizar ou excluir a área (`key = "#id"`), no registro de leitura, só quando o nível da área muda (`key = "#result.areaId()"`, `condition = "#result.nivelAreaAlterado()"`), e inteiro (`allEntries = true`) ao atualizar ou excluir uma estação, que pode mudar o nível de duas áreas (a antiga e a nova) | A tela do bairro mostra o nível de risco. As leituras chegam a cada 10 segundos, mas o nível muda raramente; limpar a cada leitura anularia o cache |
 
@@ -384,7 +384,7 @@ As respostas usam o formato HAL. As listas vêm com os itens em `_embedded`, os 
 | Abrigo | `area`, `abrigos-disponiveis` | Com vaga: `registrar-entrada`. Com gente: `registrar-saida`. Aberto ou lotado: `fechar`. Fechado: `reabrir`. ADMIN: `excluir`, só com o abrigo vazio |
 | Estação | `area`, `leituras`, `estatisticas-24h` | Estação ATIVA e usuário AGENTE ou ADMIN: `registrar-leitura`. ADMIN: `atualizar` e, se a estação não tem alerta no histórico, `excluir` |
 | Leitura | `estacao`, `estatisticas-24h`. Na resposta do registro: `estacao`, `area` e, quando a leitura abre um alerta automático, `alerta` | nenhuma: leitura não muda depois de gravada |
-| Área | `estacoes`, `abrigos-com-vaga`, `alertas-ativos` | Usuário logado: `seguir-area` ou, se já segue, `deixar-de-seguir-area`. ADMIN: `atualizar` e, se a área não tem estações, abrigos, alertas, relatos nem moradores, `excluir` |
+| Área | `estacoes`, `abrigos-com-vaga`, `alertas-ativos` (só os alertas ativos daquela área: `/api/alertas/ativos?areaId=`) | Usuário logado: `seguir-area` ou, se já segue, `deixar-de-seguir-area`. ADMIN: `atualizar` e, se a área não tem estações, abrigos, alertas, relatos nem moradores, `excluir` |
 | Linha do ranking | `area`, `abrigos-com-vaga` | nenhuma: é um relatório |
 | Usuário (também no `/api/auth/me`) | `area`; no próprio cadastro, `meus-relatos`, `alertas-da-minha-area` e `areas-seguidas`; para o ADMIN, também `usuarios` | No próprio cadastro: `editar-perfil` e `trocar-senha`. ADMIN: `alterar-papel`, menos no registro dele mesmo, que não pode mudar o próprio papel |
 | Estatística das leituras | `estacao`, `leituras`; o `self` guarda a janela pedida (`?horas=24`) | nenhuma: é um relatório |
@@ -505,6 +505,7 @@ Requisição que o Tomcat recusa antes de chegar ao Spring (barra codificada `%2
 | GET | `/api/estacoes/{id}/leituras/estatisticas?horas=24` | público | 200 |
 | GET | `/api/alertas?status=` | público | 200 |
 | GET | `/api/alertas/ativos` | público (cache) | 200 |
+| GET | `/api/alertas/ativos?areaId=` | público (cache) | 200 |
 | GET | `/api/alertas/minha-area` | logado | 200 |
 | GET | `/api/alertas/{id}` | público | 200 |
 | POST | `/api/alertas` | AGENTE, ADMIN | 201 + Location |
@@ -539,10 +540,10 @@ As rotas de listagem aceitam também `page`, `size` e `sort`. A descrição de c
 
 ## Testes
 
-`./mvnw test` roda 300 testes:
+`./mvnw test` roda 302 testes:
 
 - 24 testes de unidade, sem Spring e sem banco: 17 das regras que ficam nas entidades e nos enums (régua de risco nas fronteiras de cada cota, nível da área só com estações ativas, leitura atrasada ou antiga, lotação do abrigo, prioridade, máquina de estados, encerramento de alerta), 4 do JWT (`JwtServiceTest`: a chave e o token sem `exp`), 2 da lista vazia no HAL (`RespostaHalTest`) e 1 do que o banco recusa (`GlobalExceptionHandlerTest`: valor inválido dá 400, unique violada dá 409).
-- 276 testes de integração que sobem a aplicação inteira e chamam a API por HTTP (com o MockMvc; o `ServidorRealIntegrationTest`, por socket), passando pela segurança, pelo cache e pelo banco de verdade: status e formato de cada erro, 401 x 403, token expirado, posse, alerta automático, substituição de alertas, nível da área quando a estação muda de área ou de status, filtros com Specification, links HATEOAS mudando com o estado e sem template, invalidação e métricas do cache, link excluir sem N+1 (contando os comandos SQL), Actuator, OpenAPI, CORS e o perfil prod subindo sem carga de demonstração. Três classes cobrem o que costuma escapar: `MatrizDeAutorizacaoIntegrationTest` passa por toda rota protegida (401 sem token, 403 para quem não tem o papel) e pelas rotas públicas de consulta (200 sem token); `ConcorrenciaIntegrationTest` e os testes de abrigo e leitura disparam requisições ao mesmo tempo (entradas no abrigo, leituras da mesma área, encerrar o mesmo alerta, atender e descartar o mesmo relato, cadastros com o mesmo email); `CasosExtremosIntegrationTest` cobre corpo ausente, campo obrigatório nulo, lista vazia e paginação nos limites (página depois da última, size zero, negativo e acima do teto). O `ServidorRealIntegrationTest` sobe o Tomcat de verdade numa porta livre e manda requisições cruas por socket, para conferir o JSON dos erros que o Tomcat responde antes do Spring e o `Allow` do TRACE. O `HalFormsIntegrationTest` confere os templates de cada ação em HAL-FORMS e que o HAL padrão continua sem eles.
+- 278 testes de integração que sobem a aplicação inteira e chamam a API por HTTP (com o MockMvc; o `ServidorRealIntegrationTest`, por socket), passando pela segurança, pelo cache e pelo banco de verdade: status e formato de cada erro, 401 x 403, token expirado, posse, alerta automático, substituição de alertas, nível da área quando a estação muda de área ou de status, filtros com Specification, links HATEOAS mudando com o estado e sem template, invalidação e métricas do cache, link excluir sem N+1 (contando os comandos SQL), Actuator, OpenAPI, CORS e o perfil prod subindo sem carga de demonstração. Três classes cobrem o que costuma escapar: `MatrizDeAutorizacaoIntegrationTest` passa por toda rota protegida (401 sem token, 403 para quem não tem o papel) e pelas rotas públicas de consulta (200 sem token); `ConcorrenciaIntegrationTest` e os testes de abrigo e leitura disparam requisições ao mesmo tempo (entradas no abrigo, leituras da mesma área, encerrar o mesmo alerta, atender e descartar o mesmo relato, cadastros com o mesmo email); `CasosExtremosIntegrationTest` cobre corpo ausente, campo obrigatório nulo, lista vazia e paginação nos limites (página depois da última, size zero, negativo e acima do teto). O `ServidorRealIntegrationTest` sobe o Tomcat de verdade numa porta livre e manda requisições cruas por socket, para conferir o JSON dos erros que o Tomcat responde antes do Spring e o `Allow` do TRACE. O `HalFormsIntegrationTest` confere os templates de cada ação em HAL-FORMS e que o HAL padrão continua sem eles.
 
 ## Estrutura do projeto
 

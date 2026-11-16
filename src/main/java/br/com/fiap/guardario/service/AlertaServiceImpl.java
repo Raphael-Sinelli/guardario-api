@@ -63,6 +63,25 @@ public class AlertaServiceImpl implements AlertaService {
     }
 
     /*
+     * Alertas ativos de uma área: é para onde leva o link alertas-ativos de cada área. Fica no mesmo cache da lista de
+     * todas, com o id da área como chave. Toda escrita que limpa esse cache limpa todas as chaves (allEntries), e a
+     * exclusão da área limpa a chave dela. Área que não existe dá 404, e o 404 não entra no cache.
+     */
+    @Override
+    @Transactional(readOnly = true)
+    @Cacheable(cacheNames = "alertasAtivos", key = "#areaId")
+    public List<AlertaResponse> ativosDaArea(Long areaId) {
+        if (!areaRepository.existsById(areaId)) {
+            throw new ResourceNotFoundException("área", areaId);
+        }
+        log.info("Cache 'alertasAtivos' sem a área {}: consultando o banco", areaId);
+        return alertaRepository.findByAreaIdAndStatus(areaId, StatusAlerta.ATIVO).stream()
+                .sorted(Comparator.comparingInt((Alerta a) -> a.getNivel().getPeso()).reversed())
+                .map(AlertaMapper::toResponse)
+                .toList();
+    }
+
+    /*
      * Alertas ativos da área onde o usuário logado mora. Sem cache: a resposta muda de usuário para usuário.
      * Transação de leitura porque o mapper lê o nome da área, e o open-in-view está desligado.
      */

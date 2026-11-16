@@ -3094,6 +3094,157 @@
           ]
         },
         {
+          "name": "Link alertas-ativos da área leva à própria área",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/areas/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "areas",
+                "1"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"O link alertas-ativos traz o areaId da área\", () => pm.expect(pm.response.json()._links[\"alertas-ativos\"].href).to.match(/\\/api\\/alertas\\/ativos\\?areaId=1$/));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Alertas ativos só da área 1",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/alertas/ativos?areaId=1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "alertas",
+                "ativos"
+              ],
+              "query": [
+                {
+                  "key": "areaId",
+                  "value": "1"
+                }
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Só alertas da área 1\", () => pm.expect((pm.response.json()._embedded.alertas || []).every(a => a.areaId === 1)).to.be.true);",
+                  "pm.test(\"O self repete o filtro\", () => pm.expect(pm.response.json()._links.self.href).to.match(/areaId=1$/));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Alertas ativos de área que não existe (404)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/alertas/ativos?areaId=999999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "alertas",
+                "ativos"
+              ],
+              "query": [
+                {
+                  "key": "areaId",
+                  "value": "999999"
+                }
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"Corpo de erro padrão\", () => pm.expect(pm.response.json().status).to.eql(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Alertas ativos com areaId inválido (400)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/alertas/ativos?areaId=0",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "alertas",
+                "ativos"
+              ],
+              "query": [
+                {
+                  "key": "areaId",
+                  "value": "0"
+                }
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"O erro aponta o areaId\", () => pm.expect(pm.response.json().errors[0].field).to.eql(\"areaId\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Emitir alerta manual (AGENTE)",
           "request": {
             "method": "POST",

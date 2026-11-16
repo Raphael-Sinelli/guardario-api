@@ -66,7 +66,7 @@ public class AreaModelAssembler implements RepresentationModelAssembler<AreaResp
                 linkTo(methodOn(AreaController.class).buscarPorId(area.id())).withSelfRel(),
                 linkTo(methodOn(EstacaoController.class).listar(area.id(), null)).withRel("estacoes").expand(),
                 linkTo(methodOn(AbrigoController.class).listar(area.id(), null, null, true, null, null)).withRel("abrigos-com-vaga").expand(),
-                linkTo(methodOn(AlertaController.class).ativos()).withRel("alertas-ativos"),
+                linkTo(methodOn(AlertaController.class).ativos(area.id())).withRel("alertas-ativos"),
                 linkTo(methodOn(AreaController.class).listar(null, null)).withRel("areas").expand());
 
         // quem está logado segue ou deixa de seguir a área (N:M), conforme já segue ou não; a URL já vem com o id

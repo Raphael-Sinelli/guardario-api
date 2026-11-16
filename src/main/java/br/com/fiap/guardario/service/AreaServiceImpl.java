@@ -91,10 +91,14 @@ public class AreaServiceImpl implements AreaService {
         return AreaMapper.toResponse(area);
     }
 
-    // sem cascade na área: apagar uma área com histórico apagaria estações, alertas e relatos junto
+    // sem cascade na área: apagar uma área com histórico apagaria estações, alertas e relatos junto. A lista de alertas
+    // ativos da área também fica em cache, com o id dela, e sai junto: sem a área, a lista dá 404
     @Override
     @Transactional
-    @CacheEvict(cacheNames = "areas", key = "#id")
+    @Caching(evict = {
+            @CacheEvict(cacheNames = "areas", key = "#id"),
+            @CacheEvict(cacheNames = "alertasAtivos", key = "#id")
+    })
     public void excluir(Long id) {
         // trava a área antes de ler quem a segue: um seguir que chegasse no meio faria a FK da tabela de junção barrar a
         // exclusão; com a trava, ele espera e recebe 404 depois

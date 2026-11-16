@@ -30,6 +30,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 
@@ -59,12 +61,19 @@ public class AlertaController {
 
     @GetMapping("/ativos")
     @SecurityRequirements
-    @Operation(summary = "Alertas ativos agora",
-            description = "Pública e em cache (é a consulta que o app faz toda vez que abre). Mais grave primeiro.")
-    @ApiResponse(responseCode = "200", description = "Alertas ativos")
-    public ResponseEntity<CollectionModel<EntityModel<AlertaResponse>>> ativos() {
-        CollectionModel<EntityModel<AlertaResponse>> model = assembler.toCollectionModel(alertaService.ativos())
-                .add(linkTo(methodOn(AlertaController.class).ativos()).withSelfRel());
+    @Operation(summary = "Alertas ativos agora, de todas as áreas ou de uma",
+            description = "Pública e em cache (é a consulta que o app faz toda vez que abre). Mais grave primeiro. "
+                    + "Sem areaId, traz os alertas ativos de todas as áreas. Com areaId, só os daquela área: é para onde "
+                    + "leva o link alertas-ativos de cada área.")
+    @ApiResponse(responseCode = "200", description = "Alertas ativos (lista vazia se a área não tem nenhum)")
+    @ApiResponse(responseCode = "400", description = "areaId menor ou igual a zero, ou que não é número")
+    @ApiResponse(responseCode = "404", description = "A área informada não existe")
+    public ResponseEntity<CollectionModel<EntityModel<AlertaResponse>>> ativos(
+            @Parameter(description = "Id da área (opcional): só os alertas ativos dela") @RequestParam(required = false) @Positive Long areaId) {
+        List<AlertaResponse> alertas = areaId == null ? alertaService.ativos() : alertaService.ativosDaArea(areaId);
+        // sem areaId, o expand tira o {?areaId} do link: nenhum link da API sai com template
+        CollectionModel<EntityModel<AlertaResponse>> model = assembler.toCollectionModel(alertas)
+                .add(linkTo(methodOn(AlertaController.class).ativos(areaId)).withSelfRel().expand());
         return ResponseEntity.ok(RespostaHal.colecao(model, AlertaResponse.class));
     }
 

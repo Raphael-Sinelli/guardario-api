@@ -1,9 +1,13 @@
 package br.com.fiap.guardario;
 
+import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -555,5 +559,51 @@ class LeituraAlertaIntegrationTest extends IntegracaoBase {
         mockMvc.perform(get("/api/alertas/minha-area"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.status").value(401));
+    }
+
+    // o link alertas-ativos de cada área leva só aos alertas ativos daquela área; sem o areaId, a lista continua com os
+    // alertas de todas as áreas, como antes
+    @Test
+    void linkAlertasAtivosDaAreaLevaSoAosAlertasDaquelaArea() throws Exception {
+        long area = criarArea("Área do Link " + sufixoUnico());
+        long vizinha = criarArea("Área Vizinha " + sufixoUnico());
+        long alerta = id(registrarLeitura(criarEstacao(area), 250, 0.0).andReturn().getResponse().getContentAsString(), "$.alertaGeradoId");
+        long alertaDaVizinha = id(registrarLeitura(criarEstacao(vizinha), 310, 0.0).andReturn().getResponse().getContentAsString(), "$.alertaGeradoId");
+
+        String href = JsonPath.read(mockMvc.perform(get("/api/areas/" + area)).andReturn().getResponse().getContentAsString(),
+                "$._links['alertas-ativos'].href");
+        assertThat(href).endsWith("/api/alertas/ativos?areaId=" + area);
+        mockMvc.perform(get(href))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$._embedded.alertas[*].id", contains((int) alerta)))
+                .andExpect(jsonPath("$._embedded.alertas[*].areaId", everyItem(is((int) area))))
+                .andExpect(jsonPath("$._links.self.href").value(href));
+
+        mockMvc.perform(get("/api/alertas/ativos"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$._embedded.alertas[*].id", hasItems((int) alerta, (int) alertaDaVizinha)))
+                .andExpect(jsonPath("$._links.self.href", endsWith("/api/alertas/ativos")));
+    }
+
+    // área sem alerta ativo devolve a lista vazia; área que não existe dá o 404 padrão, mesmo depois de a lista dela ter
+    // ido para o cache e a área ter sido excluída; id que não é positivo, ou não é número, dá 400
+    @Test
+    void alertasAtivosDeAreaSemAlertaInexistenteOuInvalida() throws Exception {
+        long area = criarArea("Área Sem Alerta " + sufixoUnico());
+        mockMvc.perform(get("/api/alertas/ativos").param("areaId", String.valueOf(area)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$._embedded.alertas").isEmpty());
+        mockMvc.perform(delete("/api/areas/" + area).header(HttpHeaders.AUTHORIZATION, bearer(tokenAdmin())))
+                .andExpect(status().isNoContent());
+        mockMvc.perform(get("/api/alertas/ativos").param("areaId", String.valueOf(area)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404));
+
+        for (String invalido : List.of("0", "-1", "abc")) {
+            mockMvc.perform(get("/api/alertas/ativos").param("areaId", invalido))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.status").value(400))
+                    .andExpect(jsonPath("$.errors[0].field").value("areaId"));
+        }
     }
 }
