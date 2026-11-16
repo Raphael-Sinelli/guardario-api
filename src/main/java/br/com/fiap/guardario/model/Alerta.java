@@ -9,7 +9,8 @@ import lombok.Setter;
 import java.time.Instant;
 
 @Entity
-// o PostgreSQL não cria índice para chave estrangeira: a cada leitura, o alerta ativo da área é buscado por area_id e status; a exclusão da estação confere estacao_id
+// o PostgreSQL não cria índice para chave estrangeira: a cada leitura, o alerta ativo da área é buscado por area_id
+// e status; a exclusão da estação confere estacao_id
 @Table(indexes = {
         @Index(name = "idx_alerta_area_status", columnList = "area_id, status"),
         @Index(name = "idx_alerta_estacao", columnList = "estacao_id")})

@@ -14,7 +14,8 @@ import java.util.List;
  * Estação IoT presa numa ponte ou poste, que mede o nível do rio e a chuva.
  */
 @Entity
-// o PostgreSQL não cria índice para chave estrangeira: as estações da área e o bloqueio da exclusão da área filtram por area_id
+// o PostgreSQL não cria índice para chave estrangeira: as estações da área e o bloqueio da exclusão da área filtram
+// por area_id
 @Table(indexes = @Index(name = "idx_estacao_area", columnList = "area_id"))
 @Getter
 @Setter

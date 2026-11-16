@@ -18,7 +18,8 @@ import java.util.List;
 import java.util.Set;
 
 @Entity
-// o PostgreSQL não cria índice para chave estrangeira: quem mora na área: o bloqueio da exclusão da área consulta por area_id
+// o PostgreSQL não cria índice para chave estrangeira: quem mora na área: o bloqueio da exclusão da área consulta
+// por area_id
 @Table(indexes = @Index(name = "idx_usuario_area", columnList = "area_id"))
 @Getter
 @Setter

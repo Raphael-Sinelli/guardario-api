@@ -11,7 +11,8 @@ import lombok.Setter;
  * A ocupação nunca passa da capacidade (RN05).
  */
 @Entity
-// o PostgreSQL não cria índice para chave estrangeira: o filtro de abrigos por área e o bloqueio da exclusão da área filtram por area_id
+// o PostgreSQL não cria índice para chave estrangeira: o filtro de abrigos por área e o bloqueio da exclusão da área
+// filtram por area_id
 @Table(indexes = @Index(name = "idx_abrigo_area", columnList = "area_id"))
 @Getter
 @Setter
