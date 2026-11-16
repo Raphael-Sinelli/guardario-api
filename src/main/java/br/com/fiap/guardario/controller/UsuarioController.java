@@ -36,7 +36,7 @@ public class UsuarioController {
     private final UsuarioModelAssembler assembler;
     private final PagedResourcesAssembler<UsuarioResponse> pagedAssembler;
 
-    @CamposDeOrdenacao({"nome", "email", "papel", "criadoEm", "id"})
+    @CamposDeOrdenacao(value = {"nome", "email", "papel", "criadoEm", "id"}, texto = {"nome", "email"})
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Lista os usuários", description = "Paginado e ordenável, ex.: ?page=0&size=10&sort=nome,asc")

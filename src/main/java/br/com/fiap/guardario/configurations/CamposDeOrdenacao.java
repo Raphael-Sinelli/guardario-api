@@ -15,4 +15,7 @@ import java.lang.annotation.Target;
 public @interface CamposDeOrdenacao {
 
     String[] value();
+
+    // os campos de texto da lista: só neles o ignorecase vale, porque o banco não aplica upper() em número, data ou enum
+    String[] texto() default {};
 }

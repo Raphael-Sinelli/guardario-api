@@ -44,7 +44,7 @@ public class AbrigoController {
     private final AbrigoModelAssembler assembler;
     private final PagedResourcesAssembler<AbrigoResponse> pagedAssembler;
 
-    @CamposDeOrdenacao({"nome", "capacidade", "ocupacao", "status", "id"})
+    @CamposDeOrdenacao(value = {"nome", "capacidade", "ocupacao", "status", "id"}, texto = {"nome"})
     @GetMapping
     @SecurityRequirements
     @Operation(summary = "Busca abrigos com filtros opcionais",

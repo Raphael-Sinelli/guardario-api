@@ -147,7 +147,9 @@ public class OpenApiConfig {
                     case "sort" -> parametro.setDescription(campos == null
                             ? "Esta rota não aceita ordenação"
                             : "Ordenação no formato campo,asc ou campo,desc (pode repetir o parâmetro). Campos aceitos: "
-                            + String.join(", ", campos.value()));
+                            + String.join(", ", campos.value())
+                            + (campos.texto().length == 0 ? ". Sem ignorecase: nenhum campo é texto"
+                            : ". O ignorecase (campo,asc,ignorecase) só vale para " + String.join(", ", campos.texto())));
                     default -> {
                     }
                 }

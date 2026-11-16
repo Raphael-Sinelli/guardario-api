@@ -49,7 +49,7 @@ public class EstacaoController {
     private final PagedResourcesAssembler<LeituraResponse> pagedLeituraAssembler;
 
     // sem o nível de risco: ele é gravado como texto (EnumType.STRING), e a ordem alfabética não é a de gravidade
-    @CamposDeOrdenacao({"codigo", "nome", "rio", "status", "ultimoNivelCm", "ultimaLeituraEm", "id"})
+    @CamposDeOrdenacao(value = {"codigo", "nome", "rio", "status", "ultimoNivelCm", "ultimaLeituraEm", "id"}, texto = {"codigo", "nome", "rio"})
     @GetMapping
     @SecurityRequirements
     @Operation(summary = "Lista as estações", description = "Pública, paginada e ordenável. Filtro opcional por área.")

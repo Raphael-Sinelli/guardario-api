@@ -374,6 +374,27 @@ class ErrosPadronizadosIntegrationTest extends IntegracaoBase {
         mockMvc.perform(get("/api/areas").param("sort", "nome,desc,ignorecase")).andExpect(status().isOk());
     }
 
+    // termo com caractere de controle e ignorecase em campo que não é texto chegavam ao Spring Data e davam 500
+    @Test
+    void ordenacaoComCaractereDeControleOuIgnorecaseForaDeTextoDevolve400() throws Exception {
+        for (String sort : new String[]{" ", "nome ", ",asc"}) {
+            mockMvc.perform(get("/api/areas").param("sort", sort))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.errors[0].field").value("sort"));
+        }
+        mockMvc.perform(get("/api/estacoes/1/leituras").param("sort", "id,ignorecase"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0].field").value("sort"));
+        mockMvc.perform(get("/api/relatos/meus").param("sort", "prioridade,desc,ignorecase")
+                .header(HttpHeaders.AUTHORIZATION, bearer(tokenCidadao()))).andExpect(status().isBadRequest());
+        mockMvc.perform(get("/api/areas").param("sort", "populacaoEstimada,ignorecase"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0].message", containsString("nome, cidade, uf")));
+        // em campo de texto o ignorecase continua valendo, escrito de qualquer jeito
+        mockMvc.perform(get("/api/areas").param("sort", "uf,nome,IgnoreCase")).andExpect(status().isOk());
+        mockMvc.perform(get("/api/estacoes").param("sort", "codigo,ignorecase")).andExpect(status().isOk());
+    }
+
     // erro de um campo ou parâmetro sai sempre em errors com o nome dele, mesmo quando a regra está no service
     @Test
     void erroDeCampoConferidoNoServiceTambemApontaOCampo() throws Exception {

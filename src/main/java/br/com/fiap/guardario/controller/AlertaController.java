@@ -45,7 +45,7 @@ public class AlertaController {
     private final PagedResourcesAssembler<AlertaResponse> pagedAssembler;
 
     // sem o nível de risco: ele é gravado como texto (EnumType.STRING), e a ordem alfabética não é a de gravidade
-    @CamposDeOrdenacao({"emitidoEm", "encerradoEm", "status", "origem", "titulo", "id"})
+    @CamposDeOrdenacao(value = {"emitidoEm", "encerradoEm", "status", "origem", "titulo", "id"}, texto = {"titulo"})
     @GetMapping
     @SecurityRequirements
     @Operation(summary = "Lista os alertas", description = "Público, paginado e ordenável. Filtro opcional por status.")

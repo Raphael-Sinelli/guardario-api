@@ -11,6 +11,7 @@ import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -28,7 +29,7 @@ public class PaginacaoConfig implements WebMvcConfigurer {
 
     private static final int TAMANHO_PADRAO = 20;
     private static final int TAMANHO_MAXIMO = 100; // o mesmo de spring.data.web.pageable.max-page-size
-    private static final Set<String> PALAVRAS_DE_DIRECAO = Set.of("asc", "desc", "ignorecase");
+    private static final Set<String> DIRECOES = Set.of("asc", "desc");
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
@@ -59,16 +60,35 @@ public class PaginacaoConfig implements WebMvcConfigurer {
         CamposDeOrdenacao anotacao = handler instanceof HandlerMethod metodo
                 ? metodo.getMethodAnnotation(CamposDeOrdenacao.class) : null;
         List<String> aceitos = anotacao == null ? List.of() : List.of(anotacao.value());
+        List<String> deTexto = anotacao == null ? List.of() : List.of(anotacao.texto());
         // "?sort=emitidoEm,titulo,desc": todo termo que não é direção (asc, desc, ignorecase) é mais um campo para o
-        // Spring Data, então todos passam pela lista, e não só o primeiro
+        // Spring Data, então todos passam pela lista, e não só o primeiro. O strip tira só espaço: um caractere de
+        // controle (como %00) fica no termo e cai na lista, em vez de chegar ao Spring Data e virar 500
         for (String ordenacao : ordenacoes) {
+            List<String> campos = new ArrayList<>();
+            boolean ignorarCaixa = false;
             for (String termo : ordenacao.split(",")) {
-                String campo = termo.trim();
-                if (!campo.isEmpty() && !PALAVRAS_DE_DIRECAO.contains(campo.toLowerCase(Locale.ROOT)) && !aceitos.contains(campo)) {
+                String campo = termo.strip();
+                String minusculo = campo.toLowerCase(Locale.ROOT);
+                if (campo.isEmpty() || DIRECOES.contains(minusculo)) {
+                    continue;
+                }
+                if (minusculo.equals("ignorecase")) {
+                    ignorarCaixa = true;
+                    continue;
+                }
+                if (!aceitos.contains(campo)) {
                     throw new CampoInvalidoException("sort", aceitos.isEmpty()
                             ? "Esta rota não aceita ordenação"
                             : "Ordenação não permitida por " + campo + ". Campos aceitos: " + String.join(", ", aceitos));
                 }
+                campos.add(campo);
+            }
+            // o ignorecase compara em maiúsculas: em número, data ou enum o banco recusa o upper() e a resposta seria 500
+            if (ignorarCaixa && !deTexto.containsAll(campos)) {
+                throw new CampoInvalidoException("sort", deTexto.isEmpty()
+                        ? "Esta rota não aceita ignorecase: nenhum campo da ordenação é texto"
+                        : "ignorecase só vale para campos de texto: " + String.join(", ", deTexto));
             }
         }
     }
