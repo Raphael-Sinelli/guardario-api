@@ -15,7 +15,6 @@ import java.time.Instant;
         @Index(name = "idx_alerta_area_status", columnList = "area_id, status"),
         @Index(name = "idx_alerta_estacao", columnList = "estacao_id")})
 @Getter
-@Setter
 @NoArgsConstructor
 public class Alerta {
 
@@ -30,12 +29,15 @@ public class Alerta {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
+    @Setter
     private NivelRisco nivel;
 
     @Column(nullable = false, length = 150)
+    @Setter
     private String titulo;
 
     @Column(nullable = false, length = 1000)
+    @Setter
     private String mensagem;
 
     @Enumerated(EnumType.STRING)
@@ -44,6 +46,7 @@ public class Alerta {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
+    @Setter
     private OrigemAlerta origem;
 
     @Column(nullable = false, updatable = false)
@@ -53,16 +56,19 @@ public class Alerta {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "area_id", nullable = false)
+    @Setter
     private AreaRisco area;
 
     // estação cuja leitura gerou o alerta (nulo em alerta manual sem estação)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "estacao_id")
+    @Setter
     private Estacao estacao;
 
     // nulo quando o alerta é automático
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "emitido_por_id")
+    @Setter
     private Usuario emitidoPor;
 
     // nulo quando o alerta foi substituído por outro de nível maior

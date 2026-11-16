@@ -136,7 +136,7 @@ public class DataInitializer implements ApplicationRunner {
         abrigo.setNome(nome);
         abrigo.setEndereco(endereco);
         abrigo.setCapacidade(capacidade);
-        abrigo.setOcupacao(ocupacao);
+        abrigo.informarOcupacao(ocupacao);
         abrigo.setAceitaPets(pets);
         abrigo.setAcessivelPcd(pcd);
         abrigo.setArea(area);

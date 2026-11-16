@@ -64,7 +64,7 @@ public class AbrigoServiceImpl implements AbrigoService {
     public AbrigoResponse criar(AbrigoRequest request) {
         Abrigo abrigo = new Abrigo();
         preencher(abrigo, request);
-        abrigo.setOcupacao(request.ocupacao() != null ? request.ocupacao() : 0);
+        abrigo.informarOcupacao(request.ocupacao() != null ? request.ocupacao() : 0);
         abrigo.atualizarStatus(); // pode já nascer LOTADO se a ocupação informada for igual à capacidade
         return AbrigoMapper.toResponse(abrigoRepository.save(abrigo));
     }
@@ -75,13 +75,10 @@ public class AbrigoServiceImpl implements AbrigoService {
     public AbrigoResponse atualizar(Long id, AbrigoRequest request) {
         Abrigo abrigo = buscarEntidade(id);
         preencher(abrigo, request);
-        // sem ocupacao no corpo, fica a atual: as pessoas que já estão no abrigo não podem sumir num PUT
+        // sem ocupacao no corpo, fica a atual: as pessoas que já estão no abrigo não podem sumir num PUT. O abrigo
+        // fechado não aumenta a ocupação nem pelo PUT (RN05); a regra fica no informarOcupacao da entidade
         if (request.ocupacao() != null) {
-            // RN05: FECHADO não recebe ninguém, nem pelo PUT; diminuir (gente saindo) continua valendo
-            if (abrigo.getStatus() == StatusAbrigo.FECHADO && request.ocupacao() > abrigo.getOcupacao()) {
-                throw new RegraNegocioException("Abrigo fechado não recebe pessoas: reabra o abrigo antes de aumentar a ocupação");
-            }
-            abrigo.setOcupacao(request.ocupacao());
+            abrigo.informarOcupacao(request.ocupacao());
         }
         if (abrigo.getOcupacao() > abrigo.getCapacidade()) {
             throw new RegraNegocioException("A capacidade não pode ficar abaixo das " + abrigo.getOcupacao()

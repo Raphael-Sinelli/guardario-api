@@ -18,7 +18,6 @@ import java.time.Instant;
         @Index(name = "idx_relato_autor", columnList = "autor_id"),
         @Index(name = "idx_relato_area_status", columnList = "area_id, status")})
 @Getter
-@Setter
 @NoArgsConstructor
 public class Relato {
 
@@ -35,13 +34,17 @@ public class Relato {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
+    @Setter
     private TipoRelato tipo;
 
     @Column(nullable = false, length = 500)
+    @Setter
     private String descricao;
 
+    @Setter
     private Double latitude;
 
+    @Setter
     private Double longitude;
 
     @Column(nullable = false)
@@ -56,10 +59,12 @@ public class Relato {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "autor_id", nullable = false)
+    @Setter
     private Usuario autor;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "area_id", nullable = false)
+    @Setter
     private AreaRisco area;
 
     @Column(nullable = false, updatable = false)

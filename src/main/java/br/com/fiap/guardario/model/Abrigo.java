@@ -15,7 +15,6 @@ import lombok.Setter;
 // filtram por area_id
 @Table(indexes = @Index(name = "idx_abrigo_area", columnList = "area_id"))
 @Getter
-@Setter
 @NoArgsConstructor
 public class Abrigo {
 
@@ -24,12 +23,15 @@ public class Abrigo {
     private Long id;
 
     @Column(nullable = false, length = 120)
+    @Setter
     private String nome;
 
     @Column(nullable = false, length = 200)
+    @Setter
     private String endereco;
 
     @Column(nullable = false)
+    @Setter
     private Integer capacidade;
 
     @Column(nullable = false)
@@ -42,16 +44,21 @@ public class Abrigo {
     private Long versao;
 
     @Column(nullable = false)
+    @Setter
     private Boolean aceitaPets;
 
     @Column(nullable = false)
+    @Setter
     private Boolean acessivelPcd;
 
     @Column(length = 20)
+    @Setter
     private String telefone;
 
+    @Setter
     private Double latitude;
 
+    @Setter
     private Double longitude;
 
     @Enumerated(EnumType.STRING)
@@ -60,6 +67,7 @@ public class Abrigo {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "area_id", nullable = false)
+    @Setter
     private AreaRisco area;
 
     // abrigo fechado não recebe ninguém: para o app, ele tem 0 vaga, mesmo com espaço sobrando
@@ -68,6 +76,15 @@ public class Abrigo {
             return 0;
         }
         return Math.max(capacidade - ocupacao, 0);
+    }
+
+    // A ocupação informada no cadastro ou no PUT substitui a atual. Abrigo fechado não recebe ninguém, nem pelo PUT
+    // (RN05); diminuir, com gente saindo, continua valendo. Quem chama confere a capacidade e atualiza o status
+    public void informarOcupacao(int pessoas) {
+        if (status == StatusAbrigo.FECHADO && pessoas > ocupacao) {
+            throw new RegraNegocioException("Abrigo fechado não recebe pessoas: reabra o abrigo antes de aumentar a ocupação");
+        }
+        ocupacao = pessoas;
     }
 
     public void registrarEntrada(int pessoas) {

@@ -87,7 +87,7 @@ class RegrasDeDominioTest {
     void abrigoViraLotadoQuandoEncheEVoltaAAbertoQuandoLiberaVaga() {
         Abrigo abrigo = new Abrigo();
         abrigo.setCapacidade(10);
-        abrigo.setOcupacao(0);
+        abrigo.informarOcupacao(0);
 
         abrigo.registrarEntrada(10);
         assertThat(abrigo.getStatus()).isEqualTo(StatusAbrigo.LOTADO);
@@ -154,5 +154,38 @@ class RegrasDeDominioTest {
         leitura.setNivelRisco(risco);
         leitura.setMedidaEm(medidaEm);
         return leitura;
+    }
+
+    // Como no Project do professor, que tem @Setter campo a campo e nenhum setter genérico no status: os campos que as
+    // regras guardam só mudam pelos métodos de domínio (encerrar, alterarStatus, definirPrioridade, registrarEntrada,
+    // fechar, informarOcupacao). Um setter público deixaria o service pular a regra
+    @Test
+    void camposGuardadosPelasRegrasNaoTemSetterPublico() {
+        java.util.Map<Class<?>, java.util.List<String>> guardados = java.util.Map.of(
+                Alerta.class, java.util.List.of("setStatus", "setEncerradoEm", "setEncerradoPor", "setId", "setVersao"),
+                Relato.class, java.util.List.of("setStatus", "setPrioridade", "setObservacaoAgente", "setAtualizadoEm", "setId", "setVersao"),
+                Abrigo.class, java.util.List.of("setStatus", "setOcupacao", "setId", "setVersao"));
+        guardados.forEach((entidade, setters) -> assertThat(java.util.Arrays.stream(entidade.getMethods())
+                .map(java.lang.reflect.Method::getName)
+                .filter(setters::contains))
+                .as(entidade.getSimpleName())
+                .isEmpty());
+    }
+
+    // o PUT do abrigo informa a ocupação pelo método de domínio: abrigo fechado não aumenta a ocupação (RN05), mas
+    // diminuir, com gente saindo, continua valendo
+    @Test
+    void informarOcupacaoRespeitaOAbrigoFechado() {
+        Abrigo abrigo = new Abrigo();
+        abrigo.setCapacidade(10);
+        abrigo.informarOcupacao(4);
+        abrigo.fechar();
+
+        assertThatThrownBy(() -> abrigo.informarOcupacao(5))
+                .isInstanceOf(RegraNegocioException.class)
+                .hasMessageContaining("reabra o abrigo");
+        abrigo.informarOcupacao(2);
+        assertThat(abrigo.getOcupacao()).isEqualTo(2);
+        assertThat(abrigo.getStatus()).isEqualTo(StatusAbrigo.FECHADO);
     }
 }
