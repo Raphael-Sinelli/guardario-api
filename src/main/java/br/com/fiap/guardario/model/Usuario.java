@@ -57,7 +57,9 @@ public class Usuario implements UserDetails {
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(name = "usuario_area_seguida",
             joinColumns = @JoinColumn(name = "usuario_id"),
-            inverseJoinColumns = @JoinColumn(name = "area_id"))
+            inverseJoinColumns = @JoinColumn(name = "area_id"),
+            // a lista do usuário filtra por usuario_id; a ordem das colunas da chave composta fica com o Hibernate
+            indexes = @Index(name = "idx_usuario_area_seguida_usuario", columnList = "usuario_id"))
     @OptimisticLock(excluded = true)
     private Set<AreaRisco> areasSeguidas = new HashSet<>();
 

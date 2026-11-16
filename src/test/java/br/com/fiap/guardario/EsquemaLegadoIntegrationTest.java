@@ -101,6 +101,11 @@ class EsquemaLegadoIntegrationTest extends IntegracaoBase {
                 select count(*) from information_schema.table_constraints
                 where table_name = 'USUARIO_AREA_SEGUIDA' and constraint_type = 'FOREIGN KEY'""", Integer.class)).isEqualTo(2);
         assertThat(jdbc.queryForObject("select count(*) from usuario where email = ?", Integer.class, EMAIL)).isEqualTo(1);
+        // a lista do usuário filtra por usuario_id: um índice próprio, porque a ordem da chave composta fica com o Hibernate
+        assertThat(jdbc.queryForObject("""
+                select count(*) from information_schema.index_columns
+                where table_name = 'USUARIO_AREA_SEGUIDA' and index_name = 'IDX_USUARIO_AREA_SEGUIDA_USUARIO'
+                  and column_name = 'USUARIO_ID'""", Integer.class)).isEqualTo(1);
     }
 
     // o usuário que já estava no banco segue uma área criada depois, e ela aparece na lista dele
