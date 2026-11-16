@@ -1,10 +1,18 @@
 package br.com.fiap.guardario;
 
 import br.com.fiap.guardario.security.JwtService;
+import io.jsonwebtoken.JwtException;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
+
+import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.util.Date;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -33,6 +41,23 @@ class JwtServiceTest {
         assertThatThrownBy(() -> new JwtService("curta-demais", 3600, false, false))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("32 caracteres");
+    }
+
+    // um token assinado com a chave certa, mas sem exp, valia para sempre: agora a validade é obrigatória
+    @Test
+    void tokenSemExpiracaoNaoVale() {
+        String segredo = "chave-so-deste-teste-com-mais-de-32-caracteres";
+        JwtService servico = new JwtService(segredo, 3600, false, false);
+        SecretKey chave = Keys.hmacShaKeyFor(segredo.getBytes(StandardCharsets.UTF_8));
+        Instant agora = Instant.now();
+
+        String semExp = Jwts.builder().subject("cidadao@guardario.com").issuedAt(Date.from(agora))
+                .signWith(chave, Jwts.SIG.HS256).compact();
+        assertThatThrownBy(() -> servico.ler(semExp)).isInstanceOf(JwtException.class);
+
+        String comExp = Jwts.builder().subject("cidadao@guardario.com").issuedAt(Date.from(agora))
+                .expiration(Date.from(agora.plusSeconds(60))).signWith(chave, Jwts.SIG.HS256).compact();
+        assertThat(servico.ler(comExp).email()).isEqualTo("cidadao@guardario.com");
     }
 
     // perfil prod: sem JWT_SECRET a aplicação não sobe, em vez de assinar com uma chave que some no próximo reinício

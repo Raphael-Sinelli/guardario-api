@@ -3,6 +3,7 @@ package br.com.fiap.guardario.security;
 import br.com.fiap.guardario.model.Usuario;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.security.Keys;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -74,7 +75,7 @@ public class JwtService {
 
     /**
      * Valida assinatura e expiração e devolve o email (subject) e a versão do token.
-     * Token adulterado, expirado ou de outra chave lança JwtException. Token emitido antes de existir a claim
+     * Token adulterado, expirado, sem exp ou de outra chave lança JwtException. Token emitido antes de existir a claim
      * versaoToken conta como versão 0, e continua valendo até expirar enquanto o usuário não trocar a senha.
      */
     public TokenLido ler(String token) {
@@ -83,6 +84,10 @@ public class JwtService {
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
+        // sem exp o token valeria para sempre: todo token que a API emite tem validade, então a falta dela é forjada
+        if (claims.getExpiration() == null) {
+            throw new MalformedJwtException("Token sem a claim exp");
+        }
         Integer versao = claims.get(CLAIM_VERSAO, Integer.class);
         return new TokenLido(claims.getSubject(), versao == null ? 0 : versao);
     }
