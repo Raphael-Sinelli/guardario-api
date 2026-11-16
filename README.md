@@ -97,7 +97,7 @@ Sem login dá para consultar áreas, estações, leituras, alertas e abrigos. In
 
 ### Testando com o Postman (ou o Bruno)
 
-A pasta `postman/` tem a coleção `GuardaRio.postman_collection.json`, com 127 requisições em 10 pastas e 205 asserções automáticas (status esperado e regras de negócio); rodada com o Newman contra a API recém-iniciada, dá 0 falhas. O Bruno importa o mesmo arquivo.
+A pasta `postman/` tem a coleção `GuardaRio.postman_collection.json`, com 129 requisições em 10 pastas e 207 asserções automáticas (status esperado e regras de negócio); rodada com o Newman contra a API recém-iniciada, dá 0 falhas. Ela também pode rodar de novo na mesma API, sem reiniciar: no fim do bloco de autenticação a Maria volta para a senha de antes, e o roteiro de demonstração confere a mudança de nível a partir do nível que encontrou (depois de uma hora sem leitura, o agendamento leva a área para NORMAL). O Bruno importa o mesmo arquivo.
 
 1. Suba a API e importe o arquivo no Postman.
 2. Rode a pasta **01 Autenticação**: os logins guardam os tokens nas variáveis da coleção, e as outras requisições já usam o token certo para cada papel.

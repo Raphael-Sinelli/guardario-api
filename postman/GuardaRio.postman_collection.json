@@ -767,6 +767,103 @@
           ]
         },
         {
+          "name": "Maria volta para a senha de antes (a coleção pode rodar de novo)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/senha",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "senha"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenMaria}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"senhaAtual\": \"NovaMaria@456\",\n  \"novaSenha\": \"Maria@123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 204\", () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login da Maria com a senha de antes",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"maria@guardario.com\",\n  \"senha\": \"Maria@123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set(\"tokenMaria\", pm.response.json().token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Seguir uma área (Cida)",
           "request": {
             "method": "PUT",
@@ -1076,7 +1173,9 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
-                  "pm.test(\"Área em ATENCAO\", () => pm.expect(pm.response.json().nivelAtual).to.eql(\"ATENCAO\"));"
+                  "// na primeira subida a área está em ATENCAO; numa segunda rodada ela já está em EMERGENCIA, e depois de uma hora sem leitura o agendamento a leva para NORMAL",
+                  "pm.collectionVariables.set(\"nivelAntes\", pm.response.json().nivelAtual);",
+                  "pm.test(\"Nível conhecido\", () => pm.expect([\"NORMAL\", \"ATENCAO\", \"ALERTA\", \"EMERGENCIA\"]).to.include(pm.response.json().nivelAtual));"
                 ]
               }
             }
@@ -1134,7 +1233,7 @@
                   "const r = pm.response.json();",
                   "pm.test(\"Risco EMERGENCIA pela régua da estação\", () => pm.expect(r.leitura.nivelRisco).to.eql(\"EMERGENCIA\"));",
                   "pm.test(\"Alerta automático gerado\", () => pm.expect(r.alertaGeradoId).to.be.a(\"number\"));",
-                  "pm.test(\"Nível da área mudou\", () => pm.expect(r.nivelAreaAlterado).to.eql(true));",
+                  "pm.test(\"Nível da área muda se ela não estava em EMERGENCIA\", () => pm.expect(r.nivelAreaAlterado).to.eql(pm.collectionVariables.get(\"nivelAntes\") !== \"EMERGENCIA\"));",
                   "pm.test(\"Location aponta para a leitura\", () => pm.expect(pm.response.headers.get(\"Location\")).to.include(\"/api/estacoes/1/leituras/\"));",
                   "pm.test(\"Link HATEOAS para o alerta gerado\", () => pm.expect(r._links.alerta.href).to.include(\"/api/alertas/\" + r.alertaGeradoId));",
                   "pm.collectionVariables.set(\"alertaId\", r.alertaGeradoId);"
