@@ -16,6 +16,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -106,6 +107,23 @@ class EsquemaLegadoIntegrationTest extends IntegracaoBase {
                 select count(*) from information_schema.index_columns
                 where table_name = 'USUARIO_AREA_SEGUIDA' and index_name = 'IDX_USUARIO_AREA_SEGUIDA_USUARIO'
                   and column_name = 'USUARIO_ID'""", Integer.class)).isEqualTo(1);
+    }
+
+    // o PostgreSQL não cria índice para chave estrangeira: as que as consultas mais usam têm índice próprio, também na
+    // tabela usuario que já existia, que o ddl-auto: update completa sem recriar
+    @Test
+    void chavesEstrangeirasConsultadasTemIndice() {
+        Map<String, String> indices = Map.of(
+                "IDX_USUARIO_AREA", "USUARIO",
+                "IDX_RELATO_AUTOR", "RELATO",
+                "IDX_RELATO_AREA_STATUS", "RELATO",
+                "IDX_ALERTA_AREA_STATUS", "ALERTA",
+                "IDX_ALERTA_ESTACAO", "ALERTA",
+                "IDX_ESTACAO_AREA", "ESTACAO",
+                "IDX_ABRIGO_AREA", "ABRIGO");
+        indices.forEach((indice, tabela) -> assertThat(jdbc.queryForObject("""
+                select count(*) from information_schema.index_columns where table_name = ? and index_name = ?""",
+                Integer.class, tabela, indice)).as(indice).isPositive());
     }
 
     // o usuário que já estava no banco segue uma área criada depois, e ela aparece na lista dele

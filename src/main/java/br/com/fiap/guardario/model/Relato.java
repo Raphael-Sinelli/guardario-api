@@ -12,6 +12,10 @@ import java.time.Instant;
  * Relato enviado pelo morador: rio subindo, rua alagada, pessoa ilhada...
  */
 @Entity
+// o PostgreSQL não cria índice para chave estrangeira: "meus relatos" filtra por autor_id; a prioridade dos relatos em aberto e o bloqueio da exclusão da área, por area_id e status
+@Table(indexes = {
+        @Index(name = "idx_relato_autor", columnList = "autor_id"),
+        @Index(name = "idx_relato_area_status", columnList = "area_id, status")})
 @Getter
 @Setter
 @NoArgsConstructor
