@@ -233,6 +233,24 @@ class ErrosPadronizadosIntegrationTest extends IntegracaoBase {
                 .andExpect(header().string(HttpHeaders.ALLOW, "GET,HEAD,OPTIONS"));
     }
 
+    // /api/estacoes/{id}/leituras/lote é só POST, mas o caminho também casa com o GET de .../leituras/{leituraId}:
+    // vale a rota com menos variáveis, como nas rotas fixas. Antes, o GET dava 400 ("leituraId deve ser um número")
+    // e o Allow anunciava GET e HEAD
+    @Test
+    void rotaDoLoteSoAceitaPost() throws Exception {
+        String admin = bearer(tokenAdmin());
+        for (HttpMethod metodo : new HttpMethod[]{HttpMethod.GET, HttpMethod.HEAD, HttpMethod.PUT, HttpMethod.DELETE}) {
+            mockMvc.perform(request(metodo, "/api/estacoes/1/leituras/lote").header(HttpHeaders.AUTHORIZATION, admin))
+                    .andExpect(status().isMethodNotAllowed())
+                    .andExpect(header().string(HttpHeaders.ALLOW, "POST,OPTIONS"));
+        }
+        mockMvc.perform(options("/api/estacoes/1/leituras/lote").header(HttpHeaders.AUTHORIZATION, admin))
+                .andExpect(status().isOk())
+                .andExpect(header().string(HttpHeaders.ALLOW, "POST,OPTIONS"));
+        // a leitura pelo id continua no GET, e o id que não é número continua dando 400
+        mockMvc.perform(get("/api/estacoes/1/leituras/abc")).andExpect(status().isBadRequest());
+    }
+
     // o OPTIONS anuncia o mesmo Allow do 405: a rota fixa /api/alertas/ativos é só GET, mesmo com PUT e DELETE em
     // /api/alertas/{id}; e o OPTIONS é público onde o GET é público, como o HEAD
     @Test

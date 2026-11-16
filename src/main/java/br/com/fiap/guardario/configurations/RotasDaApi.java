@@ -20,6 +20,7 @@ import org.springframework.web.util.pattern.PathPattern;
 import org.springframework.web.util.pattern.PathPatternParser;
 
 import java.util.EnumSet;
+import java.util.IntSummaryStatistics;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -27,8 +28,9 @@ import java.util.Set;
 
 /**
  * Diz quais métodos HTTP uma rota aceita de verdade, lendo os mapeamentos do próprio Spring: é o que vai no header
- * Allow de todo 405 e do OPTIONS. Quando uma rota fixa casa com o caminho (/api/alertas/ativos), valem só os métodos
- * dela, e não os da rota com variável que também casaria (/api/alertas/{id}). O GET também responde ao HEAD, e toda
+ * Allow de todo 405 e do OPTIONS. Quando várias rotas casam com o caminho, valem só os métodos das que têm menos
+ * variáveis: a rota fixa /api/alertas/ativos na frente de /api/alertas/{id}, e /api/estacoes/{id}/leituras/lote na
+ * frente de /api/estacoes/{id}/leituras/{leituraId}. O GET também responde ao HEAD, e toda
  * rota responde ao OPTIONS. Sem rota de controller, um arquivo estático que existe (a página do Swagger UI) aceita
  * GET, HEAD e OPTIONS, como o Spring o serve. A página de erro não conta: não é rota da API.
  */
@@ -44,12 +46,10 @@ public class RotasDaApi {
         this.contexto = contexto;
     }
 
-    // métodos aceitos no caminho, com a rota fixa na frente da rota com variável; vazio se nada responde no caminho
+    // métodos aceitos no caminho, com a rota de menos variáveis na frente; vazio se nada responde no caminho
     public Set<HttpMethod> metodosAceitos(String caminho) {
-        Set<RequestMethod> fixas = EnumSet.noneOf(RequestMethod.class);
-        Set<RequestMethod> comVariavel = EnumSet.noneOf(RequestMethod.class);
-        boolean casouFixa = false;
-        boolean casouComVariavel = false;
+        Set<RequestMethod> declarados = EnumSet.noneOf(RequestMethod.class);
+        int menosVariaveis = Integer.MAX_VALUE;
         PathContainer alvo = PathContainer.parsePath(caminho);
         for (Map.Entry<RequestMappingInfo, HandlerMethod> rota : rotasDosControllers()) {
             PathPatternsRequestCondition padroes = rota.getKey().getPathPatternsCondition();
@@ -58,23 +58,21 @@ public class RotasDaApi {
                     continue;
                 }
                 Set<RequestMethod> metodos = rota.getKey().getMethodsCondition().getMethods();
-                Set<RequestMethod> todos = metodos.isEmpty() ? EnumSet.allOf(RequestMethod.class) : metodos;
-                if (ehFixa(padrao)) {
-                    casouFixa = true;
-                    fixas.addAll(todos);
-                } else {
-                    casouComVariavel = true;
-                    comVariavel.addAll(todos);
+                int variaveis = variaveis(padrao);
+                if (variaveis < menosVariaveis) {
+                    menosVariaveis = variaveis;
+                    declarados.clear();
+                }
+                if (variaveis == menosVariaveis) {
+                    declarados.addAll(metodos.isEmpty() ? EnumSet.allOf(RequestMethod.class) : metodos);
                 }
             }
         }
-        Set<RequestMethod> declarados;
-        if (casouFixa || casouComVariavel) {
-            declarados = casouFixa ? fixas : comVariavel;
-        } else if (arquivoEstatico(alvo)) {
+        if (menosVariaveis == Integer.MAX_VALUE) {
+            if (!arquivoEstatico(alvo)) {
+                return Set.of();
+            }
             declarados = EnumSet.of(RequestMethod.GET);
-        } else {
-            return Set.of();
         }
         Set<HttpMethod> aceitos = new LinkedHashSet<>();
         for (HttpMethod metodo : ORDEM) {
@@ -91,14 +89,18 @@ public class RotasDaApi {
         return metodosAceitos(request.getRequestURI().substring(request.getContextPath().length()));
     }
 
-    // a requisição caiu numa rota com variável, mas o caminho é uma rota fixa que não aceita o método
+    // a requisição caiu numa rota com mais variáveis (como /api/alertas/{id}), mas o caminho tem uma rota mais
+    // específica (/api/alertas/ativos) que não aceita o método
     public boolean rotaFixaNaoAceita(HttpServletRequest request) {
         String caminho = request.getRequestURI().substring(request.getContextPath().length());
         PathContainer alvo = PathContainer.parsePath(caminho);
-        boolean existeFixa = rotasDosControllers().stream()
+        IntSummaryStatistics variaveis = rotasDosControllers().stream()
                 .flatMap(rota -> rota.getKey().getPathPatternsCondition().getPatterns().stream())
-                .anyMatch(padrao -> ehFixa(padrao) && padrao.matches(alvo));
-        return existeFixa && !metodosAceitos(caminho).contains(HttpMethod.valueOf(request.getMethod()));
+                .filter(padrao -> padrao.matches(alvo))
+                .mapToInt(RotasDaApi::variaveis)
+                .summaryStatistics();
+        boolean existeMaisEspecifica = variaveis.getCount() > 0 && variaveis.getMin() < variaveis.getMax();
+        return existeMaisEspecifica && !metodosAceitos(caminho).contains(HttpMethod.valueOf(request.getMethod()));
     }
 
     // as rotas dos controllers e do Actuator, sem a página de erro (o /error não é rota: é o destino interno dos erros)
@@ -135,9 +137,9 @@ public class RotasDaApi {
         return arquivo != null;
     }
 
-    private static boolean ehFixa(PathPattern padrao) {
-        String texto = padrao.getPatternString();
-        return !texto.contains("{") && !texto.contains("*");
+    // variáveis e curingas do padrão: /api/alertas/ativos tem 0, /api/estacoes/{id}/leituras/{leituraId} tem 2
+    private static int variaveis(PathPattern padrao) {
+        return (int) padrao.getPatternString().chars().filter(c -> c == '{' || c == '*').count();
     }
 
     // a cadeia de resolvers do mapeamento, na ordem dele (a do Spring não é pública)
