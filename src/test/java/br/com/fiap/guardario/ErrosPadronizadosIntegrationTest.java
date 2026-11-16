@@ -319,6 +319,20 @@ class ErrosPadronizadosIntegrationTest extends IntegracaoBase {
         mockMvc.perform(get("/api/alertas").param("page", "3").param("size", "100")).andExpect(status().isOk());
     }
 
+    // size zero, negativo ou que não é número volta ao padrão da rota (10 em /api/areas), e a conta do deslocamento
+    // usa esse padrão: 300 milhões de páginas de 10 passam do maior inteiro (antes dava 500), 150 milhões não
+    @Test
+    void paginaComSizeInvalidoUsaOPadraoDaRotaNaConta() throws Exception {
+        for (String tamanho : new String[]{"0", "-1", "abc"}) {
+            mockMvc.perform(get("/api/areas").param("page", "300000000").param("size", tamanho))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.errors[0].field").value("page"));
+        }
+        mockMvc.perform(get("/api/areas").param("page", "150000000"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.page.size").value(10));
+    }
+
     // ordenar por campo de outra entidade deixaria um anônimo ordenar alertas pelo hash da senha de quem emitiu
     // o nível de risco é texto no banco: ordenar por ele daria ordem alfabética (NORMAL depois de EMERGENCIA)
     @Test

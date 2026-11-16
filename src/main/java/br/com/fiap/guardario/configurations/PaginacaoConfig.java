@@ -4,6 +4,8 @@ import br.com.fiap.guardario.exceptions.CampoInvalidoException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.MethodParameter;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
@@ -16,6 +18,7 @@ import java.util.Set;
 /**
  * Confere os parâmetros de lista (page, size e sort) antes do controller. Erro aqui vira 400 no GlobalExceptionHandler.
  * - page e size: page * size é o deslocamento do SELECT; acima do maior inteiro o banco recusa e a resposta seria 500.
+ *   O size que entra na conta é o que o Spring Data vai usar: zero, negativo ou que não é número vira o padrão da rota.
  * - sort: o Pageable aceita ordenar por qualquer caminho, inclusive de outra entidade: ?sort=emitidoPor.senha (ou
  *   emitidoPorSenha, que o Spring Data resolve pelo camelCase) ordenaria os alertas pelo hash da senha de quem emitiu,
  *   numa rota pública. Só valem os campos da lista branca de cada rota, declarada com @CamposDeOrdenacao.
@@ -32,16 +35,17 @@ public class PaginacaoConfig implements WebMvcConfigurer {
         registry.addInterceptor(new HandlerInterceptor() {
             @Override
             public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
-                conferirPagina(request);
+                conferirPagina(request, handler);
                 conferirOrdenacao(request, handler);
                 return true;
             }
         }).addPathPatterns("/api/**");
     }
 
-    private void conferirPagina(HttpServletRequest request) {
+    private void conferirPagina(HttpServletRequest request, Object handler) {
         long pagina = numero(request.getParameter("page"), 0);
-        long tamanho = Math.min(numero(request.getParameter("size"), TAMANHO_PADRAO), TAMANHO_MAXIMO);
+        long pedido = numero(request.getParameter("size"), 0);
+        long tamanho = Math.min(pedido > 0 ? pedido : tamanhoPadrao(handler), TAMANHO_MAXIMO);
         if (pagina * tamanho > Integer.MAX_VALUE) {
             throw new CampoInvalidoException("page", "fora do intervalo: page vezes size passa de " + Integer.MAX_VALUE);
         }
@@ -67,6 +71,20 @@ public class PaginacaoConfig implements WebMvcConfigurer {
                 }
             }
         }
+    }
+
+    // o size do @PageableDefault da rota (10 na maioria), ou o padrão do Spring Data (20) quando a rota não declara.
+    // size e value são o mesmo atributo: vale o que foi escrito, como no resolver do Spring Data
+    private static long tamanhoPadrao(Object handler) {
+        if (handler instanceof HandlerMethod metodo) {
+            for (MethodParameter parametro : metodo.getMethodParameters()) {
+                PageableDefault padrao = parametro.getParameterAnnotation(PageableDefault.class);
+                if (padrao != null) {
+                    return padrao.size() != 10 ? padrao.size() : padrao.value();
+                }
+            }
+        }
+        return TAMANHO_PADRAO;
     }
 
     // valor que não é número fica com o padrão, como faz o próprio Spring Data
