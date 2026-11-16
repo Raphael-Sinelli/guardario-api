@@ -20,6 +20,8 @@ import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import org.springframework.hateoas.CollectionModel;
 import org.springframework.hateoas.EntityModel;
+import org.springframework.hateoas.MediaTypes;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -42,19 +44,24 @@ public class AuthController {
     private final AreaSeguidaService areaSeguidaService;
     private final AreaModelAssembler areaAssembler;
 
-    @PostMapping("/register")
+    // O produces começa por application/json: quem não manda Accept (o app) continua recebendo application/json, como
+    // antes, e quem pede hal+json ou hal-forms recebe o tipo pedido, também como antes. Sem ele, o EntityModel sairia
+    // em application/hal+json para quem não manda Accept, e o Content-Type do cadastro mudaria para o app
+    @PostMapping(value = "/register", produces = {MediaType.APPLICATION_JSON_VALUE, MediaTypes.HAL_JSON_VALUE, MediaTypes.HAL_FORMS_JSON_VALUE})
     @SecurityRequirements
     @Operation(summary = "Cadastra um morador",
-            description = "Rota pública. O cadastro sempre cria o papel CIDADAO; só um ADMIN promove alguém a AGENTE.")
-    @ApiResponse(responseCode = "201", description = "Usuário criado; o header Location aponta para o cadastro, que o próprio usuário consulta depois do login")
+            description = "Rota pública. O cadastro sempre cria o papel CIDADAO; só um ADMIN promove alguém a AGENTE. "
+                    + "A resposta traz os dados do cadastro e os links self (o cadastro, que o próprio usuário consulta "
+                    + "depois do login) e login (o próximo passo).")
+    @ApiResponse(responseCode = "201", description = "Usuário criado; o header Location aponta para o cadastro, que o próprio usuário consulta depois do login, e _links traz self e login")
     @ApiResponse(responseCode = "400", description = "Campos inválidos (email mal formado, senha com menos de 8 caracteres...)")
     @ApiResponse(responseCode = "404", description = "A área informada não existe")
     @ApiResponse(responseCode = "409", description = "Email já cadastrado")
-    public ResponseEntity<UsuarioResponse> registrar(@RequestBody @Valid RegisterRequest request) {
+    public ResponseEntity<EntityModel<UsuarioResponse>> registrar(@RequestBody @Valid RegisterRequest request) {
         UsuarioResponse criado = authService.registrar(request);
         URI location = ServletUriComponentsBuilder.fromCurrentContextPath()
                 .path("/api/usuarios/{id}").buildAndExpand(criado.id()).toUri();
-        return ResponseEntity.created(location).body(criado);
+        return ResponseEntity.created(location).body(assembler.toModelDoCadastro(criado));
     }
 
     @PostMapping("/login")

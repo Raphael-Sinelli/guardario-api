@@ -1,14 +1,21 @@
 package br.com.fiap.guardario;
 
+import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.ResultActions;
 
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasItems;
 import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -404,5 +411,57 @@ class AuthIntegrationTest extends IntegracaoBase {
         atualizarPerfil(null, """
                 {"nome": "Sem Token", "telefone": "11911112222"}""")
                 .andExpect(status().isUnauthorized());
+    }
+
+    // o cadastro devolve os mesmos campos de antes e acrescenta _links (self do usuário e login), sem mudar o
+    // Content-Type que cada Accept recebia antes: o app não manda Accept e continua recebendo application/json
+    @Test
+    void cadastroTrazLinksSemMudarOContentType() throws Exception {
+        Map<String, String> tipoPorAccept = new LinkedHashMap<>();
+        tipoPorAccept.put("", "application/json");
+        tipoPorAccept.put("application/json", "application/json");
+        tipoPorAccept.put("*/*", "application/json");
+        tipoPorAccept.put("application/*+json", "application/json");
+        tipoPorAccept.put("application/hal+json", "application/hal+json");
+        tipoPorAccept.put("application/prs.hal-forms+json", "application/prs.hal-forms+json");
+
+        for (Map.Entry<String, String> caso : tipoPorAccept.entrySet()) {
+            String email = "links" + sufixoUnico().toLowerCase() + "@email.com";
+            var requisicao = post("/api/auth/register").contentType(MediaType.APPLICATION_JSON).content("""
+                    {"nome": "Morador com Links", "email": "%s", "senha": "Senha@123", "telefone": "11987654321", "areaId": 1}"""
+                    .formatted(email));
+            if (!caso.getKey().isEmpty()) {
+                requisicao.header(HttpHeaders.ACCEPT, caso.getKey());
+            }
+            String corpo = mockMvc.perform(requisicao)
+                    .andExpect(status().isCreated())
+                    .andExpect(content().contentType(caso.getValue()))
+                    .andExpect(header().string(HttpHeaders.LOCATION, containsString("/api/usuarios/")))
+                    .andExpect(jsonPath("$.email").value(email))
+                    .andExpect(jsonPath("$.nome").value("Morador com Links"))
+                    .andExpect(jsonPath("$.papel").value("CIDADAO"))
+                    .andExpect(jsonPath("$.telefone").value("11987654321"))
+                    .andExpect(jsonPath("$.areaId").value(1))
+                    .andExpect(jsonPath("$.criadoEm").isString())
+                    .andExpect(jsonPath("$.senha").doesNotExist())
+                    .andReturn().getResponse().getContentAsString();
+            long usuario = id(corpo, "$.id");
+            mockMvc.perform(get("/api/usuarios/" + usuario).header(HttpHeaders.AUTHORIZATION, bearer(token(email, "Senha@123"))))
+                    .andExpect(status().isOk());
+            assertLinks(corpo, usuario);
+            if (caso.getKey().contains("hal-forms")) {
+                // quem pede HAL-FORMS recebe o template do login para preencher: POST, com email e senha editáveis
+                assertThat(JsonPath.<String>read(corpo, "$._templates.login.method")).isEqualTo("POST");
+                assertThat(JsonPath.<List<String>>read(corpo, "$._templates.login.properties[*].name")).containsExactly("email", "senha");
+                assertThat(JsonPath.<List<Object>>read(corpo, "$._templates.login.properties[?(@.readOnly == true)]")).isEmpty();
+            }
+        }
+    }
+
+    private static void assertLinks(String corpo, long usuario) {
+        assertThat(JsonPath.<String>read(corpo, "$._links.self.href"))
+                .as("self do usuário").endsWith("/api/usuarios/" + usuario);
+        assertThat(JsonPath.<String>read(corpo, "$._links.login.href"))
+                .as("link para o login").endsWith("/api/auth/login");
     }
 }

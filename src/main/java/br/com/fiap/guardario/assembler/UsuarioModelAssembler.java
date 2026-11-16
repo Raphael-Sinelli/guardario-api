@@ -3,6 +3,7 @@ package br.com.fiap.guardario.assembler;
 import br.com.fiap.guardario.dto.AlterarPapelRequest;
 import br.com.fiap.guardario.dto.AlterarSenhaRequest;
 import br.com.fiap.guardario.dto.AtualizarPerfilRequest;
+import br.com.fiap.guardario.dto.LoginRequest;
 import org.springframework.http.HttpMethod;
 import br.com.fiap.guardario.controller.AlertaController;
 import br.com.fiap.guardario.controller.AreaController;
@@ -58,6 +59,15 @@ public class UsuarioModelAssembler implements RepresentationModelAssembler<Usuar
             Acoes.adicionar(model, linkTo(methodOn(AuthController.class).alterarSenha(null)).withRel("trocar-senha")
                     .withTitle("PUT com {\"senhaAtual\", \"novaSenha\"}; depois, faça login de novo"), HttpMethod.PUT, AlterarSenhaRequest.class);
         }
+        return model;
+    }
+
+    // a resposta do cadastro: os dados, o self e o próximo passo, o login. Com Accept application/prs.hal-forms+json,
+    // o login vem também com o template dele (email e senha, com as regras da Bean Validation)
+    public EntityModel<UsuarioResponse> toModelDoCadastro(UsuarioResponse usuario) {
+        EntityModel<UsuarioResponse> model = toModel(usuario);
+        Acoes.adicionar(model, linkTo(methodOn(AuthController.class).login(null)).withRel("login")
+                .withTitle("POST com {\"email\", \"senha\"}"), HttpMethod.POST, LoginRequest.class);
         return model;
     }
 }

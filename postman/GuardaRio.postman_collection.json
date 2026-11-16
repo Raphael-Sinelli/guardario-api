@@ -271,6 +271,8 @@
                   "pm.test(\"Cadastro público sempre cria CIDADAO\", () => pm.expect(pm.response.json().papel).to.eql(\"CIDADAO\"));",
                   "pm.test(\"Header Location\", () => pm.expect(pm.response.headers.get(\"Location\")).to.include(\"/api/usuarios/\"));",
                   "pm.test(\"Senha não aparece na resposta\", () => pm.expect(pm.response.json()).to.not.have.property(\"senha\"));",
+                  "pm.test(\"Content-Type continua application/json\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"));",
+                  "pm.test(\"Links self e login\", () => { const l = pm.response.json()._links; pm.expect(l.self.href).to.include(\"/api/usuarios/\" + pm.response.json().id); pm.expect(l.login.href).to.match(/\\/api\\/auth\\/login$/); });",
                   "pm.collectionVariables.set(\"novoUsuarioId\", pm.response.json().id);"
                 ]
               }
