@@ -176,6 +176,53 @@ class ConcorrenciaIntegrationTest extends IntegracaoBase {
         assertThat(saida.getOut().lines().filter(linha -> linha.contains(" WARN ") || linha.contains(" ERROR "))).isEmpty();
     }
 
+    // áreas seguidas (N:M) ao mesmo tempo que a edição do perfil: seguir mexe só na tabela de junção e não sobe o
+    // @Version, então as duas valem (sem 409); oito pedidos para seguir a mesma área deixam um par só na junção; e,
+    // perto do teto, pedidos em paralelo nunca passam de 20 áreas
+    @Test
+    void areasSeguidasAoMesmoTempoNaoPerdemNadaNemPassamDoTeto() throws Exception {
+        String admin = tokenAdmin();
+        String email = "segue" + sufixoUnico().toLowerCase() + "@email.com";
+        postJson("/api/auth/register", null, """
+                {"nome": "Pessoa que Segue", "email": "%s", "senha": "Senha@123"}""".formatted(email))
+                .andExpect(status().isCreated());
+        String token = token(email, "Senha@123");
+        String rota = "/api/auth/me/areas-seguidas/";
+
+        long primeira = criarArea("Área Corrida Seguir " + sufixoUnico());
+        List<Integer> comPerfil = emParalelo(2,
+                () -> mockMvc.perform(put(rota + primeira).header(HttpHeaders.AUTHORIZATION, bearer(token)))
+                        .andReturn().getResponse().getStatus(),
+                () -> mockMvc.perform(put("/api/auth/me").header(HttpHeaders.AUTHORIZATION, bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"nome\": \"Nome Novo\"}"))
+                        .andReturn().getResponse().getStatus());
+        assertThat(comPerfil).containsExactlyInAnyOrder(204, 200);
+        String me = mockMvc.perform(get("/api/auth/me").header(HttpHeaders.AUTHORIZATION, bearer(token)))
+                .andReturn().getResponse().getContentAsString();
+        assertThat((String) JsonPath.read(me, "$.nome")).isEqualTo("Nome Novo");
+
+        long mesma = criarArea("Área Corrida Mesma " + sufixoUnico());
+        assertThat(emParalelo(8, () -> mockMvc.perform(put(rota + mesma).header(HttpHeaders.AUTHORIZATION, bearer(token)))
+                .andReturn().getResponse().getStatus())).containsOnly(204);
+
+        List<Long> areas = new ArrayList<>();
+        for (int i = 0; i < 26; i++) {
+            areas.add(criarArea("Área Corrida Teto " + i + " " + sufixoUnico()));
+        }
+        for (int i = 0; i < 16; i++) {
+            mockMvc.perform(put(rota + areas.get(i)).header(HttpHeaders.AUTHORIZATION, bearer(token))).andExpect(status().isNoContent());
+        }
+        AtomicInteger proxima = new AtomicInteger(16);
+        List<Integer> perto = emParalelo(10, () -> mockMvc.perform(put(rota + areas.get(proxima.getAndIncrement()))
+                .header(HttpHeaders.AUTHORIZATION, bearer(token))).andReturn().getResponse().getStatus());
+        assertThat(perto).containsOnly(204, 400).filteredOn(codigo -> codigo == 204).hasSize(2);
+
+        String lista = mockMvc.perform(get("/api/auth/me/areas-seguidas").header(HttpHeaders.AUTHORIZATION, bearer(token)))
+                .andReturn().getResponse().getContentAsString();
+        List<Integer> ids = JsonPath.read(lista, "$._embedded.areas[*].id");
+        assertThat(ids).hasSize(20).doesNotHaveDuplicates().contains((int) primeira, (int) mesma);
+    }
+
     // relatos enviados enquanto uma leitura muda o nível da área: no fim, todo relato em aberto tem a prioridade do
     // nível final. Sem a trava da área na criação, o relato lia o nível antigo e ficava com a prioridade errada
     @Test

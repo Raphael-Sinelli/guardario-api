@@ -1,5 +1,6 @@
 package br.com.fiap.guardario;
 
+import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
@@ -18,7 +19,9 @@ import java.sql.Statement;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -31,7 +34,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @TestPropertySource(properties = {
         "spring.datasource.username=sa",
         "spring.datasource.password=",
-        "app.jwt.secret=chave-so-deste-teste-com-mais-de-32-caracteres"
+        "app.jwt.secret=chave-so-deste-teste-com-mais-de-32-caracteres",
+        "app.admin.email=admin.legado@guardario.com",
+        "app.admin.password=Senha-Admin-Legado-1"
 })
 class EsquemaLegadoIntegrationTest extends IntegracaoBase {
 
@@ -96,5 +101,27 @@ class EsquemaLegadoIntegrationTest extends IntegracaoBase {
                 select count(*) from information_schema.table_constraints
                 where table_name = 'USUARIO_AREA_SEGUIDA' and constraint_type = 'FOREIGN KEY'""", Integer.class)).isEqualTo(2);
         assertThat(jdbc.queryForObject("select count(*) from usuario where email = ?", Integer.class, EMAIL)).isEqualTo(1);
+    }
+
+    // o usuário que já estava no banco segue uma área criada depois, e ela aparece na lista dele
+    @Test
+    void usuarioAntigoSegueUmaAreaNoProd() throws Exception {
+        String area = mockMvc.perform(post("/api/areas").header(HttpHeaders.AUTHORIZATION, bearer(token("admin.legado@guardario.com", "Senha-Admin-Legado-1")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"nome\": \"Área do Banco Legado\", \"cidade\": \"São Paulo\", \"uf\": \"SP\", \"populacaoEstimada\": 100}"))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        int areaId = JsonPath.read(area, "$.id");
+        Long usuarioId = jdbc.queryForObject("select id from usuario where email = ?", Long.class, EMAIL);
+        String senha = jdbc.queryForObject("select versao_token from usuario where email = ?", Integer.class, EMAIL) == 0
+                ? "Senha-Antiga-1" : "Senha-Nova-2";
+        String token = token(EMAIL, senha);
+
+        mockMvc.perform(put("/api/auth/me/areas-seguidas/" + areaId).header(HttpHeaders.AUTHORIZATION, bearer(token)))
+                .andExpect(status().isNoContent());
+        mockMvc.perform(get("/api/auth/me/areas-seguidas").header(HttpHeaders.AUTHORIZATION, bearer(token)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$._embedded.areas[0].id").value(areaId));
+        assertThat(jdbc.queryForObject("select count(*) from usuario_area_seguida where usuario_id = ?", Integer.class, usuarioId))
+                .isEqualTo(1);
     }
 }
