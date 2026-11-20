@@ -40,7 +40,7 @@ Global Solution 2026/2 (tema CitizenTech), disciplina Java Advanced, FIAP. Esta 
 
 ## Vídeo pitch
 
-Link: **PITCH_PENDENTE: o link do vídeo no YouTube entra aqui antes da entrega**
+Link: https://youtu.be/vHqmyPIB6hI
 
 ## O problema
 
